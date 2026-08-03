@@ -1,0 +1,21 @@
+---
+description: "Run pnpm/npm commands always in the container, never locally"
+alwaysApply: true
+---
+
+# Run pnpm/npm in Container
+
+**pnpm and npm commands MUST always run inside the Docker container, never locally on the host machine.**
+
+Use (**no `sudo`** — see rule `16-docker-compose.mdc`):
+
+```bash
+docker compose exec web pnpm <command>
+```
+
+Examples:
+- `docker compose exec web pnpm run typecheck`
+- `docker compose exec web pnpm run build`
+- `docker compose exec web pnpm install`
+
+Ensure the stack is running (`docker compose up -d`) before running exec commands.

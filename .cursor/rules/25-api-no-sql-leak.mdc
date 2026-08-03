@@ -1,0 +1,12 @@
+---
+description: API clients must never see raw SQL, SQLSTATE, or internal DB errors
+alwaysApply: true
+---
+
+# API error responses (non-negotiable)
+
+- JSON responses under `/api/**` must **never** expose raw SQL, `SQLSTATE`, connection strings, table/column names from errors, or stack traces meant for operators.
+- Map `QueryException` / `PDOException` to a **generic** user-facing message; **log** the real exception server-side (`report()` / logs).
+- When changing DB schema, **run migrations** in every environment (Compose MySQL, staging, prod); missing columns must not surface as SQL text to the browser.
+
+Implementation lives in [`apps/api/bootstrap/app.php`](apps/api/bootstrap/app.php) (`withExceptions` render). Extend only with the same guarantees for any new exception types that could leak internals.

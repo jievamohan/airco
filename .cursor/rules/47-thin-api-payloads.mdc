@@ -1,0 +1,46 @@
+---
+description: API routes under /api/** must use minimal request/response payloads — no full models or just-in-case fields
+globs: apps/api/**/*
+alwaysApply: false
+---
+
+# Thin API payloads (non-negotiable)
+
+Scope: Laravel code serving JSON under `/api/**` (`apps/api/**`).
+
+Complements [`25-api-no-sql-leak.mdc`](25-api-no-sql-leak.mdc) (generic error messages). **This rule is about request/response shape** — what fields leave or enter the API, not SQL in errors.
+
+## Principle
+
+Return and accept **only what the client uses for that screen or action**. Admin and public endpoints alike.
+
+## Responses (GET / list / detail)
+
+- **Never** return full Eloquent models, `$model->toArray()`, or nested relations “for convenience”.
+- **Never** add “just in case” fields (emails, internal ids, scores, `progress_json`, operator notes, timestamps the UI does not render).
+- Map internal query/service output through **dedicated API Resources or DTO mappers** with an explicit public `@phpstan-type` contract.
+- **List/slot items:** ids + display label + kind/status (+ `href` when navigable) — not duplicate metrics or PII.
+
+## Requests (POST / PATCH / PUT)
+
+- Validate a **strict allowlist** of keys; **reject unknown fields** (Form Request or explicit `array_diff` on keys before validation).
+- Do not accept partial model updates that mirror `$fillable` unless every key is intentional for that endpoint.
+
+## Reference: Category Health
+
+`GET /api/admin/category-health` — internal query builds rich rows; public JSON is mapped only in:
+
+- `CategoryHealthIndexResource` → `threshold`, `bedrijfstype_order`, `rows`
+- `CategoryHealthRowResource` → `id`, `slug`, `name`, `hoofdcategorie_name`, `slots`
+- `CategoryHealthSlotResource` → `kind`, `label`, `href` (no supplier/draft ids, counts, or emails)
+
+`PATCH /api/admin/category-health/order` — body `{ order: [...] }` only; extra keys → 422.
+
+When adding or changing an endpoint, define the **smallest** public shape first, then implement the mapper — not the reverse.
+
+## Checklist (new/changed `/api/**` routes)
+
+1. Documented public payload type (Resource / Form Request / controller docblock)?
+2. Response strips all internal-only fields from service/query layer?
+3. Write body uses allowlisted keys only?
+4. Feature test asserts absence of sensitive or unused fields where relevant?

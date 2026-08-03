@@ -1,0 +1,16 @@
+---
+description: "Run-epics: mandatory Slack scripts — do not skip"
+alwaysApply: true
+---
+
+# Run-Epics Slack (Mandatory)
+
+When executing `/run-epics`, you MUST run these scripts at the specified steps. Do not skip.
+
+| Step | Script | When |
+|------|--------|------|
+| a2 | `scripts/ci/slack_post_epic_checklist.sh` | First action when epic starts (before step b) |
+| f | `scripts/ci/slack_post_review.sh` with verdict args | After each review pass (before merge) |
+| i | `scripts/ci/gh_pr_merge_with_notify.sh` | For merge — never use raw `gh pr merge` (internally runs merge evidence upload when bot token + channel are set, then merge, then PR merged + epic checklist webhooks) |
+
+Incoming webhook scripts no-op if `SLACK_*_WEBHOOK_URL` are unset; they must still be run. Merge evidence (`slack_post_merge_evidence.sh`) no-ops if `SLACK_BOT_TOKEN` / `SLACK_EVIDENCE_CHANNEL_ID` are unset, or when the Gates Playwright job did not produce a `merge-evidence-e2e` artifact (CI no longer generates scoped UI screenshots by default). For manual evidence before merge, run `scripts/ci/run-scoped-e2e-screenshots.sh <pr>` locally and upload via Slack script env vars, or rely on scoped API logs (`merge-evidence-api-scoped`).

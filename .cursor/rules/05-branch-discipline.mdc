@@ -1,0 +1,14 @@
+---
+description: "Branch discipline: never modify main/master; create feature branches before edits"
+alwaysApply: true
+---
+
+Before ANY file modifications:
+- Check current branch using: `git branch --show-current`
+- If current branch is `main` or `master`:
+  - Create and switch to a feature branch:
+    - `feat/{task.id}-{slug}`
+  - Record the branch name in `artifacts/current/plan.md`.
+
+Hard stop:
+- If you cannot create/switch branches, mark the task BLOCKED and do not edit files.

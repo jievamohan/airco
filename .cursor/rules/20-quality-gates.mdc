@@ -1,0 +1,21 @@
+---
+description: "Quality gates: C type-safety, D security baseline, F performance budget"
+alwaysApply: true
+---
+
+Non-negotiable gates:
+
+Gate C (Type-safety)
+- Web: typecheck must be clean
+- API: PHPStan must be clean
+
+Gate D (Security baseline)
+- Secrets scan must be clean (gitleaks)
+- SAST light must be clean (semgrep auto) OR documented+approved
+- Dependency audits: pnpm audit --prod, composer audit
+
+Gate F (Performance budget)
+- v1: bundle-size budget must PASS against baseline
+- Build must succeed
+
+If a gate cannot run because scripts/config are missing, create the missing scripts/config as the FIRST task (bootstrap tooling).

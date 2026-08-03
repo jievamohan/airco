@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "stitch": {
+      "command": "bash",
+      "args": ["${workspaceFolder}/.cursor/stitch-mcp.sh"],
+      "envFile": "${workspaceFolder}/.env"
+    }
+  }
+}

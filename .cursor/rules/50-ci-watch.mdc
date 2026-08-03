@@ -1,0 +1,14 @@
+---
+description: "CI-WATCH is mandatory and merge-ready requires CI SUCCESS"
+alwaysApply: true
+---
+
+MERGE-READY is forbidden unless:
+- ci-watch has been run and exited 0 (CI SUCCESS for the PR head SHA).
+
+If CI fails:
+- Run /ci-fetch-logs
+- Generate/update tasks/0002-ci-green.md (Lane I, strict scope)
+- Execute CI fix immediately (deps-infra + security + performance + reviewer)
+- Re-run /ci-watch (bounded retries; max 3 fix loops)
+- If still failing, mark task BLOCKED and stop.

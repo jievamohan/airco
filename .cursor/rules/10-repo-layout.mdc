@@ -1,0 +1,13 @@
+---
+description: "Monorepo layout: Nuxt web + Laravel api"
+alwaysApply: true
+---
+
+Repository layout (authoritative):
+- /apps/web  => Nuxt 3 + Vue 3 + TypeScript (pnpm)
+- /apps/api  => Laravel + PHP + MySQL (composer)
+- /packages  => optional shared libs
+
+Never collapse web+api into one app. Keep boundaries clean:
+- Web calls API via HTTP (or a defined internal interface), not direct DB access.
+- DB migrations live under /apps/api only.

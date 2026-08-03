@@ -1,0 +1,24 @@
+---
+description: "Docker Compose: run in containers, never use sudo"
+alwaysApply: true
+---
+
+# Docker Compose (no sudo)
+
+**Do not prefix `docker` or `docker compose` with `sudo`** in this repo unless the user explicitly asks or the environment truly requires it (permission denied after a normal attempt).
+
+Use:
+
+```bash
+docker compose up -d
+docker compose exec web pnpm <command>
+docker compose exec api php artisan <command>
+docker compose run --rm e2e pnpm test:e2e
+```
+
+Agents and docs must show commands **without** `sudo`. If a command fails with permission errors, report that to the user instead of silently switching to `sudo`.
+
+Related:
+- pnpm/npm: rule `15-run-npm-in-container.mdc`
+- Playwright: rule `64-container-only-playwright.mdc`
+- Canonical list: `docs/runbooks/commands.md`

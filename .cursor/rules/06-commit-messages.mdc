@@ -1,0 +1,30 @@
+---
+description: Git commit message format for this repository
+alwaysApply: true
+---
+
+# Commit messages
+
+Use **Conventional Commits** in this form:
+
+```
+type(scope): Message
+```
+
+- **type**: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `ci`, `build` (lowercase)
+- **scope**: short area, e.g. `api`, `web`, `intake`, `e2e`, `deps`
+- **Message**: imperative, concise summary; capitalize the first word only if it is a proper noun
+- **One line** unless the user asks for a body
+- **Never** mention Cursor, AI tools, or co-authorship trailers in commit messages
+- **Never** pass `git commit --trailer "Co-authored-by: …"` or any Cursor attribution flag
+- Repo hook `.githooks/prepare-commit-msg` strips `cursoragent@cursor.com` lines if the IDE injects them anyway
+
+Examples:
+
+```
+feat(intake): add Chrome extension for supplier profile enrichment
+fix(api): map database errors to generic JSON responses
+chore(deps): bump laravel/framework to 12.x
+```
+
+When a change spans multiple apps, pick the primary feature scope (not `cursor` or `agent`).

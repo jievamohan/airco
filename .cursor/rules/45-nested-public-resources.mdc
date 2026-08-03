@@ -1,0 +1,41 @@
+---
+description: "Patterns for nested public resources (e.g. supplier offerings), slug redirects, sync wipes, and minimal embed payloads"
+globs:
+  - "apps/api/**/SupplierOffering*.php"
+  - "apps/api/**/Offering*.php"
+  - "apps/web/**/aanbod/**"
+  - "apps/web/**/offerings/**"
+  - "apps/web/**/AdminSupplierOfferings*.vue"
+---
+
+# Nested public resources (offerings pattern)
+
+Apply when adding **child resources under a published parent** (e.g. `/suppliers/{slug}/offerings/{slug}`).
+
+## API
+
+- **Module gate:** Respect `CategoryDetailModules` (e.g. `offerings`) on public routes; 404 when disabled (same as “not found”).
+- **Published-only:** Public resolver must not expose draft rows.
+- **Slug redirects:** `from_slug` → `to_slug` with `offering_id`; collapse chains on rename (`recordSlugChange`); max hops + cycle detection; tests for legacy URL, hop limit, and slug reuse after delete.
+- **Backfill:** One-time `fissa:backfill-offering-slug-redirect-offering-ids` for legacy null `offering_id` — not a cron job. Going forward `recordSlugChange` maintains rows.
+- **Sync wipe:** Empty `offerings: []` with existing rows requires explicit `clear_all: true` (API validation). **No extra UI confirmation modal** — partial row removal is already permanent on save.
+- **Deletes:** Hard delete + `SupplierOfferingMediaStorage::deleteAllForOffering()` before row delete (slug uniqueness; avoid soft-delete + unique conflicts).
+- **Media:** Uploads under `supplier-media/{supplierId}/offerings/{offeringId}/`; validate magic bytes; sync accepts only `/storage/…` URLs belonging to that offering; 404 when offering ∉ supplier.
+- **Authz:** Admin + `owns.supplier` for `/api/me/…`; Feature tests for cross-tenant 403/404 on PUT and media POST.
+
+## Web
+
+- **One HTTP call** on public detail: embed a **minimal supplier shell** in the offering JSON (`SupplierPublicOfferingShellPayload` / `PublicSupplierOfferingPageSupplier`), not a second `GET /suppliers/{slug}?include=…`.
+- **Canonical URLs:** SSR `navigateTo(..., { redirectCode: 301 })` when `meta.canonical_slug` or category slug differs; optional client watch for SPA navigation.
+- **Types:** Do not type the embed as full `PublicSupplierDetail` if the API sends a subset.
+- **Admin:** `prepareOfferingsForBundle()` auto-sets `clear_all` when all persisted rows removed; bundle save must not abort unrelated tabs.
+- **E2E:** Legacy slug redirect + mobile primary actions (~390px) on changed routes.
+
+## Shared helpers
+
+- Reuse `SupplierCategoryApiPayload::forSupplier()` for category JSON — do not duplicate `categoryPayload` in controllers.
+
+## Before merge
+
+- `SupplierOfferingsApiTest` (or equivalent) + owner auth + gallery upload/remove + phpstan + web typecheck.
+- Skill: `.cursor/skills/fissa-nested-public-resources/SKILL.md`

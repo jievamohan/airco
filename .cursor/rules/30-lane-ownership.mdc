@@ -1,0 +1,25 @@
+---
+description: "Parallel lanes + ownership + wave-based integration"
+alwaysApply: true
+---
+
+We run aggressive parallel execution. To prevent conflicts:
+
+Lanes:
+- W1: web pages/components (UI surface)
+- W2: web composables/stores/services (logic)
+- A1: api endpoints/controllers/routes
+- A2: api domain/services/models
+- T: tests
+- I: deps/infra/CI/Docker
+- D: DB migrations/schema
+
+Ownership model: strict-by-default, soft-by-exception
+- Stay within your lane file globs.
+  - If you must touch outside, create artifacts/current/ownership-request.md and STOP until orchestrator approves.
+
+Wave-based integration:
+- Wave 0: shared contracts/types/config (serialized)
+- Wave 1: backend A1/A2 parallel
+- Wave 2: frontend W1/W2 parallel
+- Wave 3: tests + hardening

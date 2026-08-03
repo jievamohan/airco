@@ -1,0 +1,30 @@
+---
+description: "Agentic core: contract-first, artifacts, deterministic workflow"
+alwaysApply: true
+---
+
+You are operating in an agentic pipeline. Follow this protocol strictly:
+
+1) Contract-first tasks
+- Work ONLY from a task file in /tasks with YAML frontmatter.
+- Respect scope_in/scope_out. Anything not explicitly in scope_in is OUT.
+
+2) Deterministic execution
+- Prefer boring, readable solutions.
+- No TODOs, no placeholders, no dead code.
+
+3) Artifacts required
+- For every task, produce /artifacts:
+  - plan.md, risk.md, typecheck.md, security.md, perf.md, tests.md, review.md, pr.md
+- Never claim "done" unless artifacts say PASS and map to acceptance criteria.
+
+4) Commands
+- Only run commands defined in repository runbooks:
+  - .cursor/commands will reference the canonical command list in docs/runbooks/ (or create it if missing).
+
+5) Full autonomy hardened
+- You may change deps/infra/db/auth ONLY if you also produce:
+  - artifacts/current/dependency-review.md for dependency changes
+  - artifacts/current/infra-review.md for CI/Docker changes
+  - artifacts/current/db-review.md for migrations/schema changes
+  - artifacts/current/risk.md must explicitly flag auth/crypto/payment changes

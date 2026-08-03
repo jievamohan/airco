@@ -1,0 +1,64 @@
+---
+description: "Force broad subagent participation with required outputs, N/A policy, and no stale artifacts"
+alwaysApply: true
+---
+
+General:
+- artifacts/current is ephemeral and must be reset at the start of /feature and /epicify runs.
+- Required agents must produce their artifact for the CURRENT run-id, not rely on old files.
+- Empty files are forbidden. If an agent is not applicable, it must write an explicit N/A section with reason.
+
+Planning runs (/feature, /epicify):
+Required planning agents and outputs (written under artifacts/current):
+- business-analyst -> discovery.md
+- ux-designer -> ux.md
+- principal-architect -> architecture.md (N/A allowed if no architecture changes)
+- solution-designer -> solution.md (N/A allowed if no ops/config changes)
+- qa-strategist -> qa.md
+- security-privacy -> security-design.md
+
+Feature-conditional planning agents and outputs:
+- art-director -> art-direction.md (required for UI/look-and-feel/visual epics; otherwise N/A)
+- game-designer -> game-feel.md (required for gameplay/minigame/difficulty epics; otherwise N/A)
+- motion-audio-designer -> motion-audio.md (required for animation/audio epics; otherwise N/A)
+- illustrator -> assets.md (required when the feature requests visuals/assets/minigames; otherwise N/A)
+
+N/A policy:
+- If a discipline does not apply, the artifact MUST include:
+  - "N/A: <reason>"
+  - "Impact: none"
+  - "Checks still required: <yes/no + short list>"
+
+Run manifest (hard requirement):
+- The orchestrator must maintain artifacts/current/run-manifest.md that includes:
+  - run id
+  - required agents list
+  - for each agent: status OK or N/A with reason + artifact path
+- If manifest or any required artifact is missing: BLOCKED.
+
+Delivery runs (/orchestrate-task):
+Always dispatch:
+- implementer-web, tester, reviewer
+Always validate (near end):
+- security, performance
+Conditionally dispatch:
+- implementer-api if any A-lanes are touched
+- deps-infra if any I-lanes are touched
+- db if any D-lanes are touched
+
+Skill mapping (use these Cursor skills explicitly):
+- principal-architect / architecture.md -> architect
+- implementer-web, implementer-api -> code-guru
+- supplier offerings / nested public child resources (sync, slug redirects, aanbod pages) -> fissa-nested-public-resources (in addition to code-guru)
+- security validation -> security-reviewer
+- reviewer / PR review -> code-review-expert
+- deps-infra (I-lanes: infra/deps/CI/docker/scripts) -> devops-sre
+
+Playwright policy:
+- Playwright (including screenshot tests) must run only via docker compose e2e service.
+
+Docker:
+- Do not use `sudo` with `docker compose` (rule `16-docker-compose.mdc`).
+
+Merge readiness:
+- MERGE-READY is forbidden unless CI is green and required artifacts (including run manifest) exist for the current run.

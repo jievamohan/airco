@@ -1,0 +1,59 @@
+---
+description: "Web Lottie micro-icons (useAnimations-style): reuse catalog, add JSON + Fissa*Lottie wrapper"
+globs:
+  - "apps/web/**/*.vue"
+  - "apps/web/app/assets/lottie/**"
+alwaysApply: false
+---
+
+# Micro-animations (Lottie / useAnimations)
+
+When adding or changing **interactive iconography** (hover/click/loop micro-motion) on the public or admin web app, prefer the existing **Lottie + `lottie-web`** pattern over ad-hoc CSS-only icons **when a matching animation already exists** or the UX clearly benefits from the same style as other Fissa Lottie icons.
+
+## Source and license
+
+- Animations are typically from [useAnimations](https://useanimations.com/#explore) / the same assets as [react-useanimations](https://github.com/useAnimations/react-useanimations) (MIT).
+- Every wrapper component MUST include a short file header: purpose, trigger (hover / click / loop), and `@see` links to useanimations.com and the matching `react-useanimations` path when applicable.
+
+## Before implementing
+
+1. **Search the codebase** for existing wrappers: `Fissa*Lottie` under `apps/web/app/components/fissa/**` and imports of `~/assets/lottie/*.json`.
+2. **Reuse** the existing component and props if it fits; do not duplicate the same JSON under a second name.
+
+## Current catalog (extend this list when you add a wrapper)
+
+| Asset (JSON) | Component | Typical use |
+|--------------|-----------|-------------|
+| `app/assets/lottie/share.json` | `FissaShareLottie.vue` (playlist) | Share / link kopiëren |
+| `app/assets/lottie/trash-v2.json` | `FissaTrashV2Lottie.vue` (playlist) | Delete / remove row |
+| `app/assets/lottie/search-to-x.json` | `FissaSearchToXLottie.vue` (collections) | Search ↔ close toggle |
+| `app/assets/lottie/check-box.json` | `FissaCheckSelectionLottie.vue` | Selection checkbox |
+| `app/assets/lottie/radio-button.json` | `FissaRadioCollectionState.vue` | Radio state (legacy name, not `*Lottie`) |
+| `app/assets/lottie/skip-back.json` | `FissaSkipBackLottie.vue` | Paginering: eerste pagina |
+| `app/assets/lottie/skip-forward.json` | `FissaSkipForwardLottie.vue` | Paginering: laatste pagina |
+| `app/assets/lottie/chevron-left.json` | `FissaChevronLeftLottie.vue` | Paginering: vorige; layout `website-user` mobiel «terug naar overzicht» (`uiClass`) |
+| `app/assets/lottie/chevron-right.json` | `FissaChevronRightLottie.vue` | Paginering: volgende |
+| `app/assets/lottie/arrow-left-circle.json` | `FissaArrowLeftCircleLottie.vue` (admin) | Pijl in cirkel (niet paginering) |
+| `app/assets/lottie/arrow-right-circle.json` | `FissaArrowRightCircleLottie.vue` (admin) | Pijl in cirkel (niet paginering) |
+| `app/assets/lottie/arrow-down.json` | `FissaSortLottie.vue` (listing) | Sorteer: zichtbaar rustframe + hover (mobiel: knop) |
+| `app/assets/lottie/loading-v3.json` | `FissaLoadingV3Lottie.vue` | Listing: full-screen load overlay (useAnimations Loading V3 / `react-useanimations` `loading3`, MIT) |
+
+Paths in code: `~/assets/lottie/<kebab-case>.json`, components live next to their feature area under `components/fissa/<area>/`.
+
+## Adding a new animation
+
+1. Add **one** Lottie JSON file: `apps/web/app/assets/lottie/<name>.json` (`kebab-case`, stable name).
+2. Add a **single-purpose** Vue SFC: `Fissa<PascalCase>Name>Lottie.vue` (or reuse an existing generic pattern if the repo introduces one later).
+3. Implement with **`lottie-web`** only (`import lottie from 'lottie-web'`), matching the patterns in existing `Fissa*Lottie` components (container ref, `loadAnimation`, cleanup on unmount).
+4. Respect **`prefers-reduced-motion`**: use `matchMedia('(prefers-reduced-motion: reduce)')` and snap to a sensible static frame or skip playback, consistent with `FissaTrashV2Lottie.vue`.
+5. Keep **bundle impact** in mind: avoid landing large batches of new JSON files in one change without running the web **size** / build gate (`docs/runbooks/commands.md`). Prefer lazy or route-local imports only if the codebase already uses that pattern for heavy assets.
+
+## Do not
+
+- Add a second Lottie runtime or unrelated animation libraries without an explicit dependency / infra task and `artifacts/current/dependency-review.md` where repo policy requires it.
+- Load animation JSON from untrusted remote URLs at runtime for UI chrome.
+- Omit license/source attribution in new wrapper files.
+
+## Lanes
+
+- New components under `apps/web/app/components/fissa/**` and assets under `apps/web/app/assets/lottie/**` are **W1** (and asset files). If you must place components elsewhere, follow existing colocation rules for that feature.

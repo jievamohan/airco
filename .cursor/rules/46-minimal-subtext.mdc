@@ -1,0 +1,38 @@
+---
+description: Minimize helper subtext in admin and product UI; prefer raster-first, self-explanatory controls
+globs: apps/web/**/*
+alwaysApply: false
+---
+
+# Minimal subtext (admin + product UI)
+
+Applies to `apps/web/**` and UI pattern docs (e.g. `apps/web/DESIGN.md`).
+
+## Principle
+
+Minimize subtexts, helper paragraphs, subtitles under headings, and redundant explanatory copy. The interface should read from primary elements: labels where needed, icons, visual state, and `aria-label` / `sr-only` for accessibility.
+
+## Prefer
+
+- Self-explanatory controls (checkbox + icon, color-coded slots, drag handles)
+- Tooltips (`title`) for optional detail — not visible flankerende tellers
+- Error/recovery copy only when action fails (`role="alert"`)
+- `sr-only` or `aria-label` instead of visible helper lines
+
+## Subtext only when
+
+- Legal / compliance disclosure
+- Destructive action confirmation
+- Non-obvious error recovery (user cannot infer next step from UI alone)
+- Accessibility requires visible text beyond `aria-label` (rare; prefer visible primary label over a separate hint)
+
+## Reference: Category Health (`/admin/categories/health`)
+
+Raster-first layout — no counters or labels flanking the slot grid:
+
+- **Filter:** checkbox + filter icon, `aria-label="Alleen actie nodig"` — no visible caption or hint below
+- **Legend:** icon swatches + `sr-only` labels — no inline text labels beside swatches
+- **Rows:** drag handle + category names + slot grid — no “sleep rijen…” helper paragraph
+- **Empty state:** icon + short headline — no explanatory paragraph
+
+When adding admin dashboards or dense data views, follow this pattern before adding helper copy.

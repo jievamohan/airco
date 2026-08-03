@@ -1,0 +1,34 @@
+# Dependencies / package stores
+node_modules/
+.pnpm-store/
+
+# Nuxt / build
+.nuxt/
+.output/
+.data/
+dist/
+coverage/
+
+# Caches
+node-compile-cache/
+.cache/
+*.log
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+!.env.deploy.example
+
+# On-VPS deploy snapshots (created by make deploy-production)
+releases/
+
+# Local tooling
+.venv/
+.docker/
+.DS_Store
+.idea/
+
+# OS / editor noise
+*.swp
+*~

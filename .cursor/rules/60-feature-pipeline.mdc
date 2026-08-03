@@ -1,0 +1,61 @@
+---
+description: "Feature pipeline: discovery -> tasks -> default autopilot (FORCE) with --safe option (single PR per feature)"
+alwaysApply: true
+---
+
+When using /feature:
+
+1) Planning is read-only
+- Planning phase must not modify code.
+- Planning must produce these artifacts:
+  - artifacts/current/discovery.md
+  - artifacts/current/ux.md
+  - artifacts/current/architecture.md
+  - artifacts/current/solution.md
+  - artifacts/current/qa.md
+  - artifacts/current/security-design.md
+  - artifacts/current/backlog.md
+
+2) Task generation contract
+- Generated tasks must follow the /tasks contract format (YAML frontmatter + required sections).
+- Each generated task must include:
+  - scope_in / scope_out
+  - testable acceptance criteria
+  - lanes + file globs
+  - gates (C, D, F at minimum unless explicitly justified)
+  - risk tags and mitigation notes
+- UI-facing tasks (lane W1 or globs touching `apps/web/**/pages/**`, layouts, or AppShell): acceptance criteria MUST include responsive/mobile verification — primary user actions work at ~390px width, no broken overflow on the main content, navigation/menus usable on small screens, and CI Playwright passes for both `chromium-desktop` and `chromium-mobile` on added or changed smoke/e2e coverage (or an explicit, justified exception if E2E is out of scope for that task).
+
+3) Single PR invariant (mandatory)
+- One /feature run MUST use exactly ONE feature branch and ONE PR.
+- /feature MUST bootstrap the PR once via:
+  - scripts/ci/gh_pr_bootstrap.sh
+- Delivery must stack commits onto the same PR branch (no PR per task).
+- The PR body MUST include a "## Tasks" checklist seeded from the generated task files (all unchecked initially).
+
+4) Default delivery mode
+- Default behavior of /feature is FORCE autopilot (bounded).
+- FORCE safety floor (always enforced):
+  - max tasks executed per /feature run <= 5 (or user-provided --max-tasks, capped at 5)
+  - stop immediately on any BLOCKED task
+  - any I/D/auth-related work must be explicitly flagged in task risks and artifacts/current/risk.md
+  - no destructive DB operations; prefer reversible changes only
+
+5) --safe behavior
+- If --safe is used, delivery is allowed only if the SAFE Complexity Gate passes:
+  - tasks_generated <= 3
+  - no high-risk tags (auth/payments/crypto/data-loss/privacy)
+  - no lanes I or D unless explicitly allowed in the feature input
+  - acceptance criteria include required tests (unit at minimum)
+- If SAFE gate fails: stop after planning and output backlog + tasks (PLAN_ONLY).
+
+6) Delivery handoff rule
+- Delivery execution (FORCE/SAFE) must run tasks via /orchestrate-task.
+- /orchestrate-task remains the single authority for CI watch, CI autofix, artifacts commit, and merge-ready claims.
+- After successful delivery (no BLOCKED tasks and CI green), /feature MUST run /finalize-feature unless --no-finalize was provided.
+- /finalize-feature is responsible for:
+  - syncing PR task checklist
+  - squashing the feature branch
+  - force-pushing
+  - re-running CI watch and requiring CI SUCCESS
+- TIMEOUT_SECONDS=600 scripts/ci/gh_wait_pr_merged.sh <PR_NUM>

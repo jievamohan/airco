@@ -1,0 +1,13 @@
+---
+description: "Container-only: Playwright must run via docker compose e2e service"
+alwaysApply: true
+---
+
+Policy:
+- Never run Playwright on the host.
+- All Playwright commands MUST be executed via:
+  - docker compose run --rm e2e <command>
+
+If Playwright cannot run due to missing compose service or missing deps:
+- Create a Lane I task to fix container setup.
+- Do not fall back to host execution.

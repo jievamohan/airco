@@ -1,0 +1,14 @@
+node_modules/
+.pnpm-store/
+.nuxt/
+.output/
+.data/
+dist/
+coverage/
+node-compile-cache/
+.cache/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
