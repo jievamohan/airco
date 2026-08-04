@@ -3,12 +3,18 @@
     id="werkwijze"
     ref="container"
     class="climate"
-    :class="{ 'climate--mobile': isMobile }"
+    :class="{
+      'climate--mobile': isMobile,
+      'climate--reduced': reduced,
+      'climate--exiting': exitProgress > 0 && !reduced,
+    }"
     data-testid="climate-scrub"
-    :data-scrub-progress="progress.toFixed(3)"
+    :data-scrub-progress="scrubProgress.toFixed(3)"
+    :data-track-progress="trackProgress.toFixed(3)"
+    :data-scroll-phase="displayPhase"
   >
-    <div class="climate__pin">
-      <div class="climate__copy" aria-live="polite">
+    <div class="climate__pin" :style="pinWipeStyle">
+      <div class="climate__copy">
         <div
           v-for="beat in captionBeats"
           :key="beat.id"
@@ -21,7 +27,7 @@
       </div>
 
       <div class="climate__stage">
-        <div class="climate__frame">
+        <div class="climate__frame" :style="frameEnterStyle">
           <img
             src="/media/2nd-start.png"
             alt=""
@@ -68,19 +74,52 @@
 </template>
 
 <script setup lang="ts">
+import {
+  easeEnter,
+  easeExit,
+  HANDOFF_HOLD,
+  SCRUB_PHASE_DESKTOP,
+  SCRUB_PHASE_MOBILE,
+  type ScrollPhase,
+} from '../../composables/mapScrollPhases'
+
 const container = ref<HTMLElement | null>(null)
 const video = ref<HTMLVideoElement | null>(null)
 const reduced = usePrefersReducedMotion()
 const isMobile = ref(false)
+const hashSnap = ref(false)
 
 const { ready, error, markReady, onError } = useScrubVideo(video)
 
 const enabled = computed(() => !reduced.value && !error.value && ready.value)
 
-const { progress } = useScrollScrub({
+const scrubRange = computed(() =>
+  isMobile.value ? SCRUB_PHASE_MOBILE : SCRUB_PHASE_DESKTOP,
+)
+
+const {
+  trackProgress,
+  scrubProgress,
+  phase,
+  enterProgress,
+  exitProgress,
+} = useScrollScrub({
   container,
   video,
   enabled,
+  scrubRange,
+  pauseSeekOffscreen: true,
+})
+
+const visualEnter = computed(() => {
+  if (reduced.value || hashSnap.value) return 1
+  return enterProgress.value
+})
+
+const displayPhase = computed<ScrollPhase>(() => {
+  if (reduced.value) return 'scrub'
+  if (hashSnap.value && phase.value === 'intro') return 'scrub'
+  return phase.value
 })
 
 type Beat = {
@@ -145,11 +184,39 @@ const captionBeats = computed(() => {
     id: b.id,
     titleHtml: b.titleHtml,
     body: b.body,
-    opacity: scrubCaptionOpacity(b.from, b.to, progress.value, 0.55),
+    opacity: scrubCaptionOpacity(b.from, b.to, scrubProgress.value, 0.55),
   }))
 })
 
+const frameEnterStyle = computed(() => {
+  const t = easeEnter(visualEnter.value)
+  const from = isMobile.value ? 1.1 : 1.15
+  const scale = from + (1 - from) * t
+  // Keep a floor so S1 wipe always reveals a visible frame.
+  const opacity = Math.min(1, 0.25 + (0.75 * t) / HANDOFF_HOLD)
+  return {
+    opacity: String(opacity),
+    transform: `scale(${scale})`,
+  }
+})
+
+const pinWipeStyle = computed(() => {
+  if (reduced.value || exitProgress.value <= 0) {
+    return undefined
+  }
+  const raw = Math.max(0, (exitProgress.value - HANDOFF_HOLD) / (1 - HANDOFF_HOLD))
+  const wipe = easeExit(raw)
+  return {
+    opacity: String(1 - wipe),
+    clipPath: `inset(0 0 ${wipe * 100}% 0)`,
+  }
+})
+
 onMounted(() => {
+  if (window.location.hash === '#werkwijze') {
+    hashSnap.value = true
+  }
+
   const mq = window.matchMedia('(max-width: 767px)')
   const apply = () => {
     isMobile.value = mq.matches
@@ -163,13 +230,26 @@ onMounted(() => {
 <style scoped>
 .climate {
   position: relative;
-  /* Nog steeds langzamer dan S1 (meer tekst), maar minder witruimte tussen secties */
   height: 220vh;
-  background: #fff;
+  /* Pull under S1 outro band only — avoid starting S2 scrub mid-S1 */
+  margin-top: -25vh;
+  background: transparent;
+  z-index: 3;
 }
 
 .climate--mobile {
   height: 165vh;
+  margin-top: -18vh;
+}
+
+.climate--reduced {
+  height: 110vh;
+  margin-top: 0;
+}
+
+.climate--reduced.climate--mobile {
+  height: 105vh;
+  margin-top: 0;
 }
 
 .climate__pin {
@@ -184,6 +264,12 @@ onMounted(() => {
   background: #fff;
   padding: calc(var(--header-h) + 0.35rem) 0 2vh;
   box-sizing: border-box;
+  z-index: 3;
+  will-change: clip-path, opacity;
+}
+
+.climate--exiting .climate__pin {
+  z-index: 4;
 }
 
 .climate__copy {
@@ -233,11 +319,14 @@ onMounted(() => {
   min-height: 0;
   width: 100%;
   padding: 0 3vw;
+  overflow: hidden;
 }
 
 .climate__frame {
   position: relative;
   width: min(1100px, 94vw);
+  transform-origin: center center;
+  will-change: transform, opacity;
 }
 
 .climate__frame::after {
