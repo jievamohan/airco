@@ -231,15 +231,19 @@ onMounted(() => {
 .climate {
   position: relative;
   height: 220vh;
-  /* Pull under S1 outro band only — avoid starting S2 scrub mid-S1 */
-  margin-top: -25vh;
+  /*
+   * Stick Climate pin under S1 from outroStart (~0.92):
+   * -(S1H - outroStart × (S1H - 100vh)) ≈ -110vh desktop.
+   */
+  margin-top: -110vh;
   background: transparent;
   z-index: 3;
 }
 
 .climate--mobile {
   height: 165vh;
-  margin-top: -18vh;
+  /* S1H 175vh, outroStart 0.94 → ≈ -105vh */
+  margin-top: -105vh;
 }
 
 .climate--reduced {
