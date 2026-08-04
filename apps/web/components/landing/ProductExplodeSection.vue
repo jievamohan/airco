@@ -83,6 +83,8 @@
 import {
   desktopScrubMediaScale,
   handoffPinStyle,
+  HANDOFF_SCROLL_VH,
+  HANDOFF_SCROLL_VH_MOBILE,
   mobileScrubMediaScale,
   PRODUCT_PHASE_DESKTOP,
   PRODUCT_PHASE_MOBILE,
@@ -193,7 +195,8 @@ const pinHandoffStyle = computed(() => {
   if (hashSnap.value) return undefined
 
   if (enterProgress.value < 1) {
-    return handoffPinStyle(enterProgress.value, 'in')
+    const distanceVh = isMobile.value ? HANDOFF_SCROLL_VH_MOBILE : HANDOFF_SCROLL_VH
+    return handoffPinStyle(enterProgress.value, 'in', distanceVh)
   }
 
   return undefined
@@ -253,7 +256,7 @@ onMounted(() => {
 
 .explode--mobile {
   height: 175vh;
-  margin-top: calc(-100vh - 40vh);
+  margin-top: calc(-100vh - 32vh);
 }
 
 .explode--reduced {
