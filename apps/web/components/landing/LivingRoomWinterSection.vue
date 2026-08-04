@@ -1,62 +1,61 @@
 <template>
   <section
-    id="werkwijze"
+    id="winter"
     ref="container"
-    class="climate"
+    class="winter"
     :class="{
-      'climate--mobile': isMobile,
-      'climate--reduced': reduced,
-      'climate--exiting': exitProgress > 0 && !reduced,
-      'climate--entering': isEntering,
+      'winter--mobile': isMobile,
+      'winter--reduced': reduced,
+      'winter--exiting': exitProgress > 0 && !reduced,
+      'winter--entering': isEntering,
     }"
-    data-testid="climate-scrub"
+    data-testid="winter-scrub"
     :data-scrub-progress="scrubProgress.toFixed(3)"
     :data-track-progress="trackProgress.toFixed(3)"
     :data-scroll-phase="displayPhase"
   >
-    <div class="climate__pin" :style="pinHandoffStyle">
-      <div class="climate__copy">
-        <div
-          v-for="beat in captionBeats"
-          :key="beat.id"
-          class="climate__beat"
-          :style="{ opacity: beat.opacity }"
+    <div class="winter__pin" :style="pinHandoffStyle">
+      <div class="winter__copy">
+        <p
+          v-for="line in captionLines"
+          :key="line.id"
+          class="winter__caption"
+          :style="{ opacity: line.opacity }"
         >
-          <h2 class="climate__title" v-html="beat.titleHtml" />
-          <p class="climate__body">{{ beat.body }}</p>
-        </div>
+          {{ line.text }}
+        </p>
       </div>
 
-      <div class="climate__stage">
-        <div class="climate__frame" :style="frameScaleStyle">
+      <div class="winter__stage">
+        <div class="winter__frame" :style="frameScaleStyle">
           <img
-            src="/media/2nd-start.png"
+            src="/media/livingroom-winter-start.png"
             alt=""
-            width="1536"
-            height="1024"
-            class="climate__poster"
+            width="1280"
+            height="720"
+            class="winter__poster"
             aria-hidden="true"
           />
 
           <img
             v-if="reduced || error"
-            src="/media/2nd-start.png"
-            alt="Nederlandse woonwijk met comfortabel interieur"
-            width="1536"
-            height="1024"
-            class="climate__media"
+            src="/media/livingroom-winter-start.png"
+            alt="Woonkamer van zomer naar winter"
+            width="1280"
+            height="720"
+            class="winter__media"
           />
 
           <video
             v-else
             ref="video"
-            class="climate__media"
+            class="winter__media"
             muted
             defaultmuted
             playsinline
             webkit-playsinline
             preload="auto"
-            poster="/media/2nd-start.png"
+            poster="/media/livingroom-winter-start.png"
             disablepictureinpicture
             disableremoteplayback
             tabindex="-1"
@@ -66,7 +65,7 @@
             @canplay="markReady"
             @error="onError"
           >
-            <source src="/media/2nd-animated.mp4?v=ios-main" type="video/mp4" />
+            <source src="/media/livingroom-winter.mp4?v=1" type="video/mp4" />
           </video>
         </div>
       </div>
@@ -76,12 +75,12 @@
 
 <script setup lang="ts">
 import {
-  CLIMATE_PHASE_DESKTOP,
-  CLIMATE_PHASE_MOBILE,
   DESKTOP_SCRUB_MEDIA_SCALE,
   handoffPinStyle,
   HANDOFF_SCROLL_VH,
   HANDOFF_SCROLL_VH_MOBILE,
+  WINTER_PHASE_DESKTOP,
+  WINTER_PHASE_MOBILE,
   type ScrollPhase,
 } from '../../composables/mapScrollPhases'
 
@@ -96,7 +95,7 @@ const { ready, error, markReady, onError } = useScrubVideo(video)
 const enabled = computed(() => !reduced.value && !error.value && ready.value)
 
 const scrubRange = computed(() =>
-  isMobile.value ? CLIMATE_PHASE_MOBILE : CLIMATE_PHASE_DESKTOP,
+  isMobile.value ? WINTER_PHASE_MOBILE : WINTER_PHASE_DESKTOP,
 )
 
 const {
@@ -123,83 +122,50 @@ const isEntering = computed(
   () => !reduced.value && !hashSnap.value && enterProgress.value < 1 && exitProgress.value <= 0,
 )
 
-type Beat = {
+type CaptionLine = {
   id: string
-  titleHtml: string
-  body: string
+  text: string
   from: number
   to: number
 }
 
-const beats: Beat[] = [
-  {
-    id: 'warmer',
-    titleHtml: 'Nederland wordt <span class="gradient-warm">warmer</span>.',
-    body: 'Meer tropische dagen. Langere hittegolven. En woningen die die warmte steeds langer vasthouden.',
-    from: 0.02,
-    to: 0.18,
-  },
-  {
-    id: 'street',
-    titleHtml: 'Buiten voelt de zomer zwaarder.',
-    body: 'Straten, gevels en daken warmen op. ’s Avonds blijft die warmte hangen — precies wanneer je thuis wilt afkoelen.',
-    from: 0.20,
-    to: 0.36,
-  },
-  {
-    id: 'window',
-    titleHtml: 'Comfort begint achter het raam.',
-    body: 'Terwijl de zon buiten steekt, wil je binnen een rustig, leefbaar klimaat. Zonder zware lucht. Zonder pieken.',
-    from: 0.38,
-    to: 0.54,
-  },
-  {
-    id: 'unit',
-    titleHtml: 'De binnenunit werkt onzichtbaar mee.',
-    body: 'Stil, strak gemonteerd, en precies afgestemd op de ruimte. Geen gedoe — wel een stabiele temperatuur.',
-    from: 0.56,
-    to: 0.72,
-  },
-  {
-    id: 'home',
-    titleHtml: 'Thuis, precies goed.',
-    body: 'Koelen wanneer het oploopt. En klaar om te verwarmen wanneer de seizoenen draaien — in één systeem.',
-    from: 0.74,
-    to: 0.96,
-  },
+/**
+ * Summer portion of the scrub stays caption-free; lines appear as the
+ * season turns toward winter.
+ */
+const lines: CaptionLine[] = [
+  { id: 'winter', text: 'Ook in de winter.', from: 0.48, to: 0.62 },
+  { id: 'same', text: 'Dezelfde airco.', from: 0.64, to: 0.78 },
+  { id: 'heat', text: 'Verwarmt je woning.', from: 0.80, to: 1 },
 ]
 
-const captionBeats = computed(() => {
+const captionLines = computed(() => {
   if (reduced.value) {
     return [
       {
         id: 'reduced',
-        titleHtml: 'Nederland wordt <span class="gradient-warm">warmer</span>.',
-        body: 'Een comfortabel huis wordt steeds belangrijker — met koelen én verwarmen in één systeem.',
+        text: 'Ook in de winter — dezelfde airco verwarmt je woning.',
         opacity: 1,
       },
     ]
   }
 
-  // Last beat stays at full opacity once shown; pin handoff fades the section.
-  return beats.map((b) => {
-    const isLast = b.id === 'home'
+  return lines.map((line) => {
+    const isLast = line.id === 'heat'
     const opacity =
-      isLast && scrubProgress.value >= b.from
+      isLast && scrubProgress.value >= line.from
         ? 1
-        : scrubCaptionOpacity(b.from, b.to, scrubProgress.value, 0.55)
+        : scrubCaptionOpacity(line.from, line.to, scrubProgress.value, 0.72)
     return {
-      id: b.id,
-      titleHtml: b.titleHtml,
-      body: b.body,
+      id: line.id,
+      text: line.text,
       opacity,
     }
   })
 })
 
 /**
- * Enter: scroll into view + opacity 0→100% at the same linear speed as explode exit.
- * Exit: scroll up + fade out (same handoff as hero/product) toward Winter.
+ * Enter / exit: same scroll+fade handoff as Climate ↔ neighbours.
  */
 const pinHandoffStyle = computed(() => {
   if (reduced.value) return undefined
@@ -212,7 +178,8 @@ const pinHandoffStyle = computed(() => {
   if (hashSnap.value) return undefined
 
   if (enterProgress.value < 1) {
-    return handoffPinStyle(enterProgress.value, 'in')
+    const distanceVh = isMobile.value ? HANDOFF_SCROLL_VH_MOBILE : HANDOFF_SCROLL_VH
+    return handoffPinStyle(enterProgress.value, 'in', distanceVh)
   }
 
   return undefined
@@ -225,7 +192,7 @@ const frameScaleStyle = computed(() => {
 })
 
 onMounted(() => {
-  if (window.location.hash === '#werkwijze') {
+  if (window.location.hash === '#winter') {
     hashSnap.value = true
   }
 
@@ -240,35 +207,35 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.climate {
+.winter {
   position: relative;
   height: 220vh;
   /*
-   * Stick Climate pin under S1 from outroStart (~0.92):
-   * -(S1H - outroStart × (S1H - 100vh)) ≈ -110vh desktop.
+   * Stick under Climate from outroStart 0.85:
+   * -(220 - 0.85 × 120) ≈ -118vh
    */
-  margin-top: -110vh;
+  margin-top: -118vh;
   background: transparent;
-  z-index: 3;
+  z-index: 2;
 }
 
-.climate--mobile {
+.winter--mobile {
   height: 165vh;
-  /* S1H 175vh, outroStart 0.86 → ≈ -111vh */
-  margin-top: -111vh;
+  /* Climate 165vh, outroStart 0.82 → ≈ -112vh */
+  margin-top: -112vh;
 }
 
-.climate--reduced {
+.winter--reduced {
   height: 110vh;
   margin-top: 0;
 }
 
-.climate--reduced.climate--mobile {
+.winter--reduced.winter--mobile {
   height: 105vh;
   margin-top: 0;
 }
 
-.climate__pin {
+.winter__pin {
   position: sticky;
   top: 0;
   height: 100vh;
@@ -280,57 +247,44 @@ onMounted(() => {
   background: #fff;
   padding: calc(var(--header-h) + 0.35rem) 0 2vh;
   box-sizing: border-box;
-  z-index: 3;
+  z-index: 2;
+  overflow: visible;
   will-change: opacity, transform;
 }
 
-.climate--entering .climate__pin {
-  z-index: 4;
+.winter--entering .winter__pin {
+  z-index: 3;
 }
 
-.climate--exiting .climate__pin {
-  z-index: 4;
+.winter--exiting .winter__pin {
+  z-index: 3;
 }
 
-.climate__copy {
+.winter__copy {
   position: relative;
   z-index: 2;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: min(40rem, 92vw);
-  min-height: 7.5rem;
-  padding: 0 clamp(1rem, 3vw, 1.5rem);
-  text-align: center;
+  padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+  min-height: 4.5rem;
 }
 
-.climate__beat {
+.winter__caption {
   grid-area: 1 / 1;
-  width: 100%;
+  margin: 0;
+  width: min(18ch, 92vw);
+  text-align: center;
+  font-size: clamp(2rem, 5.2vw, 3.75rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  color: var(--color-ink);
   pointer-events: none;
   transition: opacity 0.05s linear;
 }
 
-.climate__title {
-  margin: 0 0 0.65rem;
-  font-size: clamp(1.75rem, 4.2vw, 3rem);
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 1.12;
-  color: var(--color-ink);
-}
-
-.climate__body {
-  margin: 0 auto;
-  max-width: 34rem;
-  font-size: clamp(1rem, 1.7vw, 1.2rem);
-  font-weight: 400;
-  line-height: 1.45;
-  letter-spacing: -0.01em;
-  color: var(--color-ink-muted);
-}
-
-.climate__stage {
+.winter__stage {
   position: relative;
   display: flex;
   align-items: center;
@@ -339,18 +293,17 @@ onMounted(() => {
   min-height: 0;
   width: 100%;
   padding: 0 3vw;
-  /* Allow desktop +30% frame scale without hard crop */
   overflow: visible;
 }
 
-.climate__frame {
+.winter__frame {
   position: relative;
   width: min(1100px, 94vw);
   transform-origin: center center;
   will-change: transform, opacity;
 }
 
-.climate__frame::after {
+.winter__frame::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -361,7 +314,7 @@ onMounted(() => {
     linear-gradient(to bottom, #fff 0%, transparent 12%, transparent 88%, #fff 100%);
 }
 
-.climate__poster {
+.winter__poster {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -371,7 +324,7 @@ onMounted(() => {
   pointer-events: none;
 }
 
-.climate__media {
+.winter__media {
   position: relative;
   z-index: 1;
   display: block;
@@ -387,46 +340,44 @@ onMounted(() => {
   -webkit-touch-callout: none;
 }
 
-.climate__media::-webkit-media-controls {
+.winter__media::-webkit-media-controls {
   display: none !important;
 }
 
 @media (max-width: 767px) {
-  .climate__pin {
+  .winter__pin {
     width: 100%;
   }
 
-  .climate__copy {
-    min-height: 8.5rem;
+  .winter__copy {
+    min-height: 3.75rem;
     width: 100%;
     padding-inline: 16px;
   }
 
-  .climate__title {
-    font-size: clamp(1.5rem, 6.5vw, 2.1rem);
+  .winter__caption {
+    width: 100%;
+    max-width: 16ch;
+    font-size: clamp(1.65rem, 7.5vw, 2.35rem);
   }
 
-  .climate__body {
-    font-size: 0.98rem;
-  }
-
-  .climate__stage {
+  .winter__stage {
     overflow: hidden;
     width: 100%;
     padding: 0;
   }
 
-  .climate__frame {
+  .winter__frame {
     width: 100%;
   }
 
-  .climate__frame::after {
+  .winter__frame::after {
     background:
       linear-gradient(to right, #fff 0%, transparent 6%, transparent 94%, #fff 100%),
       linear-gradient(to bottom, #fff 0%, transparent 8%, transparent 92%, #fff 100%);
   }
 
-  .climate__media {
+  .winter__media {
     max-height: 48vh;
   }
 }

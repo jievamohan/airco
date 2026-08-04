@@ -82,8 +82,18 @@ const claimOpacity = computed(() => Math.min(1, Math.max(0, (progress.value - 0.
 
 <style scoped>
 .heat {
+  position: relative;
+  z-index: 1;
+  /* Sit under Winter pin during scroll+fade exit */
+  margin-top: calc(-1 * 40vh);
   padding-block: calc(var(--space) * 16) calc(var(--space) * 20);
   background: #fff;
+}
+
+@media (max-width: 767px) {
+  .heat {
+    margin-top: calc(-1 * 20vh);
+  }
 }
 
 .heat__inner {

@@ -81,10 +81,14 @@
 
 <script setup lang="ts">
 import {
+  DESKTOP_SCRUB_ENTER_SCALE,
+  DESKTOP_SCRUB_MEDIA_SCALE,
   desktopScrubMediaScale,
   handoffPinStyle,
   HANDOFF_SCROLL_VH,
   HANDOFF_SCROLL_VH_MOBILE,
+  MOBILE_SCRUB_ENTER_SCALE,
+  MOBILE_SCRUB_MEDIA_SCALE,
   mobileScrubMediaScale,
   PRODUCT_PHASE_DESKTOP,
   PRODUCT_PHASE_MOBILE,
@@ -182,7 +186,9 @@ const captionLines = computed(() => {
 })
 
 /**
- * Enter: rise + fade in lockstep with hero exit (same distance/speed).
+ * Enter: fade 0→1 + rise in lockstep with hero exit (same distance/speed).
+ * Frame slide/scale uses the same linear t so oversized state is still
+ * visible once opacity opens up (no easeEnter rushing the transform).
  * Exit: scroll up + fade in lockstep with Climate enter.
  */
 const pinHandoffStyle = computed(() => {
@@ -203,8 +209,8 @@ const pinHandoffStyle = computed(() => {
 })
 
 /**
- * Desktop: scrub media rests at +30%; hero→S1 enter eases +60% → +30%.
- * Mobile: rests at 100%; hero→S1 enter eases +50% → 100%.
+ * During enter: unit slides up from below + eases oversized → resting.
+ * Uses linear progress so oversized/low position stays visible through the handoff.
  */
 const frameScaleStyle = computed(() => {
   const animateEnter =
@@ -213,15 +219,23 @@ const frameScaleStyle = computed(() => {
     enterProgress.value < 1 &&
     exitProgress.value <= 0
 
-  const progress = animateEnter ? enterProgress.value : 1
-  const scale = isMobile.value
-    ? mobileScrubMediaScale(progress, animateEnter)
-    : desktopScrubMediaScale(progress, animateEnter)
+  if (!animateEnter) {
+    const rest = isMobile.value
+      ? mobileScrubMediaScale(1, false)
+      : desktopScrubMediaScale(1, false)
+    if (isMobile.value && rest === 1) return undefined
+    return { transform: `scale(${rest})` }
+  }
 
-  // Skip style when mobile is at rest (scale 1) to avoid needless transforms.
-  if (isMobile.value && scale === 1) return undefined
+  const t = enterProgress.value
+  const from = isMobile.value ? MOBILE_SCRUB_ENTER_SCALE : DESKTOP_SCRUB_ENTER_SCALE
+  const to = isMobile.value ? MOBILE_SCRUB_MEDIA_SCALE : DESKTOP_SCRUB_MEDIA_SCALE
+  const scale = from + (to - from) * t
+  // Start higher on the page (shorter rise) so the transition begins sooner in-view.
+  const slideVh = isMobile.value ? 28 : 26
+  const y = (1 - t) * slideVh
 
-  return { transform: `scale(${scale})` }
+  return { transform: `translate3d(0, ${y}vh, 0) scale(${scale})` }
 })
 
 onMounted(() => {
@@ -256,7 +270,7 @@ onMounted(() => {
 
 .explode--mobile {
   height: 175vh;
-  margin-top: calc(-100vh - 32vh);
+  margin-top: calc(-100vh - 20vh);
 }
 
 .explode--reduced {
@@ -282,6 +296,7 @@ onMounted(() => {
   padding: calc(var(--header-h) + 0.5rem) 0 2vh;
   box-sizing: border-box;
   z-index: 4;
+  overflow: visible;
   will-change: transform, opacity;
 }
 
@@ -390,19 +405,35 @@ onMounted(() => {
 @media (max-width: 767px) {
   .explode__pin {
     gap: 0.35rem;
+    width: 100%;
   }
 
   .explode__copy {
     min-height: 3.75rem;
+    width: 100%;
+    padding-inline: 16px;
   }
 
   .explode__caption {
-    width: min(16ch, 90vw);
+    width: 100%;
+    max-width: 16ch;
     font-size: clamp(1.65rem, 7.5vw, 2.35rem);
   }
 
   .explode__stage {
     overflow: visible;
+    width: 100%;
+    padding: 0;
+  }
+
+  .explode__frame {
+    width: 100%;
+  }
+
+  .explode__frame::after {
+    background:
+      linear-gradient(to right, #fff 0%, transparent 6%, transparent 94%, #fff 100%),
+      linear-gradient(to bottom, #fff 0%, transparent 8%, transparent 92%, #fff 100%);
   }
 
   .explode__media {

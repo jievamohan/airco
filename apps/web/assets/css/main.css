@@ -28,6 +28,8 @@ html,
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  max-width: 100%;
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font);
@@ -62,6 +64,13 @@ video {
   max-width: var(--content-max);
   margin-inline: auto;
   padding-inline: calc(var(--space) * 5);
+}
+
+@media (max-width: 767px) {
+  .container {
+    max-width: 100%;
+    padding-inline: 16px;
+  }
 }
 
 @media (min-width: 1024px) {
