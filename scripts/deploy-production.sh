@@ -151,12 +151,58 @@ sync_main() {
   echo "→ HEAD $(git rev-parse --short HEAD) ($(git rev-parse HEAD))"
 }
 
-generate_site() {
-  echo "→ pnpm install --frozen-lockfile + generate (apps/web)"
+pnpm_version_from_package() {
+  local pm
+  pm="$(grep -o '"packageManager"[[:space:]]*:[[:space:]]*"pnpm@[0-9.]*"' "${WEB_DIR}/package.json" \
+    | sed -E 's/.*pnpm@([0-9.]+)".*/\1/' || true)"
+  if [[ -n "${pm}" ]]; then
+    echo "${pm}"
+  else
+    echo "9.15.9"
+  fi
+}
+
+ensure_node_toolchain() {
+  if command -v pnpm >/dev/null 2>&1; then
+    echo "→ node $(node -v), pnpm $(pnpm -v)"
+    return 0
+  fi
+
+  # GitHub Actions / non-interactive SSH skips login profiles — load nvm if present.
+  if [[ -s "${HOME}/.nvm/nvm.sh" ]]; then
+    export NVM_DIR="${HOME}/.nvm"
+    # shellcheck disable=SC1091
+    source "${HOME}/.nvm/nvm.sh"
+    if [[ -f "${ROOT_DIR}/.nvmrc" ]]; then
+      echo "→ nvm use ($(cat "${ROOT_DIR}/.nvmrc"))"
+      nvm use --silent || nvm install
+    fi
+  fi
+
+  if command -v node >/dev/null 2>&1 && ! command -v pnpm >/dev/null 2>&1; then
+    local pnpm_ver
+    pnpm_ver="$(pnpm_version_from_package)"
+    echo "→ corepack enable + prepare pnpm@${pnpm_ver}"
+    corepack enable
+    corepack prepare "pnpm@${pnpm_ver}" --activate
+  fi
+
   if ! command -v pnpm >/dev/null 2>&1; then
-    echo "error: pnpm not found. Enable corepack (Node >=22.14): corepack enable && corepack prepare pnpm@9.15.9 --activate" >&2
+    local pnpm_ver
+    pnpm_ver="$(pnpm_version_from_package)"
+    echo "error: pnpm not found in non-interactive SSH session." >&2
+    echo "Ensure Node + corepack are installed for ${USER:-deploy user}:" >&2
+    echo "  corepack enable && corepack prepare pnpm@${pnpm_ver} --activate" >&2
+    echo "Or add nvm/node to a login profile (~/.bash_profile) and retry." >&2
     exit 1
   fi
+
+  echo "→ node $(node -v), pnpm $(pnpm -v)"
+}
+
+generate_site() {
+  ensure_node_toolchain
+  echo "→ pnpm install --frozen-lockfile + generate (apps/web)"
   (
     cd "${WEB_DIR}"
     pnpm install --frozen-lockfile

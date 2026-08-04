@@ -67,6 +67,8 @@ Configure under **Settings → Environments → production** (the deploy job use
 
 Repository-level secrets/variables work too, but the **production** environment is preferred (optional approval rules, separate config per env).
 
+**CI / SSH note:** GitHub Actions opens a **non-interactive** SSH session (no login profile). Manual `make deploy-production` on the VPS often works because your interactive shell loads `~/.bash_profile` (nvm). The deploy script bootstraps nvm/corepack automatically; the workflow also wraps the command in `bash -lc`.
+
 What the deploy script does (manual or CI):
 
 1. `git fetch` + `git checkout main` + `git pull --ff-only origin main`
