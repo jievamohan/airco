@@ -1,5 +1,10 @@
 <template>
-  <section id="projecten" class="projects">
+  <section
+    id="projecten"
+    ref="root"
+    class="projects"
+    :class="{ 'projects--reduced': reduced }"
+  >
     <div class="projects__head container">
       <h2 class="projects__title">Uitgevoerde projecten</h2>
     </div>
@@ -10,8 +15,16 @@
         class="projects__item"
         role="listitem"
       >
-        <div class="projects__media" :style="{ background: project.tone }">
-          <span class="projects__ghost" aria-hidden="true">{{ project.place }}</span>
+        <div class="projects__media">
+          <img
+            :src="project.image"
+            :alt="`${project.type} in ${project.place}`"
+            width="1024"
+            height="1536"
+            class="projects__img"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
         <div class="projects__meta">
           <p>{{ project.place }}</p>
@@ -25,12 +38,124 @@
 
 <script setup lang="ts">
 const projects = [
-  { id: 1, place: 'Utrecht', type: 'Split-unit woonkamer', area: '72 m²', tone: 'linear-gradient(145deg, #f4f4f4, #e8e8e8)' },
-  { id: 2, place: 'Amersfoort', type: 'Multi-split', area: '110 m²', tone: 'linear-gradient(145deg, #f7f5f2, #ebe7e1)' },
-  { id: 3, place: 'Hilversum', type: 'Slaapkamer + woonkamer', area: '85 m²', tone: 'linear-gradient(145deg, #f2f5f7, #e4eaee)' },
-  { id: 4, place: 'Amsterdam', type: 'Appartement', area: '64 m²', tone: 'linear-gradient(145deg, #f6f6f6, #ececec)' },
-  { id: 5, place: 'Haarlem', type: 'Nieuwbouw', area: '98 m²', tone: 'linear-gradient(145deg, #f5f3ef, #e9e4dc)' },
+  {
+    id: 1,
+    place: 'Utrecht',
+    type: 'Split-unit woonkamer',
+    area: '72 m²',
+    image: '/media/project-utrecht.webp',
+  },
+  {
+    id: 2,
+    place: 'Amersfoort',
+    type: 'Multi-split',
+    area: '110 m²',
+    image: '/media/project-amersfoort.webp',
+  },
+  {
+    id: 3,
+    place: 'Hilversum',
+    type: 'Slaapkamer + woonkamer',
+    area: '85 m²',
+    image: '/media/project-hilversum.webp',
+  },
+  {
+    id: 4,
+    place: 'Amsterdam',
+    type: 'Appartement',
+    area: '64 m²',
+    image: '/media/project-amsterdam.webp',
+  },
+  {
+    id: 5,
+    place: 'Haarlem',
+    type: 'Nieuwbouw',
+    area: '98 m²',
+    image: '/media/project-haarlem.webp',
+  },
 ]
+
+const root = ref<HTMLElement | null>(null)
+const reduced = usePrefersReducedMotion()
+
+type GsapCtx = { revert: () => void }
+let ctx: GsapCtx | null = null
+
+const teardown = () => {
+  ctx?.revert()
+  ctx = null
+}
+
+const setup = async () => {
+  teardown()
+  const el = root.value
+  if (!el || reduced.value) return
+
+  const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+    import('gsap'),
+    import('gsap/ScrollTrigger'),
+  ])
+  gsap.registerPlugin(ScrollTrigger)
+
+  ctx = gsap.context(() => {
+    const q = gsap.utils.selector(el)
+
+    gsap.set(q('.projects__title'), { autoAlpha: 0, y: 28 })
+    gsap.set(q('.projects__item'), { autoAlpha: 0, y: 36 })
+    gsap.set(q('.projects__img'), { scale: 1.1 })
+
+    gsap.to(q('.projects__title'), {
+      autoAlpha: 1,
+      y: 0,
+      duration: 0.85,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: el,
+        start: 'top 78%',
+        once: true,
+      },
+    })
+
+    gsap.to(q('.projects__item'), {
+      autoAlpha: 1,
+      y: 0,
+      duration: 0.9,
+      stagger: 0.1,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: q('.projects__strip')[0] as Element,
+        start: 'top 82%',
+        once: true,
+      },
+    })
+
+    gsap.to(q('.projects__img'), {
+      scale: 1,
+      duration: 1.15,
+      stagger: 0.1,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: q('.projects__strip')[0] as Element,
+        start: 'top 82%',
+        once: true,
+      },
+    })
+  }, el)
+
+  ScrollTrigger.refresh()
+}
+
+onMounted(() => {
+  void setup()
+})
+
+watch(reduced, () => {
+  void setup()
+})
+
+onUnmounted(() => {
+  teardown()
+})
 </script>
 
 <style scoped>
@@ -66,16 +191,19 @@ const projects = [
 .projects__media {
   height: 100%;
   min-height: 320px;
-  display: grid;
-  place-items: center;
+  overflow: hidden;
+  background: #ececec;
 }
 
-.projects__ghost {
-  font-size: 14px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.18);
-  font-weight: 500;
+.projects__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  object-fit: cover;
+  object-position: center;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .projects__meta {
@@ -85,9 +213,10 @@ const projects = [
   opacity: 0;
   transform: translateY(6px);
   transition: opacity 0.25s ease, transform 0.25s ease;
-  color: var(--color-ink);
+  color: #fff;
   font-size: 13px;
   line-height: 1.45;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.45);
 }
 
 .projects__meta p {
@@ -105,5 +234,13 @@ const projects = [
     opacity: 1;
     transform: none;
   }
+}
+
+.projects--reduced .projects__title,
+.projects--reduced .projects__item,
+.projects--reduced .projects__img {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
 }
 </style>
