@@ -65,9 +65,9 @@ const exitFade = computed(() =>
 const copyStyle = computed(() => {
   if (reduced.value) return undefined
   const fade = exitFade.value
+  // Opacity only — no translateY, so text and bg read as one fade.
   return {
     opacity: String(1 - fade),
-    transform: `translateY(${-fade * 12}%)`,
   }
 })
 

@@ -188,10 +188,8 @@ const pinWipeStyle = computed(() => {
   if (reduced.value || exitProgress.value <= 0) {
     return undefined
   }
-  // Hold full paint until HANDOFF_HOLD of outro, then spatial wipe up.
-  const raw = Math.max(0, (exitProgress.value - HANDOFF_HOLD) / (1 - HANDOFF_HOLD))
-  const wipe = easeExit(raw)
-  // Opacity reveals S2 underneath; clip adds upward spatial exit.
+  // Fade as soon as outro starts so Climate (under -110vh overlap) shows through.
+  const wipe = easeExit(exitProgress.value)
   return {
     opacity: String(1 - wipe),
     clipPath: `inset(0 0 ${wipe * 100}% 0)`,
