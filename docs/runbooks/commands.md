@@ -33,6 +33,6 @@ See [deploy-production.md](./deploy-production.md).
 ## Notes
 
 - Locally: do not run `pnpm` on the host; use `docker compose exec web …`.
-- On the VPS: `make deploy-production` uses host Node 22 + pnpm (documented exception).
+- On the VPS: `make deploy-production` uses host Node 22.14+ + pnpm 9.15.9 (documented exception).
 - Playwright / e2e service: deferred (Lane I follow-up). Never run Playwright on the host.
 - Gate D PHPStan / `composer audit`: N/A until `apps/api` exists — see `artifacts/current/infra-review.md`.

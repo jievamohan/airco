@@ -154,7 +154,7 @@ sync_main() {
 generate_site() {
   echo "→ pnpm install --frozen-lockfile + generate (apps/web)"
   if ! command -v pnpm >/dev/null 2>&1; then
-    echo "error: pnpm not found. Enable corepack (Node 22): corepack enable && corepack prepare pnpm@9.15.4 --activate" >&2
+    echo "error: pnpm not found. Enable corepack (Node >=22.14): corepack enable && corepack prepare pnpm@9.15.9 --activate" >&2
     exit 1
   fi
   (
