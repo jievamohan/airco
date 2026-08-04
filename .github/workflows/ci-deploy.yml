@@ -73,7 +73,8 @@ jobs:
               exit 1
             fi
             cd "${DEPLOY_PATH}"
-            DEPLOY_REF="${DEPLOY_SHA}" make deploy-production
+            # Login shell loads ~/.bash_profile (nvm/corepack PATH) for non-interactive SSH.
+            DEPLOY_REF="${DEPLOY_SHA}" bash -lc 'make deploy-production'
 
       - name: Smoke check
         if: ${{ vars.PRODUCTION_URL != '' }}
