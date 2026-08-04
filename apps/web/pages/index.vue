@@ -13,6 +13,7 @@
       <LandingOfferteForm />
     </main>
     <LandingSiteFooter />
+    <LandingWhatsAppFab />
   </div>
 </template>
 

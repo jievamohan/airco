@@ -1,5 +1,5 @@
 <template>
-  <header class="site-header" :class="{ 'is-scrolled': scrolled }">
+  <header class="site-header" :class="{ 'is-scrolled': scrolled, 'is-open': open }">
     <div class="site-header__inner container">
       <a href="#top" class="site-header__logo" aria-label="KlimaatX home">KlimaatX</a>
 
@@ -60,6 +60,10 @@ onMounted(() => {
   height: var(--header-h);
   background: transparent;
   transition: background 0.25s ease, backdrop-filter 0.25s ease;
+}
+
+.site-header.is-open {
+  z-index: 70;
 }
 
 .site-header.is-scrolled {
