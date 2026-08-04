@@ -183,8 +183,8 @@ const frameEnterStyle = computed(() => {
   const t = easeEnter(visualEnter.value)
   const from = isMobile.value ? 1.1 : 1.15
   const scale = from + (1 - from) * t
-  // Keep a floor so parallel hero wipe always reveals a visible frame.
-  const opacity = Math.min(1, 0.25 + (0.75 * t) / HANDOFF_HOLD)
+  // Settle in as the sticky pin locks (section already scrolled fully into view).
+  const opacity = Math.min(1, 0.35 + (0.65 * t) / Math.max(HANDOFF_HOLD, 0.001))
   return {
     opacity: String(opacity),
     transform: `scale(${scale})`,
@@ -218,18 +218,18 @@ onMounted(() => {
   /* Langzamere scrub-track voor de productanimatie */
   height: 230vh;
   /*
-   * Pull under full hero track (100vh pin + 45vh exit) so S1 intro
-   * runs under the hero wipe instead of after a white void.
+   * Follow hero in document flow so S1 scrolls in until fully visible,
+   * then sticky pin locks for scrub (no under-hero wipe overlap).
+   * Transparent bg keeps S1→S2 pin handoff able to reveal Climate beneath.
    */
-  margin-top: calc(-100vh - 45vh);
-  /* Transparent section bg so S1→S2 pin handoff can reveal Climate beneath */
+  margin-top: 0;
   background: transparent;
   z-index: 4;
 }
 
 .explode--mobile {
   height: 175vh;
-  margin-top: calc(-100vh - 40vh);
+  margin-top: 0;
 }
 
 .explode--reduced {

@@ -8,7 +8,7 @@
     :data-track-progress="trackProgress.toFixed(3)"
     :data-scroll-phase="scrollPhase"
   >
-    <div class="hero__pin" :style="pinWipeStyle">
+    <div class="hero__pin" :style="pinStyle">
       <div class="hero__stage">
         <img
           class="hero__bg"
@@ -19,7 +19,7 @@
           aria-hidden="true"
         />
 
-        <div class="hero__copy" :style="copyStyle">
+        <div class="hero__copy">
           <h1 class="hero__title">
             Perfect klimaat.<br />
             Elk <span class="gradient-season">seizoen</span>.
@@ -41,10 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  easeExit,
-  readStickyTrackProgress,
-} from '../../composables/mapScrollPhases'
+import { clamp01, easeExit } from '../../composables/mapScrollPhases'
 
 const container = ref<HTMLElement | null>(null)
 const reduced = usePrefersReducedMotion()
@@ -57,27 +54,26 @@ const scrollPhase = computed(() => {
   return 'outro'
 })
 
-/** Shared exit curve: copy + pin/bg fade together (done by ~0.25 of exit track). */
-const exitFade = computed(() =>
-  easeExit(Math.min(1, trackProgress.value / 0.25)),
-)
+/**
+ * Exit progress while the hero leaves the viewport (natural document scroll).
+ * 0 = fully in view at top; 1 = fully scrolled above the viewport.
+ */
+const readScrollExitProgress = (el: HTMLElement | null) => {
+  if (!el || typeof window === 'undefined') return 0
+  const rect = el.getBoundingClientRect()
+  const span = Math.max(rect.height, 1)
+  return clamp01(-rect.top / span)
+}
 
-const copyStyle = computed(() => {
-  if (reduced.value) return undefined
-  const fade = exitFade.value
-  // Opacity only — no translateY, so text and bg read as one fade.
-  return {
-    opacity: String(1 - fade),
-  }
-})
+/** Fade across the full exit so opacity tracks continuous upward motion. */
+const exitFade = computed(() => easeExit(trackProgress.value))
 
-const pinWipeStyle = computed(() => {
+const pinStyle = computed(() => {
   if (reduced.value || trackProgress.value <= 0) return undefined
   const fade = exitFade.value
-  // Same curve as copy — bg/pin must not lag behind text.
   return {
     opacity: String(1 - fade),
-    clipPath: `inset(0 0 ${fade * 100}% 0)`,
+    pointerEvents: fade >= 0.98 ? ('none' as const) : undefined,
   }
 })
 
@@ -85,7 +81,7 @@ let raf = 0
 let ticking = false
 
 const measure = () => {
-  trackProgress.value = readStickyTrackProgress(container.value)
+  trackProgress.value = readScrollExitProgress(container.value)
 }
 
 const onScroll = () => {
@@ -115,11 +111,10 @@ onUnmounted(() => {
 <style scoped>
 .hero {
   position: relative;
-  /* Sticky pin (100vh) + exit band — only page-growth for handoff */
-  height: calc(100vh + 45vh);
+  /* One viewport — exits via natural scroll (no sticky wipe track) */
+  height: 100vh;
   width: 100%;
-  /* Transparent: clip-path on pin must reveal S1 beneath, not section paint */
-  background: transparent;
+  background: #fff;
 }
 
 .hero--reduced {
@@ -128,21 +123,17 @@ onUnmounted(() => {
 }
 
 .hero__pin {
-  position: sticky;
-  top: 0;
+  position: relative;
   height: 100vh;
   background: #fff;
   overflow: hidden;
-  /* Above overlapping S1 pin; section itself stays auto z-index */
-  z-index: 6;
   display: flex;
   align-items: stretch;
-  will-change: clip-path, opacity;
+  will-change: opacity;
   box-sizing: border-box;
 }
 
 .hero--reduced .hero__pin {
-  position: relative;
   height: auto;
   min-height: clamp(520px, 70vh, 760px);
 }
@@ -195,7 +186,6 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
   max-width: 32rem;
-  will-change: opacity, transform;
 }
 
 .hero__title {
@@ -222,10 +212,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 959px) {
-  .hero {
-    height: calc(100vh + 40vh);
-  }
-
   .hero--reduced {
     height: auto;
   }
