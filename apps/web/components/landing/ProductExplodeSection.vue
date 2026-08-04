@@ -201,7 +201,7 @@ const pinHandoffStyle = computed(() => {
 
 /**
  * Desktop: scrub media rests at +30%; hero→S1 enter eases +60% → +30%.
- * Mobile: rests at 100%; hero→S1 enter eases +20% → 100%.
+ * Mobile: rests at 100%; hero→S1 enter eases +50% → 100%.
  */
 const frameScaleStyle = computed(() => {
   const animateEnter =
@@ -399,7 +399,7 @@ onMounted(() => {
   }
 
   .explode__stage {
-    overflow: hidden;
+    overflow: visible;
   }
 
   .explode__media {

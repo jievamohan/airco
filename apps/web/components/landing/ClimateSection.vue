@@ -250,8 +250,8 @@ onMounted(() => {
 
 .climate--mobile {
   height: 165vh;
-  /* S1H 175vh, outroStart 0.94 → ≈ -105vh */
-  margin-top: -105vh;
+  /* S1H 175vh, outroStart 0.86 → ≈ -111vh */
+  margin-top: -111vh;
 }
 
 .climate--reduced {
