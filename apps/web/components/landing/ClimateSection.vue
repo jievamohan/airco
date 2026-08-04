@@ -28,7 +28,7 @@
       </div>
 
       <div class="climate__stage">
-        <div class="climate__frame">
+        <div class="climate__frame" :style="frameScaleStyle">
           <img
             src="/media/2nd-start.png"
             alt=""
@@ -78,6 +78,7 @@
 import {
   CLIMATE_PHASE_DESKTOP,
   CLIMATE_PHASE_MOBILE,
+  DESKTOP_SCRUB_MEDIA_SCALE,
   easeExit,
   handoffPinStyle,
   HANDOFF_HOLD,
@@ -213,6 +214,12 @@ const pinHandoffStyle = computed(() => {
   return undefined
 })
 
+/** Desktop: scrub media rests at +30%. */
+const frameScaleStyle = computed(() => {
+  if (isMobile.value) return undefined
+  return { transform: `scale(${DESKTOP_SCRUB_MEDIA_SCALE})` }
+})
+
 onMounted(() => {
   if (window.location.hash === '#werkwijze') {
     hashSnap.value = true
@@ -328,7 +335,8 @@ onMounted(() => {
   min-height: 0;
   width: 100%;
   padding: 0 3vw;
-  overflow: hidden;
+  /* Allow desktop +30% frame scale without hard crop */
+  overflow: visible;
 }
 
 .climate__frame {
@@ -390,6 +398,10 @@ onMounted(() => {
 
   .climate__body {
     font-size: 0.98rem;
+  }
+
+  .climate__stage {
+    overflow: hidden;
   }
 
   .climate__media {

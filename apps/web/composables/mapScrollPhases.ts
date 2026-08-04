@@ -151,3 +151,54 @@ export function easeExit(t: number) {
   const p = clamp01(t)
   return p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2
 }
+
+/** Desktop resting scale for scrub videos (+30%). */
+export const DESKTOP_SCRUB_MEDIA_SCALE = 1.3
+
+/** Desktop enter start scale for the first scrub section (+60%). */
+export const DESKTOP_SCRUB_ENTER_SCALE = 1.6
+
+/** Mobile resting scale for scrub videos (unchanged). */
+export const MOBILE_SCRUB_MEDIA_SCALE = 1
+
+/** Mobile enter start scale for the first scrub section (+20%). */
+export const MOBILE_SCRUB_ENTER_SCALE = 1.2
+
+/**
+ * Desktop scrub-media scale. Resting size is +30%.
+ * When `animateEnter` is true, eases from +60% → +30% as enterProgress 0→1.
+ */
+export function desktopScrubMediaScale(
+  enterProgress: number,
+  animateEnter = false,
+): number {
+  return scrubMediaScale(enterProgress, {
+    animateEnter,
+    rest: DESKTOP_SCRUB_MEDIA_SCALE,
+    enter: DESKTOP_SCRUB_ENTER_SCALE,
+  })
+}
+
+/**
+ * Mobile scrub-media scale for the first section.
+ * Resting size is 100%; enter eases from +20% → 100%.
+ */
+export function mobileScrubMediaScale(
+  enterProgress: number,
+  animateEnter = false,
+): number {
+  return scrubMediaScale(enterProgress, {
+    animateEnter,
+    rest: MOBILE_SCRUB_MEDIA_SCALE,
+    enter: MOBILE_SCRUB_ENTER_SCALE,
+  })
+}
+
+function scrubMediaScale(
+  enterProgress: number,
+  opts: { animateEnter: boolean; rest: number; enter: number },
+): number {
+  if (!opts.animateEnter) return opts.rest
+  const t = easeEnter(enterProgress)
+  return opts.enter + (opts.rest - opts.enter) * t
+}
