@@ -23,6 +23,22 @@ export const SCRUB_PHASE_MOBILE: PhaseOpts = {
 }
 
 /**
+ * Product intro matched to hero exit band (HANDOFF_SCROLL_VH) so
+ * enterProgress and hero exit complete together (same visual speed).
+ * Desktop: 40vh / (230vh - 100vh) ≈ 0.308
+ * Mobile: 40vh / (175vh - 100vh) ≈ 0.533
+ */
+export const PRODUCT_PHASE_DESKTOP: PhaseOpts = {
+  introEnd: 0.308,
+  outroStart: 0.92,
+}
+
+export const PRODUCT_PHASE_MOBILE: PhaseOpts = {
+  introEnd: 0.533,
+  outroStart: 0.94,
+}
+
+/**
  * Climate intro length matched to explode outro scroll overlap so
  * enterProgress and exitProgress complete together (same visual speed).
  * Desktop: ~(1-0.92)*130vh / 120vh ≈ 0.087
@@ -42,7 +58,7 @@ export const CLIMATE_PHASE_MOBILE: PhaseOpts = {
 export const HANDOFF_HOLD = 0.35
 
 /**
- * Shared travel for explode→climate (and matching) pin handoffs.
+ * Shared travel for hero→product and explode→climate pin handoffs.
  * Outgoing scrolls up by this amount while incoming scrolls up from below —
  * same distance so both move at the same visual speed.
  */

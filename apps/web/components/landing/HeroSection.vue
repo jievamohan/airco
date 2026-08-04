@@ -41,7 +41,10 @@
 </template>
 
 <script setup lang="ts">
-import { clamp01, easeExit } from '../../composables/mapScrollPhases'
+import {
+  handoffPinStyle,
+  readStickyTrackProgress,
+} from '../../composables/mapScrollPhases'
 
 const container = ref<HTMLElement | null>(null)
 const reduced = usePrefersReducedMotion()
@@ -55,25 +58,14 @@ const scrollPhase = computed(() => {
 })
 
 /**
- * Exit progress while the hero leaves the viewport (natural document scroll).
- * 0 = fully in view at top; 1 = fully scrolled above the viewport.
+ * Parallel exit with S1: scroll up + fade over the sticky exit band
+ * (same distance/speed as product enter via handoffPinStyle).
  */
-const readScrollExitProgress = (el: HTMLElement | null) => {
-  if (!el || typeof window === 'undefined') return 0
-  const rect = el.getBoundingClientRect()
-  const span = Math.max(rect.height, 1)
-  return clamp01(-rect.top / span)
-}
-
-/** Fade across the full exit so opacity tracks continuous upward motion. */
-const exitFade = computed(() => easeExit(trackProgress.value))
-
 const pinStyle = computed(() => {
   if (reduced.value || trackProgress.value <= 0) return undefined
-  const fade = exitFade.value
   return {
-    opacity: String(1 - fade),
-    pointerEvents: fade >= 0.98 ? ('none' as const) : undefined,
+    ...handoffPinStyle(trackProgress.value, 'out'),
+    pointerEvents: trackProgress.value >= 0.98 ? ('none' as const) : undefined,
   }
 })
 
@@ -81,7 +73,7 @@ let raf = 0
 let ticking = false
 
 const measure = () => {
-  trackProgress.value = readScrollExitProgress(container.value)
+  trackProgress.value = readStickyTrackProgress(container.value)
 }
 
 const onScroll = () => {
@@ -111,10 +103,11 @@ onUnmounted(() => {
 <style scoped>
 .hero {
   position: relative;
-  /* One viewport — exits via natural scroll (no sticky wipe track) */
-  height: 100vh;
+  /* Sticky pin (100vh) + handoff exit band — matches HANDOFF_SCROLL_VH */
+  height: calc(100vh + 40vh);
   width: 100%;
-  background: #fff;
+  /* Transparent: pin fade/translate reveals S1 beneath, not section paint */
+  background: transparent;
 }
 
 .hero--reduced {
@@ -123,17 +116,21 @@ onUnmounted(() => {
 }
 
 .hero__pin {
-  position: relative;
+  position: sticky;
+  top: 0;
   height: 100vh;
   background: #fff;
   overflow: hidden;
+  /* Above overlapping S1 pin during handoff */
+  z-index: 6;
   display: flex;
   align-items: stretch;
-  will-change: opacity;
+  will-change: transform, opacity;
   box-sizing: border-box;
 }
 
 .hero--reduced .hero__pin {
+  position: relative;
   height: auto;
   min-height: clamp(520px, 70vh, 760px);
 }
@@ -212,6 +209,10 @@ onUnmounted(() => {
 }
 
 @media (max-width: 959px) {
+  .hero {
+    height: calc(100vh + 40vh);
+  }
+
   .hero--reduced {
     height: auto;
   }
