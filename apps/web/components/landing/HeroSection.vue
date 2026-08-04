@@ -43,12 +43,19 @@
 <script setup lang="ts">
 import {
   handoffPinStyle,
+  HANDOFF_SCROLL_VH,
+  HANDOFF_SCROLL_VH_MOBILE,
   readStickyTrackProgress,
 } from '../../composables/mapScrollPhases'
 
 const container = ref<HTMLElement | null>(null)
 const reduced = usePrefersReducedMotion()
+const isMobile = ref(false)
 const trackProgress = ref(0)
+
+const handoffDistanceVh = computed(() =>
+  isMobile.value ? HANDOFF_SCROLL_VH_MOBILE : HANDOFF_SCROLL_VH,
+)
 
 const scrollPhase = computed(() => {
   if (reduced.value) return 'scrub'
@@ -64,7 +71,7 @@ const scrollPhase = computed(() => {
 const pinStyle = computed(() => {
   if (reduced.value || trackProgress.value <= 0) return undefined
   return {
-    ...handoffPinStyle(trackProgress.value, 'out'),
+    ...handoffPinStyle(trackProgress.value, 'out', handoffDistanceVh.value),
     pointerEvents: trackProgress.value >= 0.98 ? ('none' as const) : undefined,
   }
 })
@@ -86,6 +93,14 @@ const onScroll = () => {
 }
 
 onMounted(() => {
+  const mq = window.matchMedia('(max-width: 767px)')
+  const applyMobile = () => {
+    isMobile.value = mq.matches
+  }
+  applyMobile()
+  mq.addEventListener('change', applyMobile)
+  onUnmounted(() => mq.removeEventListener('change', applyMobile))
+
   measure()
   if (!reduced.value) {
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -239,8 +254,14 @@ onUnmounted(() => {
     min-height: clamp(420px, 78vw, 560px);
   }
 
+  .hero__copy {
+    max-width: none;
+    margin-top: 25vh;
+  }
+
   .hero__bg {
-    object-position: 70% center;
+    object-position: 70% 25%;
+    transform: translateY(-25%);
     -webkit-mask-image: linear-gradient(
       to bottom,
       transparent 0%,
@@ -256,9 +277,11 @@ onUnmounted(() => {
       #000 100%
     );
   }
+}
 
-  .hero__copy {
-    max-width: none;
+@media (max-width: 767px) {
+  .hero {
+    height: calc(100vh + 32vh);
   }
 }
 </style>

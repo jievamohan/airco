@@ -181,12 +181,20 @@ const captionBeats = computed(() => {
     ]
   }
 
-  return beats.map((b) => ({
-    id: b.id,
-    titleHtml: b.titleHtml,
-    body: b.body,
-    opacity: scrubCaptionOpacity(b.from, b.to, scrubProgress.value, 0.55),
-  }))
+  // Last beat stays at full opacity once shown; pin handoff fades the section.
+  return beats.map((b) => {
+    const isLast = b.id === 'home'
+    const opacity =
+      isLast && scrubProgress.value >= b.from
+        ? 1
+        : scrubCaptionOpacity(b.from, b.to, scrubProgress.value, 0.55)
+    return {
+      id: b.id,
+      titleHtml: b.titleHtml,
+      body: b.body,
+      opacity,
+    }
+  })
 })
 
 /**

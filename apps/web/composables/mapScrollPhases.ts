@@ -26,7 +26,7 @@ export const SCRUB_PHASE_MOBILE: PhaseOpts = {
  * Product intro matched to hero exit band (HANDOFF_SCROLL_VH) so
  * enterProgress and hero exit complete together (same visual speed).
  * Desktop: 40vh / (230vh - 100vh) ≈ 0.308
- * Mobile: 40vh / (175vh - 100vh) ≈ 0.533
+ * Mobile: 32vh / (175vh - 100vh) ≈ 0.427
  */
 export const PRODUCT_PHASE_DESKTOP: PhaseOpts = {
   introEnd: 0.308,
@@ -34,7 +34,7 @@ export const PRODUCT_PHASE_DESKTOP: PhaseOpts = {
 }
 
 export const PRODUCT_PHASE_MOBILE: PhaseOpts = {
-  introEnd: 0.533,
+  introEnd: 0.427,
   /* Longer outro band → slower explode→climate handoff on mobile */
   outroStart: 0.86,
 }
@@ -64,6 +64,9 @@ export const HANDOFF_HOLD = 0.35
  * same distance so both move at the same visual speed.
  */
 export const HANDOFF_SCROLL_VH = 40
+
+/** Shorter hero→product handoff on mobile (−20%). */
+export const HANDOFF_SCROLL_VH_MOBILE = 32
 
 export function clamp01(n: number) {
   return Math.min(1, Math.max(0, n))
