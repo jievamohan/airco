@@ -32,12 +32,41 @@ cp .env.deploy.example .env.deploy
 
 ## Deploy
 
+Manual (on VPS):
+
 ```bash
 cd /path/to/airco
 make deploy-production
 ```
 
-What it does:
+### Automatic deploy (GitHub Actions)
+
+When a pull request is **merged into `main`**, the workflow [`.github/workflows/ci-deploy.yml`](../../.github/workflows/ci-deploy.yml) runs:
+
+1. **CI** — typecheck + `pnpm run generate` (same checks on every PR to `main`)
+2. **Deploy** — SSH to the VPS, checkout the merge commit, then `make deploy-production` (build + rsync to `PUBLIC_HTML`)
+3. **Smoke check** — optional HTTP 200 against `PRODUCTION_URL`
+
+Configure these **repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Required | Example |
+|--------|----------|---------|
+| `VPS_SSH_HOST` | yes | VPS hostname or IP |
+| `VPS_SSH_USER` | yes | DirectAdmin / SSH user |
+| `VPS_SSH_KEY` | yes | Private key (PEM) for that user |
+| `VPS_DEPLOY_PATH` | yes | Absolute path to git clone on VPS, e.g. `/home/user/airco` |
+| `VPS_SSH_PORT` | no | Default `22` |
+| `PRODUCTION_URL` | no | e.g. `https://klimaatx.nl/` for post-deploy smoke |
+
+On the VPS (one-time, unchanged):
+
+- Git clone with `origin` pointing at GitHub
+- `.env.deploy` with `PUBLIC_HTML=...`
+- Node 22 + pnpm 9.15.4 (corepack)
+
+Optional: add a **`production`** environment in GitHub with required reviewers or wait timers before deploy runs.
+
+What the deploy script does (manual or CI):
 
 1. `git fetch` + `git checkout main` + `git pull --ff-only origin main`
 2. `cd apps/web && pnpm install --frozen-lockfile && pnpm run generate`
