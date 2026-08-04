@@ -3,12 +3,18 @@
     id="aircos"
     ref="container"
     class="explode"
-    :class="{ 'explode--mobile': isMobile }"
+    :class="{
+      'explode--mobile': isMobile,
+      'explode--reduced': reduced,
+      'explode--exiting': exitProgress > 0 && !reduced,
+    }"
     data-testid="product-scrub"
-    :data-scrub-progress="progress.toFixed(3)"
+    :data-scrub-progress="scrubProgress.toFixed(3)"
+    :data-track-progress="trackProgress.toFixed(3)"
+    :data-scroll-phase="displayPhase"
   >
-    <div class="explode__pin">
-      <div class="explode__copy" aria-live="polite">
+    <div class="explode__pin" :style="pinWipeStyle">
+      <div class="explode__copy">
         <p
           v-for="line in captionLines"
           :key="line.id"
@@ -25,7 +31,7 @@
       </div>
 
       <div class="explode__stage">
-        <div class="explode__frame">
+        <div class="explode__frame" :style="frameEnterStyle">
           <!-- Poster always under video (iOS often shows blank until primed) -->
           <img
             src="/media/1st-start.png"
@@ -73,19 +79,52 @@
 </template>
 
 <script setup lang="ts">
+import {
+  easeEnter,
+  easeExit,
+  HANDOFF_HOLD,
+  SCRUB_PHASE_DESKTOP,
+  SCRUB_PHASE_MOBILE,
+  type ScrollPhase,
+} from '../../composables/mapScrollPhases'
+
 const container = ref<HTMLElement | null>(null)
 const video = ref<HTMLVideoElement | null>(null)
 const reduced = usePrefersReducedMotion()
 const isMobile = ref(false)
+const hashSnap = ref(false)
 
 const { ready, error, markReady, onError } = useScrubVideo(video)
 
 const enabled = computed(() => !reduced.value && !error.value && ready.value)
 
-const { progress } = useScrollScrub({
+const scrubRange = computed(() =>
+  isMobile.value ? SCRUB_PHASE_MOBILE : SCRUB_PHASE_DESKTOP,
+)
+
+const {
+  trackProgress,
+  scrubProgress,
+  phase,
+  enterProgress,
+  exitProgress,
+} = useScrollScrub({
   container,
   video,
   enabled,
+  scrubRange,
+  pauseSeekOffscreen: true,
+})
+
+const visualEnter = computed(() => {
+  if (reduced.value || hashSnap.value) return 1
+  return enterProgress.value
+})
+
+const displayPhase = computed<ScrollPhase>(() => {
+  if (reduced.value) return 'scrub'
+  if (hashSnap.value && phase.value === 'intro') return 'scrub'
+  return phase.value
 })
 
 type CaptionLine = {
@@ -116,22 +155,53 @@ const captionLines = computed(() => {
       {
         id: 'reduced',
         text: 'Airco-units zijn veelzijdig — koelen én verwarmen.',
+        emphasis: undefined as string | undefined,
+        after: undefined as string | undefined,
         opacity: 1,
       },
     ]
   }
 
+  // Captions only during scrub band (scrubProgress domain).
   return lines.map((line) => ({
     id: line.id,
     text: line.text,
     emphasis: line.emphasis,
     after: line.after,
-    // Lange peak-hold zodat elke zin even blijft staan
-    opacity: scrubCaptionOpacity(line.from, line.to, progress.value, 0.72),
+    opacity: scrubCaptionOpacity(line.from, line.to, scrubProgress.value, 0.72),
   }))
 })
 
+const frameEnterStyle = computed(() => {
+  const t = easeEnter(visualEnter.value)
+  const from = isMobile.value ? 1.1 : 1.15
+  const scale = from + (1 - from) * t
+  // Fast opacity ramp so handoff never drops to empty white.
+  const opacity = Math.min(1, t / HANDOFF_HOLD)
+  return {
+    opacity: String(opacity),
+    transform: `scale(${scale})`,
+  }
+})
+
+const pinWipeStyle = computed(() => {
+  if (reduced.value || exitProgress.value <= 0) {
+    return undefined
+  }
+  // Hold full paint until HANDOFF_HOLD of outro, then spatial wipe up.
+  const raw = Math.max(0, (exitProgress.value - HANDOFF_HOLD) / (1 - HANDOFF_HOLD))
+  const wipe = easeExit(raw)
+  // clip-path only on sticky pin — avoid transform containing-block bugs on iOS
+  return {
+    clipPath: `inset(0 0 ${wipe * 100}% 0)`,
+  }
+})
+
 onMounted(() => {
+  if (window.location.hash === '#aircos') {
+    hashSnap.value = true
+  }
+
   const mq = window.matchMedia('(max-width: 767px)')
   const apply = () => {
     isMobile.value = mq.matches
@@ -148,10 +218,19 @@ onMounted(() => {
   /* Langzamere scrub-track voor de productanimatie */
   height: 230vh;
   background: #fff;
+  z-index: 3;
 }
 
 .explode--mobile {
   height: 175vh;
+}
+
+.explode--reduced {
+  height: 110vh;
+}
+
+.explode--reduced.explode--mobile {
+  height: 105vh;
 }
 
 .explode__pin {
@@ -166,6 +245,12 @@ onMounted(() => {
   background: #fff;
   padding: calc(var(--header-h) + 0.5rem) 0 2vh;
   box-sizing: border-box;
+  z-index: 3;
+  will-change: clip-path;
+}
+
+.explode--exiting .explode__pin {
+  z-index: 4;
 }
 
 .explode__copy {
@@ -208,11 +293,15 @@ onMounted(() => {
   flex: 0 1 auto;
   min-height: 0;
   padding: 0 3vw;
+  overflow: hidden;
+  width: 100%;
 }
 
 .explode__frame {
   position: relative;
   width: min(820px, 92vw);
+  transform-origin: center center;
+  will-change: transform, opacity;
 }
 
 /* Soft white edge fade — overlay (not CSS mask on video; Safari iOS breaks that) */

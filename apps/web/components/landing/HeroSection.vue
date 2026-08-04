@@ -1,40 +1,144 @@
 <template>
-  <section id="top" class="hero">
-    <div class="hero__stage">
-      <img
-        class="hero__bg"
-        src="/media/hero.png?v=no-filter"
-        alt=""
-        width="1536"
-        height="1024"
-        aria-hidden="true"
-      />
+  <section
+    id="top"
+    ref="container"
+    class="hero"
+    :class="{ 'hero--reduced': reduced }"
+    data-testid="hero-handoff"
+    :data-track-progress="trackProgress.toFixed(3)"
+    :data-scroll-phase="scrollPhase"
+  >
+    <div class="hero__pin" :style="pinWipeStyle">
+      <div class="hero__stage">
+        <img
+          class="hero__bg"
+          src="/media/hero.png?v=no-filter"
+          alt=""
+          width="1536"
+          height="1024"
+          aria-hidden="true"
+        />
 
-      <div class="hero__copy">
-        <h1 class="hero__title">
-          Perfect klimaat.<br />
-          Elk <span class="gradient-season">seizoen</span>.
-        </h1>
-        <p class="hero__lede">
-          Koelen in de zomer.<br />
-          Verwarmen in de winter.<br />
-          Comfortabel. Duurzaam.<br />
-          Voordeliger dan aardgas.
-        </p>
-        <div class="hero__actions">
-          <a href="#offerte" class="btn-ghost">Vrijblijvende offerte</a>
-          <a href="#aircos" class="btn-text">Bekijk voordelen <span aria-hidden="true">›</span></a>
+        <div class="hero__copy" :style="copyStyle">
+          <h1 class="hero__title">
+            Perfect klimaat.<br />
+            Elk <span class="gradient-season">seizoen</span>.
+          </h1>
+          <p class="hero__lede">
+            Koelen in de zomer.<br />
+            Verwarmen in de winter.<br />
+            Comfortabel. Duurzaam.<br />
+            Voordeliger dan aardgas.
+          </p>
+          <div class="hero__actions">
+            <a href="#offerte" class="btn-ghost">Vrijblijvende offerte</a>
+            <a href="#aircos" class="btn-text">Bekijk voordelen <span aria-hidden="true">›</span></a>
+          </div>
         </div>
       </div>
     </div>
   </section>
 </template>
 
+<script setup lang="ts">
+import {
+  easeExit,
+  readStickyTrackProgress,
+} from '../../composables/mapScrollPhases'
+
+const container = ref<HTMLElement | null>(null)
+const reduced = usePrefersReducedMotion()
+const trackProgress = ref(0)
+
+const scrollPhase = computed(() => {
+  if (reduced.value) return 'scrub'
+  if (trackProgress.value <= 0.02) return 'intro'
+  if (trackProgress.value >= 0.98) return 'outro'
+  return 'outro'
+})
+
+/** Brand: headline/lede/CTA gone before S1 becomes readable (~0.25 of exit). */
+const copyStyle = computed(() => {
+  if (reduced.value) return undefined
+  const fade = easeExit(Math.min(1, trackProgress.value / 0.25))
+  return {
+    opacity: String(1 - fade),
+    transform: `translateY(${-fade * 12}%)`,
+  }
+})
+
+const pinWipeStyle = computed(() => {
+  if (reduced.value || trackProgress.value <= 0) return undefined
+  const wipe = easeExit(trackProgress.value)
+  // clip-path only on sticky pin — avoid transform containing-block bugs on iOS
+  return {
+    clipPath: `inset(0 0 ${wipe * 100}% 0)`,
+  }
+})
+
+let raf = 0
+let ticking = false
+
+const measure = () => {
+  trackProgress.value = readStickyTrackProgress(container.value)
+}
+
+const onScroll = () => {
+  if (ticking) return
+  ticking = true
+  raf = requestAnimationFrame(() => {
+    measure()
+    ticking = false
+  })
+}
+
+onMounted(() => {
+  measure()
+  if (!reduced.value) {
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+  }
+})
+
+onUnmounted(() => {
+  cancelAnimationFrame(raf)
+  window.removeEventListener('scroll', onScroll)
+  window.removeEventListener('resize', onScroll)
+})
+</script>
+
 <style scoped>
 .hero {
+  position: relative;
+  /* Sticky pin (100vh) + exit band — only page-growth for handoff */
+  height: calc(100vh + 45vh);
   width: 100%;
   background: #fff;
+  z-index: 5;
+}
+
+.hero--reduced {
+  height: auto;
+  min-height: 0;
+}
+
+.hero__pin {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: #fff;
   overflow: hidden;
+  z-index: 5;
+  display: flex;
+  align-items: stretch;
+  will-change: clip-path;
+  box-sizing: border-box;
+}
+
+.hero--reduced .hero__pin {
+  position: relative;
+  height: auto;
+  min-height: clamp(520px, 70vh, 760px);
 }
 
 .hero__stage {
@@ -44,11 +148,13 @@
   max-width: 1440px;
   margin-inline: auto;
   min-height: clamp(520px, 70vh, 760px);
+  height: 100%;
   display: flex;
   align-items: center;
   padding-left: clamp(24px, 5.5vw, 80px);
   padding-right: clamp(24px, 5.5vw, 80px);
   padding-block: calc(var(--space) * 6) calc(var(--space) * 10);
+  box-sizing: border-box;
 }
 
 /* Afbeelding = achtergrond van de stage (niet een tweede kolom) */
@@ -83,6 +189,7 @@
   position: relative;
   z-index: 1;
   max-width: 32rem;
+  will-change: opacity, transform;
 }
 
 .hero__title {
@@ -109,10 +216,22 @@
 }
 
 @media (max-width: 959px) {
+  .hero {
+    height: calc(100vh + 40vh);
+  }
+
+  .hero--reduced {
+    height: auto;
+  }
+
   .hero__stage {
     min-height: clamp(420px, 78vw, 560px);
     align-items: flex-end;
     padding-block: calc(var(--space) * 4) calc(var(--space) * 6);
+  }
+
+  .hero--reduced .hero__pin {
+    min-height: clamp(420px, 78vw, 560px);
   }
 
   .hero__bg {
