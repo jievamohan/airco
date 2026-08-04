@@ -7,13 +7,14 @@
       'climate--mobile': isMobile,
       'climate--reduced': reduced,
       'climate--exiting': exitProgress > 0 && !reduced,
+      'climate--entering': isEntering,
     }"
     data-testid="climate-scrub"
     :data-scrub-progress="scrubProgress.toFixed(3)"
     :data-track-progress="trackProgress.toFixed(3)"
     :data-scroll-phase="displayPhase"
   >
-    <div class="climate__pin" :style="pinWipeStyle">
+    <div class="climate__pin" :style="pinHandoffStyle">
       <div class="climate__copy">
         <div
           v-for="beat in captionBeats"
@@ -27,7 +28,7 @@
       </div>
 
       <div class="climate__stage">
-        <div class="climate__frame" :style="frameEnterStyle">
+        <div class="climate__frame">
           <img
             src="/media/2nd-start.png"
             alt=""
@@ -75,11 +76,11 @@
 
 <script setup lang="ts">
 import {
-  easeEnter,
+  CLIMATE_PHASE_DESKTOP,
+  CLIMATE_PHASE_MOBILE,
   easeExit,
+  handoffPinStyle,
   HANDOFF_HOLD,
-  SCRUB_PHASE_DESKTOP,
-  SCRUB_PHASE_MOBILE,
   type ScrollPhase,
 } from '../../composables/mapScrollPhases'
 
@@ -94,7 +95,7 @@ const { ready, error, markReady, onError } = useScrubVideo(video)
 const enabled = computed(() => !reduced.value && !error.value && ready.value)
 
 const scrubRange = computed(() =>
-  isMobile.value ? SCRUB_PHASE_MOBILE : SCRUB_PHASE_DESKTOP,
+  isMobile.value ? CLIMATE_PHASE_MOBILE : CLIMATE_PHASE_DESKTOP,
 )
 
 const {
@@ -111,16 +112,15 @@ const {
   pauseSeekOffscreen: true,
 })
 
-const visualEnter = computed(() => {
-  if (reduced.value || hashSnap.value) return 1
-  return enterProgress.value
-})
-
 const displayPhase = computed<ScrollPhase>(() => {
   if (reduced.value) return 'scrub'
   if (hashSnap.value && phase.value === 'intro') return 'scrub'
   return phase.value
 })
+
+const isEntering = computed(
+  () => !reduced.value && !hashSnap.value && enterProgress.value < 1 && exitProgress.value <= 0,
+)
 
 type Beat = {
   id: string
@@ -188,28 +188,29 @@ const captionBeats = computed(() => {
   }))
 })
 
-const frameEnterStyle = computed(() => {
-  const t = easeEnter(visualEnter.value)
-  const from = isMobile.value ? 1.1 : 1.15
-  const scale = from + (1 - from) * t
-  // Keep a floor so S1 wipe always reveals a visible frame.
-  const opacity = Math.min(1, 0.25 + (0.75 * t) / HANDOFF_HOLD)
-  return {
-    opacity: String(opacity),
-    transform: `scale(${scale})`,
-  }
-})
+/**
+ * Enter: scroll into view + opacity 0→100% at the same linear speed as explode exit.
+ * Exit: keep bottom wipe toward Heating (unchanged handoff contract).
+ */
+const pinHandoffStyle = computed(() => {
+  if (reduced.value) return undefined
 
-const pinWipeStyle = computed(() => {
-  if (reduced.value || exitProgress.value <= 0) {
-    return undefined
+  if (exitProgress.value > 0) {
+    const raw = Math.max(0, (exitProgress.value - HANDOFF_HOLD) / (1 - HANDOFF_HOLD))
+    const wipe = easeExit(raw)
+    return {
+      opacity: String(1 - wipe),
+      clipPath: `inset(0 0 ${wipe * 100}% 0)`,
+    }
   }
-  const raw = Math.max(0, (exitProgress.value - HANDOFF_HOLD) / (1 - HANDOFF_HOLD))
-  const wipe = easeExit(raw)
-  return {
-    opacity: String(1 - wipe),
-    clipPath: `inset(0 0 ${wipe * 100}% 0)`,
+
+  if (hashSnap.value) return undefined
+
+  if (enterProgress.value < 1) {
+    return handoffPinStyle(enterProgress.value, 'in')
   }
+
+  return undefined
 })
 
 onMounted(() => {
@@ -269,7 +270,11 @@ onMounted(() => {
   padding: calc(var(--header-h) + 0.35rem) 0 2vh;
   box-sizing: border-box;
   z-index: 3;
-  will-change: clip-path, opacity;
+  will-change: clip-path, opacity, transform;
+}
+
+.climate--entering .climate__pin {
+  z-index: 4;
 }
 
 .climate--exiting .climate__pin {
