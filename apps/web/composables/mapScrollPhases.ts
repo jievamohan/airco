@@ -159,8 +159,8 @@ export function easeExit(t: number) {
 /** Desktop resting scale for scrub videos (+30%). */
 export const DESKTOP_SCRUB_MEDIA_SCALE = 1.3
 
-/** Desktop enter start scale for the first scrub section (+60%). */
-export const DESKTOP_SCRUB_ENTER_SCALE = 1.6
+/** Desktop enter start scale — oversized, then eases to resting (+30%). */
+export const DESKTOP_SCRUB_ENTER_SCALE = 1.95
 
 /** Mobile resting scale for scrub videos (unchanged). */
 export const MOBILE_SCRUB_MEDIA_SCALE = 1
@@ -170,7 +170,7 @@ export const MOBILE_SCRUB_ENTER_SCALE = 1.65
 
 /**
  * Desktop scrub-media scale. Resting size is +30%.
- * When `animateEnter` is true, eases from +60% → +30% as enterProgress 0→1.
+ * When `animateEnter` is true, eases from oversized → resting as enterProgress 0→1.
  */
 export function desktopScrubMediaScale(
   enterProgress: number,
