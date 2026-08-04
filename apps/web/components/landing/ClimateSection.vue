@@ -396,8 +396,14 @@ onMounted(() => {
 }
 
 @media (max-width: 767px) {
+  .climate__pin {
+    width: 100%;
+  }
+
   .climate__copy {
     min-height: 8.5rem;
+    width: 100%;
+    padding-inline: 16px;
   }
 
   .climate__title {
@@ -410,6 +416,18 @@ onMounted(() => {
 
   .climate__stage {
     overflow: hidden;
+    width: 100%;
+    padding: 0;
+  }
+
+  .climate__frame {
+    width: 100%;
+  }
+
+  .climate__frame::after {
+    background:
+      linear-gradient(to right, #fff 0%, transparent 6%, transparent 94%, #fff 100%),
+      linear-gradient(to bottom, #fff 0%, transparent 8%, transparent 92%, #fff 100%);
   }
 
   .climate__media {

@@ -163,9 +163,19 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px 40px 32px;
+  padding: 16px 16px 32px;
   background: #fff;
   border-bottom: 1px solid var(--color-line);
+}
+
+@media (max-width: 767px) {
+  .site-header {
+    width: 100%;
+  }
+
+  .site-header__inner {
+    max-width: 100%;
+  }
 }
 
 .site-header__drawer a {

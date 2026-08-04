@@ -32,7 +32,6 @@
           </p>
           <div class="hero__actions">
             <a href="#offerte" class="btn-ghost">Vrijblijvende offerte</a>
-            <a href="#aircos" class="btn-text">Bekijk voordelen <span aria-hidden="true">›</span></a>
           </div>
         </div>
       </div>
@@ -281,7 +280,68 @@ onUnmounted(() => {
 
 @media (max-width: 767px) {
   .hero {
-    height: calc(100vh + 32vh);
+    height: calc(100vh + 20vh);
+    width: 100%;
+  }
+
+  .hero__pin,
+  .hero__stage {
+    width: 100%;
+    max-width: none;
+  }
+
+  .hero__stage {
+    padding-left: clamp(20px, 7vw, 36px);
+    padding-right: 16px;
+    justify-content: flex-start;
+  }
+
+  .hero__stage::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 48%;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.35) 35%,
+      rgba(255, 255, 255, 0.85) 70%,
+      #ffffff 100%
+    );
+  }
+
+  .hero__copy {
+    z-index: 2;
+    margin-top: 8vh;
+    width: min(100%, 22rem);
+    transform: none;
+    text-align: left;
+  }
+
+  .hero__bg {
+    object-fit: contain;
+    object-position: 70% 8%;
+    transform: translateY(0) scale(1.35);
+    transform-origin: top center;
+    /* Top soft-in only; bottom fade is the white overlay on .hero__stage */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.5) 10%,
+      #000 22%,
+      #000 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.5) 10%,
+      #000 22%,
+      #000 100%
+    );
   }
 }
 </style>

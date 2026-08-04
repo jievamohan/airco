@@ -26,7 +26,7 @@ export const SCRUB_PHASE_MOBILE: PhaseOpts = {
  * Product intro matched to hero exit band (HANDOFF_SCROLL_VH) so
  * enterProgress and hero exit complete together (same visual speed).
  * Desktop: 40vh / (230vh - 100vh) ≈ 0.308
- * Mobile: 32vh / (175vh - 100vh) ≈ 0.427
+ * Mobile: 20vh / (175vh - 100vh) ≈ 0.267
  */
 export const PRODUCT_PHASE_DESKTOP: PhaseOpts = {
   introEnd: 0.308,
@@ -34,7 +34,7 @@ export const PRODUCT_PHASE_DESKTOP: PhaseOpts = {
 }
 
 export const PRODUCT_PHASE_MOBILE: PhaseOpts = {
-  introEnd: 0.427,
+  introEnd: 0.267,
   /* Longer outro band → slower explode→climate handoff on mobile */
   outroStart: 0.86,
 }
@@ -65,8 +65,8 @@ export const HANDOFF_HOLD = 0.35
  */
 export const HANDOFF_SCROLL_VH = 40
 
-/** Shorter hero→product handoff on mobile (−20%). */
-export const HANDOFF_SCROLL_VH_MOBILE = 32
+/** Hero↔product handoff travel on mobile (shared by both pins — keep in lockstep). */
+export const HANDOFF_SCROLL_VH_MOBILE = 20
 
 export function clamp01(n: number) {
   return Math.min(1, Math.max(0, n))
@@ -165,8 +165,8 @@ export const DESKTOP_SCRUB_ENTER_SCALE = 1.6
 /** Mobile resting scale for scrub videos (unchanged). */
 export const MOBILE_SCRUB_MEDIA_SCALE = 1
 
-/** Mobile enter start scale for the first scrub section (+50%). */
-export const MOBILE_SCRUB_ENTER_SCALE = 1.5
+/** Mobile enter start scale for the first scrub section (oversized → resting). */
+export const MOBILE_SCRUB_ENTER_SCALE = 1.65
 
 /**
  * Desktop scrub-media scale. Resting size is +30%.

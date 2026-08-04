@@ -82,6 +82,7 @@
 <script setup lang="ts">
 import {
   desktopScrubMediaScale,
+  easeEnter,
   handoffPinStyle,
   HANDOFF_SCROLL_VH,
   HANDOFF_SCROLL_VH_MOBILE,
@@ -204,7 +205,8 @@ const pinHandoffStyle = computed(() => {
 
 /**
  * Desktop: scrub media rests at +30%; hero→S1 enter eases +60% → +30%.
- * Mobile: rests at 100%; hero→S1 enter eases +50% → 100%.
+ * Mobile: rests at 100%; enter eases oversized → rest.
+ * During enter the deconstructing unit slides up from below into place.
  */
 const frameScaleStyle = computed(() => {
   const animateEnter =
@@ -215,13 +217,19 @@ const frameScaleStyle = computed(() => {
 
   const progress = animateEnter ? enterProgress.value : 1
   const scale = isMobile.value
-    ? mobileScrubMediaScale(progress, animateEnter)
+    ? mobileScrubMediaScale(progress, true)
     : desktopScrubMediaScale(progress, animateEnter)
 
-  // Skip style when mobile is at rest (scale 1) to avoid needless transforms.
-  if (isMobile.value && scale === 1) return undefined
+  if (!animateEnter) {
+    if (isMobile.value && scale === 1) return undefined
+    return { transform: `scale(${scale})` }
+  }
 
-  return { transform: `scale(${scale})` }
+  const t = easeEnter(progress)
+  const slideVh = isMobile.value ? 58 : 42
+  const y = (1 - t) * slideVh
+
+  return { transform: `translate3d(0, ${y}vh, 0) scale(${scale})` }
 })
 
 onMounted(() => {
@@ -256,7 +264,7 @@ onMounted(() => {
 
 .explode--mobile {
   height: 175vh;
-  margin-top: calc(-100vh - 32vh);
+  margin-top: calc(-100vh - 20vh);
 }
 
 .explode--reduced {
@@ -390,19 +398,35 @@ onMounted(() => {
 @media (max-width: 767px) {
   .explode__pin {
     gap: 0.35rem;
+    width: 100%;
   }
 
   .explode__copy {
     min-height: 3.75rem;
+    width: 100%;
+    padding-inline: 16px;
   }
 
   .explode__caption {
-    width: min(16ch, 90vw);
+    width: 100%;
+    max-width: 16ch;
     font-size: clamp(1.65rem, 7.5vw, 2.35rem);
   }
 
   .explode__stage {
     overflow: visible;
+    width: 100%;
+    padding: 0;
+  }
+
+  .explode__frame {
+    width: 100%;
+  }
+
+  .explode__frame::after {
+    background:
+      linear-gradient(to right, #fff 0%, transparent 6%, transparent 94%, #fff 100%),
+      linear-gradient(to bottom, #fff 0%, transparent 8%, transparent 92%, #fff 100%);
   }
 
   .explode__media {
