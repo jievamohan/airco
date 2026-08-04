@@ -192,7 +192,8 @@ const frameEnterStyle = computed(() => {
   const t = easeEnter(visualEnter.value)
   const from = isMobile.value ? 1.1 : 1.15
   const scale = from + (1 - from) * t
-  const opacity = Math.min(1, t / HANDOFF_HOLD)
+  // Keep a floor so S1 wipe always reveals a visible frame.
+  const opacity = Math.min(1, 0.25 + (0.75 * t) / HANDOFF_HOLD)
   return {
     opacity: String(opacity),
     transform: `scale(${scale})`,
@@ -205,8 +206,8 @@ const pinWipeStyle = computed(() => {
   }
   const raw = Math.max(0, (exitProgress.value - HANDOFF_HOLD) / (1 - HANDOFF_HOLD))
   const wipe = easeExit(raw)
-  // clip-path only on sticky pin — avoid transform containing-block bugs on iOS
   return {
+    opacity: String(1 - wipe),
     clipPath: `inset(0 0 ${wipe * 100}% 0)`,
   }
 })
@@ -230,20 +231,25 @@ onMounted(() => {
 .climate {
   position: relative;
   height: 220vh;
-  background: #fff;
-  z-index: 2;
+  /* Pull under S1 outro band only — avoid starting S2 scrub mid-S1 */
+  margin-top: -25vh;
+  background: transparent;
+  z-index: 3;
 }
 
 .climate--mobile {
   height: 165vh;
+  margin-top: -18vh;
 }
 
 .climate--reduced {
   height: 110vh;
+  margin-top: 0;
 }
 
 .climate--reduced.climate--mobile {
   height: 105vh;
+  margin-top: 0;
 }
 
 .climate__pin {
@@ -258,12 +264,12 @@ onMounted(() => {
   background: #fff;
   padding: calc(var(--header-h) + 0.35rem) 0 2vh;
   box-sizing: border-box;
-  z-index: 2;
-  will-change: clip-path;
+  z-index: 3;
+  will-change: clip-path, opacity;
 }
 
 .climate--exiting .climate__pin {
-  z-index: 3;
+  z-index: 4;
 }
 
 .climate__copy {

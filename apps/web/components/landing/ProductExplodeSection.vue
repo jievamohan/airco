@@ -176,8 +176,8 @@ const frameEnterStyle = computed(() => {
   const t = easeEnter(visualEnter.value)
   const from = isMobile.value ? 1.1 : 1.15
   const scale = from + (1 - from) * t
-  // Fast opacity ramp so handoff never drops to empty white.
-  const opacity = Math.min(1, t / HANDOFF_HOLD)
+  // Keep a floor so parallel hero wipe always reveals a visible frame.
+  const opacity = Math.min(1, 0.25 + (0.75 * t) / HANDOFF_HOLD)
   return {
     opacity: String(opacity),
     transform: `scale(${scale})`,
@@ -191,8 +191,9 @@ const pinWipeStyle = computed(() => {
   // Hold full paint until HANDOFF_HOLD of outro, then spatial wipe up.
   const raw = Math.max(0, (exitProgress.value - HANDOFF_HOLD) / (1 - HANDOFF_HOLD))
   const wipe = easeExit(raw)
-  // clip-path only on sticky pin — avoid transform containing-block bugs on iOS
+  // Opacity reveals S2 underneath; clip adds upward spatial exit.
   return {
+    opacity: String(1 - wipe),
     clipPath: `inset(0 0 ${wipe * 100}% 0)`,
   }
 })
@@ -217,20 +218,29 @@ onMounted(() => {
   position: relative;
   /* Langzamere scrub-track voor de productanimatie */
   height: 230vh;
-  background: #fff;
-  z-index: 3;
+  /*
+   * Pull under full hero track (100vh pin + 45vh exit) so S1 intro
+   * runs under the hero wipe instead of after a white void.
+   */
+  margin-top: calc(-100vh - 45vh);
+  /* Transparent section bg so S1→S2 pin wipe can reveal Climate beneath */
+  background: transparent;
+  z-index: 4;
 }
 
 .explode--mobile {
   height: 175vh;
+  margin-top: calc(-100vh - 40vh);
 }
 
 .explode--reduced {
   height: 110vh;
+  margin-top: 0;
 }
 
 .explode--reduced.explode--mobile {
   height: 105vh;
+  margin-top: 0;
 }
 
 .explode__pin {
@@ -245,12 +255,12 @@ onMounted(() => {
   background: #fff;
   padding: calc(var(--header-h) + 0.5rem) 0 2vh;
   box-sizing: border-box;
-  z-index: 3;
-  will-change: clip-path;
+  z-index: 4;
+  will-change: clip-path, opacity;
 }
 
 .explode--exiting .explode__pin {
-  z-index: 4;
+  z-index: 5;
 }
 
 .explode__copy {

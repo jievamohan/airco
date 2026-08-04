@@ -70,8 +70,9 @@ const copyStyle = computed(() => {
 const pinWipeStyle = computed(() => {
   if (reduced.value || trackProgress.value <= 0) return undefined
   const wipe = easeExit(trackProgress.value)
-  // clip-path only on sticky pin — avoid transform containing-block bugs on iOS
+  // Opacity reveals S1 underneath (not white). Clip adds upward spatial exit.
   return {
+    opacity: String(1 - wipe),
     clipPath: `inset(0 0 ${wipe * 100}% 0)`,
   }
 })
@@ -113,8 +114,8 @@ onUnmounted(() => {
   /* Sticky pin (100vh) + exit band — only page-growth for handoff */
   height: calc(100vh + 45vh);
   width: 100%;
-  background: #fff;
-  z-index: 5;
+  /* Transparent: clip-path on pin must reveal S1 beneath, not section paint */
+  background: transparent;
 }
 
 .hero--reduced {
@@ -128,10 +129,11 @@ onUnmounted(() => {
   height: 100vh;
   background: #fff;
   overflow: hidden;
-  z-index: 5;
+  /* Above overlapping S1 pin; section itself stays auto z-index */
+  z-index: 6;
   display: flex;
   align-items: stretch;
-  will-change: clip-path;
+  will-change: clip-path, opacity;
   box-sizing: border-box;
 }
 
