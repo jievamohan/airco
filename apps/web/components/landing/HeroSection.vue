@@ -57,10 +57,14 @@ const scrollPhase = computed(() => {
   return 'outro'
 })
 
-/** Brand: headline/lede/CTA gone before S1 becomes readable (~0.25 of exit). */
+/** Shared exit curve: copy + pin/bg fade together (done by ~0.25 of exit track). */
+const exitFade = computed(() =>
+  easeExit(Math.min(1, trackProgress.value / 0.25)),
+)
+
 const copyStyle = computed(() => {
   if (reduced.value) return undefined
-  const fade = easeExit(Math.min(1, trackProgress.value / 0.25))
+  const fade = exitFade.value
   return {
     opacity: String(1 - fade),
     transform: `translateY(${-fade * 12}%)`,
@@ -69,11 +73,11 @@ const copyStyle = computed(() => {
 
 const pinWipeStyle = computed(() => {
   if (reduced.value || trackProgress.value <= 0) return undefined
-  const wipe = easeExit(trackProgress.value)
-  // Opacity reveals S1 underneath (not white). Clip adds upward spatial exit.
+  const fade = exitFade.value
+  // Same curve as copy — bg/pin must not lag behind text.
   return {
-    opacity: String(1 - wipe),
-    clipPath: `inset(0 0 ${wipe * 100}% 0)`,
+    opacity: String(1 - fade),
+    clipPath: `inset(0 0 ${fade * 100}% 0)`,
   }
 })
 
