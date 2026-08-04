@@ -58,29 +58,29 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           DEPLOY_SHA: ${{ github.sha }}
-          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
         with:
-          host: ${{ secrets.VPS_SSH_HOST }}
-          username: ${{ secrets.VPS_SSH_USER }}
+          host: ${{ vars.VPS_SSH_HOST }}
+          username: ${{ vars.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT != '' && secrets.VPS_SSH_PORT || 22 }}
+          port: ${{ vars.VPS_SSH_PORT != '' && vars.VPS_SSH_PORT || 22 }}
           envs: DEPLOY_SHA,DEPLOY_PATH
           script_stop: true
           script: |
             set -euo pipefail
             if [[ -z "${DEPLOY_PATH}" ]]; then
-              echo "error: VPS_DEPLOY_PATH secret is not set" >&2
+              echo "error: VPS_DEPLOY_PATH variable is not set" >&2
               exit 1
             fi
             cd "${DEPLOY_PATH}"
             DEPLOY_REF="${DEPLOY_SHA}" make deploy-production
 
       - name: Smoke check
-        if: ${{ secrets.PRODUCTION_URL != '' }}
+        if: ${{ vars.PRODUCTION_URL != '' }}
         run: |
-          code="$(curl -fsS -o /dev/null -w '%{http_code}' "${{ secrets.PRODUCTION_URL }}")"
+          code="$(curl -fsS -o /dev/null -w '%{http_code}' "${{ vars.PRODUCTION_URL }}")"
           if [[ "${code}" != "200" ]]; then
-            echo "error: expected HTTP 200 from ${{ secrets.PRODUCTION_URL }}, got ${code}" >&2
+            echo "error: expected HTTP 200 from ${{ vars.PRODUCTION_URL }}, got ${code}" >&2
             exit 1
           fi
           echo "✓ smoke check passed (${code})"

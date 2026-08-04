@@ -47,24 +47,25 @@ When a pull request is **merged into `main`**, the workflow [`.github/workflows/
 2. **Deploy** — SSH to the VPS, checkout the merge commit, then `make deploy-production` (build + rsync to `PUBLIC_HTML`)
 3. **Smoke check** — optional HTTP 200 against `PRODUCTION_URL`
 
-Configure these **repository secrets** (Settings → Secrets and variables → Actions):
+Configure under **Settings → Environments → production** (the deploy job uses `environment: production`).
 
-| Secret | Required | Example |
-|--------|----------|---------|
+**Environment secret** (1):
+
+| Name | Example |
+|------|---------|
+| `VPS_SSH_KEY` | Private SSH key (PEM) |
+
+**Environment variables**:
+
+| Name | Required | Example |
+|------|----------|---------|
 | `VPS_SSH_HOST` | yes | VPS hostname or IP |
 | `VPS_SSH_USER` | yes | DirectAdmin / SSH user |
-| `VPS_SSH_KEY` | yes | Private key (PEM) for that user |
-| `VPS_DEPLOY_PATH` | yes | Absolute path to git clone on VPS, e.g. `/home/user/airco` |
-| `VPS_SSH_PORT` | no | Default `22` |
-| `PRODUCTION_URL` | no | e.g. `https://klimaatx.nl/` for post-deploy smoke |
+| `VPS_DEPLOY_PATH` | yes | `/home/user/airco` |
+| `VPS_SSH_PORT` | no | `22` |
+| `PRODUCTION_URL` | no | `https://klimaatx.nl/` |
 
-On the VPS (one-time, unchanged):
-
-- Git clone with `origin` pointing at GitHub
-- `.env.deploy` with `PUBLIC_HTML=...`
-- Node 22 + pnpm 9.15.4 (corepack)
-
-Optional: add a **`production`** environment in GitHub with required reviewers or wait timers before deploy runs.
+Repository-level secrets/variables work too, but the **production** environment is preferred (optional approval rules, separate config per env).
 
 What the deploy script does (manual or CI):
 
