@@ -4,6 +4,8 @@
 #   ./scripts/deploy-production.sh           # pull, generate, publish
 #   ./scripts/deploy-production.sh --dry-run # same, but rsync --dry-run
 #   ./scripts/deploy-production.sh --rollback
+#   DEPLOY_REF=<sha> ./scripts/deploy-production.sh   # pin checkout (CI/CD)
+#   ./scripts/deploy-production.sh --ref <sha>        # same as DEPLOY_REF
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -15,14 +17,32 @@ RELEASES_DIR="${ROOT_DIR}/releases"
 KEEP_RELEASES=3
 
 MODE="deploy"
-if [[ "${1:-}" == "--dry-run" ]]; then
-  MODE="dry-run"
-elif [[ "${1:-}" == "--rollback" ]]; then
-  MODE="rollback"
-elif [[ -n "${1:-}" ]]; then
-  echo "error: unknown argument '${1}' (use --dry-run or --rollback)" >&2
-  exit 2
-fi
+DEPLOY_REF="${DEPLOY_REF:-}"
+
+while [[ $# -gt 0 ]]; do
+  case "${1}" in
+    --dry-run)
+      MODE="dry-run"
+      shift
+      ;;
+    --rollback)
+      MODE="rollback"
+      shift
+      ;;
+    --ref)
+      if [[ -z "${2:-}" ]]; then
+        echo "error: --ref requires a commit SHA or ref" >&2
+        exit 2
+      fi
+      DEPLOY_REF="${2}"
+      shift 2
+      ;;
+    *)
+      echo "error: unknown argument '${1}' (use --dry-run, --rollback, or --ref SHA)" >&2
+      exit 2
+      ;;
+  esac
+done
 
 load_env_deploy() {
   if [[ -f "${ROOT_DIR}/.env.deploy" ]]; then
@@ -117,11 +137,17 @@ rsync_publish() {
     "${PUBLIC_HTML}/"
 }
 
-pull_main() {
-  echo "→ git fetch + pull origin main"
+sync_main() {
+  echo "→ git fetch origin main"
   git fetch origin main
   git checkout main
-  git pull --ff-only origin main
+  if [[ -n "${DEPLOY_REF}" ]]; then
+    echo "→ checkout pinned ref ${DEPLOY_REF}"
+    git reset --hard "${DEPLOY_REF}"
+  else
+    echo "→ git pull --ff-only origin main"
+    git pull --ff-only origin main
+  fi
   echo "→ HEAD $(git rev-parse --short HEAD) ($(git rev-parse HEAD))"
 }
 
@@ -165,7 +191,7 @@ case "${MODE}" in
   deploy|dry-run)
     load_env_deploy
     require_public_html
-    pull_main
+    sync_main
     generate_site
     require_generate_artifact
     if [[ "${MODE}" == "deploy" ]]; then

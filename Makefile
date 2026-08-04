@@ -2,7 +2,7 @@
 .PHONY: deploy-production deploy-production-dry-run rollback-production
 
 deploy-production:
-	@./scripts/deploy-production.sh
+	@./scripts/deploy-production.sh $(if $(DEPLOY_REF),--ref $(DEPLOY_REF),)
 
 deploy-production-dry-run:
 	@./scripts/deploy-production.sh --dry-run

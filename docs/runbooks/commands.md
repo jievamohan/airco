@@ -28,6 +28,8 @@ make rollback-production
 
 See [deploy-production.md](./deploy-production.md).
 
+**Auto-deploy:** merging a PR into `main` triggers `.github/workflows/ci-deploy.yml` (CI → SSH deploy → optional smoke). Configure the `production` environment in GitHub (secret: `VPS_SSH_KEY`; variables: host, user, deploy path — see deploy runbook).
+
 ## Notes
 
 - Locally: do not run `pnpm` on the host; use `docker compose exec web …`.

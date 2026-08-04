@@ -1,0 +1,86 @@
+name: CI and Deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Build and typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Generate static site
+        run: pnpm run generate
+
+      - name: Verify generate output
+        run: |
+          test -f .output/public/index.html
+          test -d .output/public/_nuxt
+
+  deploy:
+    name: Deploy production
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+        with:
+          host: ${{ vars.VPS_SSH_HOST }}
+          username: ${{ vars.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ vars.VPS_SSH_PORT != '' && vars.VPS_SSH_PORT || 22 }}
+          envs: DEPLOY_SHA,DEPLOY_PATH
+          script_stop: true
+          script: |
+            set -euo pipefail
+            if [[ -z "${DEPLOY_PATH}" ]]; then
+              echo "error: VPS_DEPLOY_PATH variable is not set" >&2
+              exit 1
+            fi
+            cd "${DEPLOY_PATH}"
+            DEPLOY_REF="${DEPLOY_SHA}" make deploy-production
+
+      - name: Smoke check
+        if: ${{ vars.PRODUCTION_URL != '' }}
+        run: |
+          code="$(curl -fsS -o /dev/null -w '%{http_code}' "${{ vars.PRODUCTION_URL }}")"
+          if [[ "${code}" != "200" ]]; then
+            echo "error: expected HTTP 200 from ${{ vars.PRODUCTION_URL }}, got ${code}" >&2
+            exit 1
+          fi
+          echo "✓ smoke check passed (${code})"

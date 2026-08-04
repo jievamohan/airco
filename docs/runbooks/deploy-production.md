@@ -32,12 +32,42 @@ cp .env.deploy.example .env.deploy
 
 ## Deploy
 
+Manual (on VPS):
+
 ```bash
 cd /path/to/airco
 make deploy-production
 ```
 
-What it does:
+### Automatic deploy (GitHub Actions)
+
+When a pull request is **merged into `main`**, the workflow [`.github/workflows/ci-deploy.yml`](../../.github/workflows/ci-deploy.yml) runs:
+
+1. **CI** — typecheck + `pnpm run generate` (same checks on every PR to `main`)
+2. **Deploy** — SSH to the VPS, checkout the merge commit, then `make deploy-production` (build + rsync to `PUBLIC_HTML`)
+3. **Smoke check** — optional HTTP 200 against `PRODUCTION_URL`
+
+Configure under **Settings → Environments → production** (the deploy job uses `environment: production`).
+
+**Environment secret** (1):
+
+| Name | Example |
+|------|---------|
+| `VPS_SSH_KEY` | Private SSH key (PEM) |
+
+**Environment variables**:
+
+| Name | Required | Example |
+|------|----------|---------|
+| `VPS_SSH_HOST` | yes | VPS hostname or IP |
+| `VPS_SSH_USER` | yes | DirectAdmin / SSH user |
+| `VPS_DEPLOY_PATH` | yes | `/home/user/airco` |
+| `VPS_SSH_PORT` | no | `22` |
+| `PRODUCTION_URL` | no | `https://klimaatx.nl/` |
+
+Repository-level secrets/variables work too, but the **production** environment is preferred (optional approval rules, separate config per env).
+
+What the deploy script does (manual or CI):
 
 1. `git fetch` + `git checkout main` + `git pull --ff-only origin main`
 2. `cd apps/web && pnpm install --frozen-lockfile && pnpm run generate`
