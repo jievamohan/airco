@@ -218,9 +218,21 @@ onUnmounted(() => {
   }
 
   .hero__stage {
-    min-height: clamp(420px, 78vw, 560px);
-    align-items: flex-end;
-    padding-block: calc(var(--space) * 4) calc(var(--space) * 6);
+    min-height: 0;
+    align-items: flex-start;
+    justify-content: center;
+    /* Header already sits above the pin in document flow — avoid double offset */
+    padding-block: calc(var(--space) * 3) calc(var(--space) * 4);
+  }
+
+  .hero__title {
+    margin-bottom: calc(var(--space) * 3);
+    font-size: clamp(36px, 9.5vw, 48px);
+  }
+
+  .hero__lede {
+    margin-bottom: calc(var(--space) * 4);
+    font-size: clamp(15px, 4vw, 17px);
   }
 
   .hero--reduced .hero__pin {

@@ -35,14 +35,15 @@ export const PRODUCT_PHASE_DESKTOP: PhaseOpts = {
 
 export const PRODUCT_PHASE_MOBILE: PhaseOpts = {
   introEnd: 0.533,
-  outroStart: 0.94,
+  /* Longer outro band → slower explode→climate handoff on mobile */
+  outroStart: 0.86,
 }
 
 /**
  * Climate intro length matched to explode outro scroll overlap so
  * enterProgress and exitProgress complete together (same visual speed).
  * Desktop: ~(1-0.92)*130vh / 120vh ≈ 0.087
- * Mobile: ~(1-0.94)*75vh / 65vh ≈ 0.069
+ * Mobile: ~(1-0.86)*75vh / 65vh ≈ 0.162
  */
 export const CLIMATE_PHASE_DESKTOP: PhaseOpts = {
   introEnd: 0.087,
@@ -50,7 +51,7 @@ export const CLIMATE_PHASE_DESKTOP: PhaseOpts = {
 }
 
 export const CLIMATE_PHASE_MOBILE: PhaseOpts = {
-  introEnd: 0.069,
+  introEnd: 0.162,
   outroStart: 0.94,
 }
 
@@ -161,8 +162,8 @@ export const DESKTOP_SCRUB_ENTER_SCALE = 1.6
 /** Mobile resting scale for scrub videos (unchanged). */
 export const MOBILE_SCRUB_MEDIA_SCALE = 1
 
-/** Mobile enter start scale for the first scrub section (+20%). */
-export const MOBILE_SCRUB_ENTER_SCALE = 1.2
+/** Mobile enter start scale for the first scrub section (+50%). */
+export const MOBILE_SCRUB_ENTER_SCALE = 1.5
 
 /**
  * Desktop scrub-media scale. Resting size is +30%.
@@ -180,8 +181,8 @@ export function desktopScrubMediaScale(
 }
 
 /**
- * Mobile scrub-media scale for the first section.
- * Resting size is 100%; enter eases from +20% → 100%.
+ * Mobile scrub-media scale for the first scrub section.
+ * Resting size is 100%; enter eases from +50% → 100%.
  */
 export function mobileScrubMediaScale(
   enterProgress: number,
