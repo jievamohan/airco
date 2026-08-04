@@ -47,12 +47,28 @@ export const PRODUCT_PHASE_MOBILE: PhaseOpts = {
  */
 export const CLIMATE_PHASE_DESKTOP: PhaseOpts = {
   introEnd: 0.087,
-  outroStart: 0.92,
+  /* Longer outro so climate can scroll+fade out toward Winter living-room */
+  outroStart: 0.85,
 }
 
 export const CLIMATE_PHASE_MOBILE: PhaseOpts = {
   introEnd: 0.162,
-  outroStart: 0.94,
+  outroStart: 0.82,
+}
+
+/**
+ * Winter living-room scrub — intro matched to climate outro overlap.
+ * Desktop: ~(1-0.85)*120vh / 120vh = 0.15
+ * Mobile: ~(1-0.82)*65vh / 65vh = 0.18
+ */
+export const WINTER_PHASE_DESKTOP: PhaseOpts = {
+  introEnd: 0.15,
+  outroStart: 0.85,
+}
+
+export const WINTER_PHASE_MOBILE: PhaseOpts = {
+  introEnd: 0.18,
+  outroStart: 0.82,
 }
 
 /** Incoming must reach this before outgoing finishes clearing. */

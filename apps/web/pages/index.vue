@@ -5,6 +5,7 @@
       <LandingHeroSection />
       <LandingProductExplodeSection />
       <LandingClimateSection />
+      <LandingLivingRoomWinterSection />
       <LandingHeatingSection />
       <LandingProjectsSection />
       <LandingReviewsSection />
