@@ -7,6 +7,7 @@
       'explode--mobile': isMobile,
       'explode--reduced': reduced,
       'explode--exiting': exitProgress > 0 && !reduced,
+      'explode--entering': isEntering,
     }"
     data-testid="product-scrub"
     :data-scrub-progress="scrubProgress.toFixed(3)"
@@ -31,7 +32,7 @@
       </div>
 
       <div class="explode__stage">
-        <div class="explode__frame" :style="frameEnterStyle">
+        <div class="explode__frame">
           <!-- Poster always under video (iOS often shows blank until primed) -->
           <img
             src="/media/1st-start.png"
@@ -80,11 +81,9 @@
 
 <script setup lang="ts">
 import {
-  easeEnter,
   handoffPinStyle,
-  HANDOFF_HOLD,
-  SCRUB_PHASE_DESKTOP,
-  SCRUB_PHASE_MOBILE,
+  PRODUCT_PHASE_DESKTOP,
+  PRODUCT_PHASE_MOBILE,
   type ScrollPhase,
 } from '../../composables/mapScrollPhases'
 
@@ -99,7 +98,7 @@ const { ready, error, markReady, onError } = useScrubVideo(video)
 const enabled = computed(() => !reduced.value && !error.value && ready.value)
 
 const scrubRange = computed(() =>
-  isMobile.value ? SCRUB_PHASE_MOBILE : SCRUB_PHASE_DESKTOP,
+  isMobile.value ? PRODUCT_PHASE_MOBILE : PRODUCT_PHASE_DESKTOP,
 )
 
 const {
@@ -116,16 +115,15 @@ const {
   pauseSeekOffscreen: true,
 })
 
-const visualEnter = computed(() => {
-  if (reduced.value || hashSnap.value) return 1
-  return enterProgress.value
-})
-
 const displayPhase = computed<ScrollPhase>(() => {
   if (reduced.value) return 'scrub'
   if (hashSnap.value && phase.value === 'intro') return 'scrub'
   return phase.value
 })
+
+const isEntering = computed(
+  () => !reduced.value && !hashSnap.value && enterProgress.value < 1 && exitProgress.value <= 0,
+)
 
 type CaptionLine = {
   id: string
@@ -179,22 +177,24 @@ const captionLines = computed(() => {
   })
 })
 
-const frameEnterStyle = computed(() => {
-  const t = easeEnter(visualEnter.value)
-  const from = isMobile.value ? 1.1 : 1.15
-  const scale = from + (1 - from) * t
-  // Settle in as the sticky pin locks (section already scrolled fully into view).
-  const opacity = Math.min(1, 0.35 + (0.65 * t) / Math.max(HANDOFF_HOLD, 0.001))
-  return {
-    opacity: String(opacity),
-    transform: `scale(${scale})`,
-  }
-})
-
-/** Scroll up + fade to 0 in lockstep with Climate enter (same distance/speed). */
+/**
+ * Enter: rise + fade in lockstep with hero exit (same distance/speed).
+ * Exit: scroll up + fade in lockstep with Climate enter.
+ */
 const pinHandoffStyle = computed(() => {
-  if (reduced.value || exitProgress.value <= 0) return undefined
-  return handoffPinStyle(exitProgress.value, 'out')
+  if (reduced.value) return undefined
+
+  if (exitProgress.value > 0) {
+    return handoffPinStyle(exitProgress.value, 'out')
+  }
+
+  if (hashSnap.value) return undefined
+
+  if (enterProgress.value < 1) {
+    return handoffPinStyle(enterProgress.value, 'in')
+  }
+
+  return undefined
 })
 
 onMounted(() => {
@@ -218,18 +218,18 @@ onMounted(() => {
   /* Langzamere scrub-track voor de productanimatie */
   height: 230vh;
   /*
-   * Follow hero in document flow so S1 scrolls in until fully visible,
-   * then sticky pin locks for scrub (no under-hero wipe overlap).
-   * Transparent bg keeps S1→S2 pin handoff able to reveal Climate beneath.
+   * Pull under hero track (100vh pin + 40vh handoff) so S1 intro
+   * runs in parallel with the hero scroll/fade — no long empty gap.
    */
-  margin-top: 0;
+  margin-top: calc(-100vh - 40vh);
+  /* Transparent section bg so S1→S2 pin handoff can reveal Climate beneath */
   background: transparent;
   z-index: 4;
 }
 
 .explode--mobile {
   height: 175vh;
-  margin-top: 0;
+  margin-top: calc(-100vh - 40vh);
 }
 
 .explode--reduced {
@@ -256,6 +256,10 @@ onMounted(() => {
   box-sizing: border-box;
   z-index: 4;
   will-change: transform, opacity;
+}
+
+.explode--entering .explode__pin {
+  z-index: 5;
 }
 
 .explode--exiting .explode__pin {
