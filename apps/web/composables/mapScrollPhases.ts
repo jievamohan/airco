@@ -22,11 +22,57 @@ export const SCRUB_PHASE_MOBILE: PhaseOpts = {
   outroStart: 0.94,
 }
 
+/**
+ * Climate intro length matched to explode outro scroll overlap so
+ * enterProgress and exitProgress complete together (same visual speed).
+ * Desktop: ~(1-0.92)*130vh / 120vh ≈ 0.087
+ * Mobile: ~(1-0.94)*75vh / 65vh ≈ 0.069
+ */
+export const CLIMATE_PHASE_DESKTOP: PhaseOpts = {
+  introEnd: 0.087,
+  outroStart: 0.92,
+}
+
+export const CLIMATE_PHASE_MOBILE: PhaseOpts = {
+  introEnd: 0.069,
+  outroStart: 0.94,
+}
+
 /** Incoming must reach this before outgoing finishes clearing. */
 export const HANDOFF_HOLD = 0.35
 
+/**
+ * Shared travel for explode→climate (and matching) pin handoffs.
+ * Outgoing scrolls up by this amount while incoming scrolls up from below —
+ * same distance so both move at the same visual speed.
+ */
+export const HANDOFF_SCROLL_VH = 40
+
 export function clamp01(n: number) {
   return Math.min(1, Math.max(0, n))
+}
+
+/**
+ * Parallel opacity + translateY handoff (linear so both sides match speed).
+ * @param progress 0→1 through the handoff band
+ * @param direction 'out' scrolls up + fades out; 'in' rises into view + fades in
+ */
+export function handoffPinStyle(
+  progress: number,
+  direction: 'in' | 'out',
+  distanceVh = HANDOFF_SCROLL_VH,
+): { opacity: string; transform: string } {
+  const t = clamp01(progress)
+  if (direction === 'out') {
+    return {
+      opacity: String(1 - t),
+      transform: `translate3d(0, ${-t * distanceVh}vh, 0)`,
+    }
+  }
+  return {
+    opacity: String(t),
+    transform: `translate3d(0, ${(1 - t) * distanceVh}vh, 0)`,
+  }
 }
 
 /** Sticky-track progress: 0→1 while pin is stuck. */

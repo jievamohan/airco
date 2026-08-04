@@ -13,7 +13,7 @@
     :data-track-progress="trackProgress.toFixed(3)"
     :data-scroll-phase="displayPhase"
   >
-    <div class="explode__pin" :style="pinWipeStyle">
+    <div class="explode__pin" :style="pinHandoffStyle">
       <div class="explode__copy">
         <p
           v-for="line in captionLines"
@@ -81,7 +81,7 @@
 <script setup lang="ts">
 import {
   easeEnter,
-  easeExit,
+  handoffPinStyle,
   HANDOFF_HOLD,
   SCRUB_PHASE_DESKTOP,
   SCRUB_PHASE_MOBILE,
@@ -145,7 +145,7 @@ const lines: CaptionLine[] = [
     emphasis: 'én',
     after: ' te kunnen verwarmen',
     from: 0.72,
-    to: 0.94,
+    to: 1,
   },
 ]
 
@@ -162,14 +162,21 @@ const captionLines = computed(() => {
     ]
   }
 
-  // Captions only during scrub band (scrubProgress domain).
-  return lines.map((line) => ({
-    id: line.id,
-    text: line.text,
-    emphasis: line.emphasis,
-    after: line.after,
-    opacity: scrubCaptionOpacity(line.from, line.to, scrubProgress.value, 0.72),
-  }))
+  // Last caption stays at full opacity once shown; pin handoff fades the section.
+  return lines.map((line) => {
+    const isLast = line.id === 'heat'
+    const opacity =
+      isLast && scrubProgress.value >= line.from
+        ? 1
+        : scrubCaptionOpacity(line.from, line.to, scrubProgress.value, 0.72)
+    return {
+      id: line.id,
+      text: line.text,
+      emphasis: line.emphasis,
+      after: line.after,
+      opacity,
+    }
+  })
 })
 
 const frameEnterStyle = computed(() => {
@@ -184,16 +191,10 @@ const frameEnterStyle = computed(() => {
   }
 })
 
-const pinWipeStyle = computed(() => {
-  if (reduced.value || exitProgress.value <= 0) {
-    return undefined
-  }
-  // Fade as soon as outro starts so Climate (under -110vh overlap) shows through.
-  const wipe = easeExit(exitProgress.value)
-  return {
-    opacity: String(1 - wipe),
-    clipPath: `inset(0 0 ${wipe * 100}% 0)`,
-  }
+/** Scroll up + fade to 0 in lockstep with Climate enter (same distance/speed). */
+const pinHandoffStyle = computed(() => {
+  if (reduced.value || exitProgress.value <= 0) return undefined
+  return handoffPinStyle(exitProgress.value, 'out')
 })
 
 onMounted(() => {
@@ -221,7 +222,7 @@ onMounted(() => {
    * runs under the hero wipe instead of after a white void.
    */
   margin-top: calc(-100vh - 45vh);
-  /* Transparent section bg so S1→S2 pin wipe can reveal Climate beneath */
+  /* Transparent section bg so S1→S2 pin handoff can reveal Climate beneath */
   background: transparent;
   z-index: 4;
 }
@@ -254,7 +255,7 @@ onMounted(() => {
   padding: calc(var(--header-h) + 0.5rem) 0 2vh;
   box-sizing: border-box;
   z-index: 4;
-  will-change: clip-path, opacity;
+  will-change: transform, opacity;
 }
 
 .explode--exiting .explode__pin {
