@@ -13,12 +13,6 @@
           <footer>{{ review.name }} · {{ review.place }}</footer>
         </blockquote>
       </div>
-      <div class="reviews__trust" aria-label="Beoordelingen">
-        <span>Google 4.9</span>
-        <span>InstallQ 9.7</span>
-        <span>Trustpilot 4.2</span>
-        <span>STEK 5.0</span>
-      </div>
     </div>
   </section>
 </template>
@@ -72,7 +66,6 @@ const setup = async () => {
 
     gsap.set(q('.reviews__title'), { autoAlpha: 0, y: 28 })
     gsap.set(q('.reviews__quote'), { autoAlpha: 0, y: 32 })
-    gsap.set(q('.reviews__trust'), { autoAlpha: 0, y: 16 })
 
     gsap.to(q('.reviews__title'), {
       autoAlpha: 1,
@@ -95,18 +88,6 @@ const setup = async () => {
       scrollTrigger: {
         trigger: q('.reviews__grid')[0] as Element,
         start: 'top 82%',
-        once: true,
-      },
-    })
-
-    gsap.to(q('.reviews__trust'), {
-      autoAlpha: 1,
-      y: 0,
-      duration: 0.75,
-      ease: 'power3.out',
-      scrollTrigger: {
-        trigger: q('.reviews__trust')[0] as Element,
-        start: 'top 90%',
         once: true,
       },
     })
@@ -163,17 +144,6 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
-.reviews__trust {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
-  margin-top: calc(var(--space) * 12);
-  color: var(--color-ink-soft);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 @media (min-width: 900px) {
   .reviews__grid {
     grid-template-columns: repeat(3, 1fr);
@@ -182,8 +152,7 @@ onUnmounted(() => {
 }
 
 .reviews--reduced .reviews__title,
-.reviews--reduced .reviews__quote,
-.reviews--reduced .reviews__trust {
+.reviews--reduced .reviews__quote {
   opacity: 1 !important;
   visibility: visible !important;
   transform: none !important;

@@ -9,6 +9,7 @@
       <LandingHeatingSection />
       <LandingProjectsSection />
       <LandingReviewsSection />
+      <LandingCertificationsSection />
       <LandingOfferteForm />
     </main>
     <LandingSiteFooter />

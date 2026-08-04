@@ -94,17 +94,44 @@
             <span v-if="errors.phone" id="err-phone" class="field__error">{{ errors.phone }}</span>
           </label>
 
-          <label class="field">
-            <span>Aantal vierkante meters</span>
-            <input
-              v-model.trim="form.square_meters"
-              name="square_meters"
-              inputmode="numeric"
-              :aria-invalid="!!errors.square_meters"
-              :aria-describedby="errors.square_meters ? 'err-m2' : undefined"
-            />
-            <span v-if="errors.square_meters" id="err-m2" class="field__error">{{ errors.square_meters }}</span>
-          </label>
+          <div class="field">
+            <span id="space-label">Ruimtemaat</span>
+            <div
+              class="field__measure"
+              :class="{ 'field__measure--invalid': !!errors.space_size }"
+            >
+              <input
+                v-model.trim="form.space_size"
+                name="space_size"
+                inputmode="numeric"
+                aria-labelledby="space-label"
+                :aria-invalid="!!errors.space_size"
+                :aria-describedby="errors.space_size ? 'err-space' : undefined"
+              />
+              <div class="field__units" role="group" aria-label="Eenheid">
+                <button
+                  type="button"
+                  class="field__unit"
+                  :class="{ 'is-active': form.space_unit === 'm2' }"
+                  :aria-pressed="form.space_unit === 'm2'"
+                  @click="setUnit('m2')"
+                >
+                  m²
+                </button>
+                <button
+                  type="button"
+                  class="field__unit"
+                  :class="{ 'is-active': form.space_unit === 'm3' }"
+                  :aria-pressed="form.space_unit === 'm3'"
+                  @click="setUnit('m3')"
+                >
+                  m³
+                </button>
+              </div>
+            </div>
+            <input type="hidden" name="space_unit" :value="form.space_unit" />
+            <span v-if="errors.space_size" id="err-space" class="field__error">{{ errors.space_size }}</span>
+          </div>
 
           <label class="field field--full">
             <span>Opmerkingen</span>
@@ -126,6 +153,8 @@
 </template>
 
 <script setup lang="ts">
+type SpaceUnit = 'm2' | 'm3'
+
 type LeadForm = {
   name: string
   address: string
@@ -133,7 +162,8 @@ type LeadForm = {
   city: string
   email: string
   phone: string
-  square_meters: string
+  space_size: string
+  space_unit: SpaceUnit
   notes: string
 }
 
@@ -146,7 +176,8 @@ const empty = (): LeadForm => ({
   city: '',
   email: '',
   phone: '',
-  square_meters: '',
+  space_size: '',
+  space_unit: 'm2',
   notes: '',
 })
 
@@ -157,6 +188,12 @@ const success = ref(false)
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 const postcodeOk = (v: string) => /^\d{4}\s?[A-Za-z]{2}$/.test(v)
 const phoneOk = (v: string) => /^[0-9+\s()-]{8,20}$/.test(v)
+const unitLabel = (unit: SpaceUnit) => (unit === 'm2' ? 'm²' : 'm³')
+
+function setUnit(unit: SpaceUnit) {
+  form.space_unit = unit
+  if (errors.space_size) delete errors.space_size
+}
 
 function clearErrors() {
   ;(Object.keys(errors) as (keyof LeadForm)[]).forEach((k) => {
@@ -175,10 +212,10 @@ function validate(): boolean {
   else if (!emailOk(form.email)) errors.email = 'Ongeldig e-mailadres.'
   if (!form.phone) errors.phone = 'Vul uw telefoonnummer in.'
   else if (!phoneOk(form.phone)) errors.phone = 'Ongeldig telefoonnummer.'
-  if (form.square_meters) {
-    const n = Number(form.square_meters)
+  if (form.space_size) {
+    const n = Number(form.space_size.replace(',', '.'))
     if (!Number.isFinite(n) || n < 1 || n > 10000) {
-      errors.square_meters = 'Voer een geldig aantal m² in.'
+      errors.space_size = `Voer een geldig aantal ${unitLabel(form.space_unit)} in.`
     }
   }
   return Object.keys(errors).length === 0
@@ -264,6 +301,63 @@ function reset() {
 .field input[aria-invalid='true'],
 .field textarea[aria-invalid='true'] {
   border-bottom-color: #c45c5c;
+}
+
+.field__measure {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.field__measure:focus-within {
+  border-bottom-color: var(--color-ink);
+}
+
+.field__measure--invalid {
+  border-bottom-color: #c45c5c;
+}
+
+.field__measure input {
+  flex: 1;
+  min-width: 0;
+  border-bottom: none;
+  padding-right: 0;
+}
+
+.field__measure input:focus {
+  border-bottom: none;
+}
+
+.field__units {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding-bottom: 2px;
+}
+
+.field__unit {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 8px 6px;
+  margin: 0;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.field__unit.is-active {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.field__unit:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
 }
 
 .field__error {
