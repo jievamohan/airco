@@ -19,7 +19,7 @@
           aria-hidden="true"
         />
 
-        <div class="hero__copy" :style="copyStyle">
+        <div class="hero__copy">
           <h1 class="hero__title">
             Perfect klimaat.<br />
             Elk <span class="gradient-season">seizoen</span>.
@@ -67,13 +67,6 @@ const readScrollExitProgress = (el: HTMLElement | null) => {
 
 /** Fade across the full exit so opacity tracks continuous upward motion. */
 const exitFade = computed(() => easeExit(trackProgress.value))
-
-const copyStyle = computed(() => {
-  if (reduced.value) return undefined
-  return {
-    opacity: String(1 - exitFade.value),
-  }
-})
 
 const pinStyle = computed(() => {
   if (reduced.value || trackProgress.value <= 0) return undefined
@@ -193,7 +186,6 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
   max-width: 32rem;
-  will-change: opacity;
 }
 
 .hero__title {
