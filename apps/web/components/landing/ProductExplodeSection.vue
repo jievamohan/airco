@@ -83,6 +83,7 @@
 import {
   desktopScrubMediaScale,
   handoffPinStyle,
+  mobileScrubMediaScale,
   PRODUCT_PHASE_DESKTOP,
   PRODUCT_PHASE_MOBILE,
   type ScrollPhase,
@@ -199,22 +200,23 @@ const pinHandoffStyle = computed(() => {
 })
 
 /**
- * Desktop: scrub media rests at +30%.
- * On hero→S1 enter: start +60% and ease down to +30% while sliding in.
+ * Desktop: scrub media rests at +30%; hero→S1 enter eases +60% → +30%.
+ * Mobile: rests at 100%; hero→S1 enter eases +20% → 100%.
  */
 const frameScaleStyle = computed(() => {
-  if (isMobile.value) return undefined
-
   const animateEnter =
     !reduced.value &&
     !hashSnap.value &&
     enterProgress.value < 1 &&
     exitProgress.value <= 0
 
-  const scale = desktopScrubMediaScale(
-    animateEnter ? enterProgress.value : 1,
-    animateEnter,
-  )
+  const progress = animateEnter ? enterProgress.value : 1
+  const scale = isMobile.value
+    ? mobileScrubMediaScale(progress, animateEnter)
+    : desktopScrubMediaScale(progress, animateEnter)
+
+  // Skip style when mobile is at rest (scale 1) to avoid needless transforms.
+  if (isMobile.value && scale === 1) return undefined
 
   return { transform: `scale(${scale})` }
 })
