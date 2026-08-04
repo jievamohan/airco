@@ -2,19 +2,19 @@
 
 Run **on the TransIP VPS**, inside the git checkout. This flow does **not** use Docker.
 
-**Exception to local-dev rule:** on the VPS, `pnpm` runs on the host (Node 22 + corepack). Locally, keep using `docker compose exec web pnpm …`.
+**Exception to local-dev rule:** on the VPS, `pnpm` runs on the host (Node **22.14+** + corepack). Locally, keep using `docker compose exec web pnpm …`.
 
 ## Prerequisites (VPS)
 
 - Git clone of this repo with access to `origin`
-- Node.js **22**
-- pnpm **9.15.4** via corepack:
+- Node.js **22.14+** (VPS reference: `v22.14.0`)
+- pnpm **9.15.9** via corepack:
 
 ```bash
 corepack enable
-corepack prepare pnpm@9.15.4 --activate
-node -v   # v22.x
-pnpm -v   # 9.15.4
+corepack prepare pnpm@9.15.9 --activate
+node -v   # v22.14.x or newer 22.x
+pnpm -v   # 9.15.9
 ```
 
 - `rsync`, `tar`, `make`
