@@ -32,7 +32,7 @@
       </div>
 
       <div class="explode__stage">
-        <div class="explode__frame">
+        <div class="explode__frame" :style="frameScaleStyle">
           <!-- Poster always under video (iOS often shows blank until primed) -->
           <img
             src="/media/1st-start.png"
@@ -81,6 +81,7 @@
 
 <script setup lang="ts">
 import {
+  desktopScrubMediaScale,
   handoffPinStyle,
   PRODUCT_PHASE_DESKTOP,
   PRODUCT_PHASE_MOBILE,
@@ -197,6 +198,27 @@ const pinHandoffStyle = computed(() => {
   return undefined
 })
 
+/**
+ * Desktop: scrub media rests at +30%.
+ * On hero→S1 enter: start +60% and ease down to +30% while sliding in.
+ */
+const frameScaleStyle = computed(() => {
+  if (isMobile.value) return undefined
+
+  const animateEnter =
+    !reduced.value &&
+    !hashSnap.value &&
+    enterProgress.value < 1 &&
+    exitProgress.value <= 0
+
+  const scale = desktopScrubMediaScale(
+    animateEnter ? enterProgress.value : 1,
+    animateEnter,
+  )
+
+  return { transform: `scale(${scale})` }
+})
+
 onMounted(() => {
   if (window.location.hash === '#aircos') {
     hashSnap.value = true
@@ -306,7 +328,8 @@ onMounted(() => {
   flex: 0 1 auto;
   min-height: 0;
   padding: 0 3vw;
-  overflow: hidden;
+  /* Allow desktop +30%/+60% frame scale without hard crop */
+  overflow: visible;
   width: 100%;
 }
 
@@ -371,6 +394,10 @@ onMounted(() => {
   .explode__caption {
     width: min(16ch, 90vw);
     font-size: clamp(1.65rem, 7.5vw, 2.35rem);
+  }
+
+  .explode__stage {
+    overflow: hidden;
   }
 
   .explode__media {

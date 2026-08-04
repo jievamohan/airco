@@ -151,3 +151,25 @@ export function easeExit(t: number) {
   const p = clamp01(t)
   return p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2
 }
+
+/** Desktop resting scale for scrub videos (+30%). */
+export const DESKTOP_SCRUB_MEDIA_SCALE = 1.3
+
+/** Desktop enter start scale for the first scrub section (+60%). */
+export const DESKTOP_SCRUB_ENTER_SCALE = 1.6
+
+/**
+ * Desktop scrub-media scale. Resting size is +30%.
+ * When `animateEnter` is true, eases from +60% → +30% as enterProgress 0→1.
+ */
+export function desktopScrubMediaScale(
+  enterProgress: number,
+  animateEnter = false,
+): number {
+  if (!animateEnter) return DESKTOP_SCRUB_MEDIA_SCALE
+  const t = easeEnter(enterProgress)
+  return (
+    DESKTOP_SCRUB_ENTER_SCALE +
+    (DESKTOP_SCRUB_MEDIA_SCALE - DESKTOP_SCRUB_ENTER_SCALE) * t
+  )
+}
