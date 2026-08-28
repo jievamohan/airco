@@ -11,6 +11,7 @@ use App\Models\Lead;
 use App\Models\SequenceStep;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AppointmentScheduler;
 use App\Services\LeadWorkflow;
 use App\Services\QuoteBuilder;
 use App\Services\Voice\FakeVoiceAgentClient;
@@ -160,6 +161,21 @@ class AdminApiTest extends TestCase
             ->assertJsonPath('data.uuid', $lead->uuid)
             ->assertJsonPath('data.quotes.0.number', $quote->number)
             ->assertJsonStructure(['data' => ['events', 'calls', 'quotes', 'appointments', 'emails']]);
+    }
+
+    #[Test]
+    public function een_afspraak_wordt_met_zijn_eigen_tijdzone_teruggegeven(): void
+    {
+        $this->actingAsOwner();
+
+        $lead = Lead::factory()->create(['status' => 'follow_up']);
+        app(AppointmentScheduler::class)->book($lead, null);
+
+        $this->getJson('/api/admin/leads/'.$lead->uuid)
+            ->assertOk()
+            // Zonder deze zone toont het dashboard de tijd van de kijker
+            // in plaats van die van de klus.
+            ->assertJsonPath('data.appointments.0.timezone', 'Europe/Amsterdam');
     }
 
     #[Test]

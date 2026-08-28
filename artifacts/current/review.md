@@ -82,5 +82,5 @@ zodra de eigen cijfers in de catalogus staan.
 | Gate C — type-safety | PASS (`vue-tsc` schoon, PHPStan level 6 schoon, geen baseline of ignores) |
 | Gate D — security | PASS (`composer audit` en `pnpm audit --prod` schoon, geen secrets in de repo) |
 | Gate F — performance | PASS (build slaagt, geen nieuwe runtime-deps voor de web-app) |
-| Tests | PASS (92 tests, 362 assertions) |
+| Tests | PASS (94 tests, 367 assertions) + 31/31 checks in een headless browser |
 | Codestijl | PASS (Pint) |

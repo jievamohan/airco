@@ -156,9 +156,11 @@
           <h2 class="panel__title">Afspraken</h2>
           <p v-if="!lead.appointments.length" class="empty">Nog geen afspraak.</p>
           <div v-for="appointment in lead.appointments" v-else :key="appointment.id" style="padding: 8px 0">
-            <p style="margin: 0"><strong>{{ fmt.dateTime(appointment.starts_at) }}</strong></p>
+            <p style="margin: 0">
+              <strong>{{ fmt.dateTime(appointment.starts_at, appointment.timezone) }}</strong>
+            </p>
             <p class="small muted" style="margin: 3px 0 0">
-              tot {{ fmt.dateTime(appointment.ends_at) }} · {{ providerLabel(appointment.provider) }}
+              tot {{ fmt.dateTime(appointment.ends_at, appointment.timezone) }} · {{ providerLabel(appointment.provider) }}
             </p>
             <p v-if="appointment.sync_error" class="small muted" style="margin: 3px 0 0">{{ appointment.sync_error }}</p>
           </div>

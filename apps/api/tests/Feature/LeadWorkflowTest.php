@@ -160,6 +160,21 @@ class LeadWorkflowTest extends TestCase
     }
 
     #[Test]
+    public function een_herziene_offerte_trekt_een_geboekte_klant_niet_terug_de_funnel_in(): void
+    {
+        $workflow = app(LeadWorkflow::class);
+        $lead = Lead::factory()->create(['status' => 'appointment_scheduled']);
+
+        $workflow->markQuoteSent($lead, $workflow->buildQuote($lead));
+
+        $lead->refresh();
+        $this->assertSame(LeadStatus::AppointmentScheduled, $lead->status, 'De status hoort te blijven staan.');
+        $this->assertSame(0, $lead->calls()->where('purpose', CallPurpose::Conversion->value)->count(),
+            'Een geboekte klant hoort niet opnieuw nagebeld te worden.');
+        $this->assertContains('quote_resent', $lead->events()->pluck('type')->all());
+    }
+
+    #[Test]
     public function het_maximale_aantal_belpogingen_zet_de_lead_op_onbereikbaar(): void
     {
         $lead = Lead::factory()->create(['status' => 'follow_up', 'call_attempts' => 4]);

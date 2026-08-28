@@ -4,7 +4,7 @@
 
 ```
 vendor/bin/phpunit --no-coverage
-OK (92 tests, 362 assertions)
+OK (94 tests, 367 assertions)
 ```
 
 | Suite | Wat het bewijst |
@@ -53,9 +53,31 @@ Uitgevoerd in proefmodus met de fake voice-client:
 | Een verzoek zonder `Accept: application/json` kreeg een 500 in plaats van een 401 | handmatige doorloop | `redirectGuestsTo(null)`, met regressietest |
 | Platgeslagen HTML-tabellen leverden waarden met een afsluitende dubbele punt | parsertest | waarde wordt nu ontdaan van trailing `:` |
 | Een offerte die op de advertentieprijs landde kwam door btw-afronding op € 899,01 uit | test op de vanaf-prijs | het totaal wordt vastgepind op het geadverteerde bedrag en de btw volgt uit het verschil |
+| **Het dashboard had helemaal geen navigatiebalk**: `app.vue` miste `<NuxtLayout>`, waardoor `definePageMeta({ layout })` stil genegeerd werd | doorloop in de browser | `<NuxtLayout>` toegevoegd; landingspagina ongewijzigd |
+| Afspraaktijden werden in de tijdzone van de kijker getoond in plaats van die van de klus (08:00 verscheen als 06:00) | doorloop in de browser | `timezone` toegevoegd aan de API-payload en meegegeven aan de datumopmaak, met regressietest |
+| Een herziene offerte trok een al geboekte klant terug de funnel in en plande een nieuw conversiegesprek | doorloop in de browser | status blijft staan bij `appointment_scheduled` en `won`; er wordt geen gesprek meer ingepland, met test |
+
+## Doorloop in een headless browser
+
+De volledige dashboardapplicatie is met een headless Chromium doorlopen tegen een
+draaiende API met demodata (`DemoSeeder`): **31 van de 31 checks geslaagd**.
+
+Gecontroleerd: afscherming van `/dashboard`, foutmelding bij een verkeerd
+wachtwoord, inloggen, de navigatiebalk, de KPI-tegels en alle acht funnelstappen,
+de leadlijst met status- en zoekfilter, het leaddetail met tijdlijn (26
+gebeurtenissen), beide transcripten, offerte met kostprijs en marge, de afspraak
+in de juiste tijdzone, verstuurde mail, clientvalidatie op een ongeldig bouwjaar,
+gegevens opslaan en zien blijven staan, twee "opnieuw aftrappen"-acties, de
+vanaf-prijs-check, een catalogusprijs aanpassen, de cadans met zes stappen en het
+aanpassen daarvan, alle zes instellingsgroepen met gemaskeerde geheimen,
+instellingen opslaan, uitloggen, opnieuw afgeschermd zijn, en de landingspagina
+die intact blijft.
+
+Geen console- of API-fouten, op de 422 na die de test zelf uitlokt met een
+verkeerd wachtwoord.
 
 ## Niet gedekt
 
-Er zijn geen browsertests voor het dashboard; de Playwright-service is nog steeds
-uitgesteld (zie `docs/runbooks/commands.md`). De schermen zijn handmatig
-doorlopen via de API die eronder zit, en de typecheck en build zijn groen.
+De browserdoorloop is een handmatig script, nog geen Playwright-suite in CI; die
+service is in dit project nog steeds uitgesteld (zie
+`docs/runbooks/commands.md`).

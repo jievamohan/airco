@@ -300,8 +300,24 @@ class LeadWorkflow
             ['quote_id' => $quote->id],
         );
 
-        $this->transition($lead, LeadStatus::Quoted);
         $this->notifier->quoteSent($lead, $quote);
+
+        // Een lead die de afspraak al rond heeft, hoort niet terug de
+        // verkoopfunnel in: een herziene offerte naar een geboekte klant mag
+        // geen nieuw conversiegesprek uitlokken.
+        if (in_array($lead->status, [LeadStatus::AppointmentScheduled, LeadStatus::Won], true)) {
+            $this->timeline->record(
+                $lead,
+                'quote_resent',
+                'Herziene offerte bij een geboekte klant',
+                'De status blijft staan en er wordt geen conversiegesprek ingepland.',
+                ['quote_id' => $quote->id],
+            );
+
+            return;
+        }
+
+        $this->transition($lead, LeadStatus::Quoted);
 
         $delay = $this->settings->int('agent.workflow.conversion_call_delay_minutes', 60);
         $this->scheduleCall($lead, CallPurpose::Conversion, now()->addMinutes($delay));

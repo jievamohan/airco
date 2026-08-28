@@ -51,7 +51,8 @@ klopt.
 
 ## Poorten
 
-* PHPUnit: 92 tests, 362 assertions — groen
+* PHPUnit: 94 tests, 367 assertions — groen
+* Volledige doorloop van het dashboard in een headless browser: 31/31 checks
 * PHPStan level 6 met larastan: schoon, zonder baseline of ignores
 * Pint: schoon
 * `nuxt typecheck` en `nuxt build`: schoon

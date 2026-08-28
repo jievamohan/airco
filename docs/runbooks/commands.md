@@ -22,6 +22,21 @@ docker compose exec api vendor/bin/pint --test
 
 Open: http://localhost:3010 (web) en http://localhost:8010 (api)
 
+Het CRM-dashboard zit op **http://localhost:3010/dashboard**. Inloggen kan met
+het account dat `DatabaseSeeder` aanmaakt: het adres uit
+`OWNER_NOTIFICATION_EMAIL` en het wachtwoord uit `OWNER_INITIAL_PASSWORD`
+(standaard `wachtwoord-wijzigen` — wijzig dat direct).
+
+Demodata om het dashboard gevuld te zien:
+
+```bash
+docker compose exec api php artisan db:seed --class='Database\\Seeders\\DemoSeeder'
+```
+
+Die seeder maakt acht leads verspreid over de funnel, met gesprekken,
+transcripten, offertes en afspraken. Alleen voor lokaal en demo, nooit op
+productie.
+
 ## Agent-workflow
 
 De workflow draait op twee processen: de scheduler (hartslag) en een queue-worker.

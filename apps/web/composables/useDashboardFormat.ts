@@ -12,7 +12,12 @@ export function useDashboardFormat() {
       ? '—'
       : new Intl.NumberFormat('nl-NL', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value)
 
-  const dateTime = (iso: string | null | undefined) =>
+  /**
+   * Tijden komen als UTC uit de API. Zonder expliciete zone rendert de browser
+   * ze in de tijdzone van de kijker; voor een afspraak is dat verkeerd, want
+   * die staat in de tijdzone van de klus. Geef die dan mee.
+   */
+  const dateTime = (iso: string | null | undefined, timeZone?: string) =>
     !iso
       ? '—'
       : new Intl.DateTimeFormat('nl-NL', {
@@ -21,6 +26,7 @@ export function useDashboardFormat() {
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
+          ...(timeZone ? { timeZone } : {}),
         }).format(new Date(iso))
 
   const date = (iso: string | null | undefined) =>

@@ -105,6 +105,9 @@ class LeadDetailResource extends JsonResource
                 'provider' => $appointment->provider,
                 'starts_at' => $appointment->starts_at->toIso8601String(),
                 'ends_at' => $appointment->ends_at->toIso8601String(),
+                // Nodig om de afspraak in de tijdzone van de klus te tonen,
+                // niet in die van degene die het dashboard openslaat.
+                'timezone' => $appointment->timezone,
                 'status' => $appointment->status,
                 'sync_error' => $appointment->sync_error,
             ])->all()),
