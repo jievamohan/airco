@@ -1,26 +1,42 @@
-# Dependency review — gsap
+# Dependency review
 
-## Change
-- Package: `gsap` `^3.15.0`
-- App: `apps/web`
-- Install: `docker compose exec web pnpm add gsap`
-- Lockfile: `apps/web/pnpm-lock.yaml` updated
+## Nieuw in `apps/api` (Laravel 12, PHP 8.4)
 
-## Why
-Design brief for `#verwarmen` Apple-style scroll section requires GSAP + ScrollTrigger exclusively for motion (opacity, translateY, light scale, clip/mask scrubbed to scroll).
+| Pakket | Versie | Waarvoor | Afweging |
+|--------|--------|----------|----------|
+| `laravel/framework` | ^12.0 | applicatieraamwerk | vastgelegd in `.cursor/rules/10-repo-layout.mdc` |
+| `laravel/sanctum` | ^4.0 | bearertokens voor het dashboard | first-party; geen cookie/CSRF-koppeling nodig voor een statische SPA |
+| `webklex/php-imap` | ^6.0 | mailbox uitlezen | praat zelf IMAP over een socket, dus de `imap`-extensie hoeft niet in de image |
+| `dompdf/dompdf` | ^3.0 | offerte-pdf | pure PHP, geen headless browser of systeembinaries |
+| `larastan/larastan` | ^3.0 (dev) | statische analyse | vereist door Gate C |
 
-## Scope of use
-- Client-only dynamic import inside `useHeatingStoryScroll`
-- ScrollTrigger scrub on Heating sticky track only
-- Not used on Hero / Product / Climate / Winter (remain RAF sticky scrub)
+Bewust **niet** toegevoegd:
 
-## Risk
-- **Low** — animation library; no network/auth surface
-- Bundle: GSAP loaded only when Heating section mounts (dynamic import)
-- License: GSAP standard license (free for most use cases; ScrollTrigger included in core package distribution used here)
+* `google/apiclient` — we gebruiken één endpoint van Google Calendar; een directe
+  HTTPS-aanroep met een refresh-token scheelt een grote afhankelijkheidsboom.
+* Een CalDAV-bibliotheek — een afspraak aanmaken is één `PUT` van een
+  iCalendar-bestand; dat schrijven we zelf, inclusief regelvouwing volgens RFC 5545.
+* Een HTTP-clientwrapper voor ElevenLabs — `Illuminate\Http\Client` volstaat.
 
-## Rollback
-Remove dependency and heating GSAP composable; restore prior HeatingSection claim block if needed.
+## Gewijzigd in `apps/web`
 
-## Verdict
-**PASS** — allowed for this feature.
+| Wijziging | Reden |
+|-----------|-------|
+| `pnpm.overrides.nanoid: ^3.3.18` | `pnpm audit --prod` meldde GHSA (hoog): custom generators kunnen oneindig doorlopen bij size 0. De transitieve versie (3.3.17 via postcss/vite) valt binnen het kwetsbare bereik. Na de override: geen meldingen meer. Typecheck en build blijven groen. |
+
+Er zijn geen nieuwe runtime-afhankelijkheden voor de web-app: het dashboard is
+gebouwd met wat Nuxt zelf meebrengt.
+
+## Auditresultaat
+
+```
+composer audit  → No security vulnerability advisories found.
+pnpm audit --prod → No known vulnerabilities found.
+```
+
+Beide draaien voortaan ook in CI (`.github/workflows/ci-deploy.yml`).
+
+## Licenties
+
+Alle toegevoegde pakketten zijn MIT of LGPL-2.1 (`dompdf`, LGPL — gebruikt als
+bibliotheek, niet aangepast). Geen copyleft-verplichting op onze eigen code.

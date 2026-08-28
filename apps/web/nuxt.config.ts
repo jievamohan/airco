@@ -1,7 +1,20 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/dashboard.css'],
+  runtimeConfig: {
+    public: {
+      // Basis-URL van de Laravel-API.
+      // Overschrijven met NUXT_PUBLIC_API_BASE; bij een statische build wordt
+      // die waarde tijdens `nuxt generate` vastgelegd.
+      apiBase: 'http://localhost:8000/api',
+    },
+  },
+  routeRules: {
+    // Het dashboard is een afgeschermde SPA: client-side renderen en niet indexeren.
+    '/dashboard': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/dashboard/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+  },
   nitro: {
     preset: 'static',
   },

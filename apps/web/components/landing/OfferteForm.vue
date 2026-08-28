@@ -7,9 +7,11 @@
       </div>
 
       <div v-if="success" class="offerte__success" data-testid="offerte-success" role="status">
-        <p>Bedankt. Uw aanvraag is klaar om te versturen zodra we live gaan.</p>
-        <p class="offerte__success-note">Er is nog niets opgeslagen of verzonden.</p>
-        <button type="button" class="btn-ghost" @click="reset">Opnieuw</button>
+        <p>Bedankt, uw aanvraag is bij ons binnen.</p>
+        <p class="offerte__success-note">
+          We bellen u kort om de laatste details door te nemen en sturen daarna direct een offerte.
+        </p>
+        <button type="button" class="btn-ghost" @click="reset">Nog een aanvraag doen</button>
       </div>
 
       <form
@@ -144,8 +146,15 @@
           </label>
         </div>
 
-        <button type="submit" class="btn-primary offerte__submit" data-testid="offerte-submit">
-          Versturen
+        <p v-if="submitError" class="offerte__error" role="alert">{{ submitError }}</p>
+
+        <button
+          type="submit"
+          class="btn-primary offerte__submit"
+          data-testid="offerte-submit"
+          :disabled="submitting"
+        >
+          {{ submitting ? 'Bezig met versturen…' : 'Versturen' }}
         </button>
       </form>
     </div>
@@ -184,6 +193,8 @@ const empty = (): LeadForm => ({
 const form = reactive<LeadForm>(empty())
 const errors = reactive<LeadErrors>({})
 const success = ref(false)
+const submitting = ref(false)
+const submitError = ref('')
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 const postcodeOk = (v: string) => /^\d{4}\s?[A-Za-z]{2}$/.test(v)
@@ -222,23 +233,65 @@ function validate(): boolean {
 }
 
 /**
- * Mirrors future thin POST /api/leads → { ok: true }.
- * v1: local mock only — no network, no PII logging.
+ * Verstuurt de aanvraag naar POST /api/leads. Daar begint de agent-workflow:
+ * verrijken, bellen, offerte mailen en nabellen.
  */
-function mockSubmit(): { ok: true } {
-  return { ok: true }
-}
-
-function onSubmit() {
+async function onSubmit() {
   if (!validate()) return
-  const res = mockSubmit()
-  if (res.ok) success.value = true
+
+  submitting.value = true
+  submitError.value = ''
+
+  const payload: Record<string, unknown> = {
+    name: form.name,
+    email: form.email,
+    phone: form.phone,
+    address: form.address,
+    postcode: form.postcode,
+    city: form.city,
+    notes: form.notes || null,
+  }
+
+  if (form.space_size) {
+    payload.space_size = Number(form.space_size.replace(',', '.'))
+    payload.space_unit = form.space_unit
+  }
+
+  try {
+    const response = await fetch(`${useRuntimeConfig().public.apiBase}/leads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}))
+
+      if (response.status === 422 && body.errors) {
+        for (const [field, messages] of Object.entries(body.errors as Record<string, string[]>)) {
+          if (field in form) errors[field as keyof LeadForm] = messages[0]
+        }
+        submitError.value = 'Controleer de gemarkeerde velden.'
+        return
+      }
+
+      submitError.value = 'Het versturen lukte niet. Probeer het zo nog eens of bel ons.'
+      return
+    }
+
+    success.value = true
+  } catch {
+    submitError.value = 'We konden geen verbinding maken. Probeer het zo nog eens of bel ons.'
+  } finally {
+    submitting.value = false
+  }
 }
 
 function reset() {
   Object.assign(form, empty())
   clearErrors()
   success.value = false
+  submitError.value = ''
 }
 </script>
 
@@ -368,6 +421,17 @@ function reset() {
 .offerte__submit {
   margin-top: 12px;
   min-width: 180px;
+}
+
+.offerte__submit:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.offerte__error {
+  margin: 12px 0 0;
+  color: #c45c5c;
+  font-size: 14px;
 }
 
 .offerte__success p {

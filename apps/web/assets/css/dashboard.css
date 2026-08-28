@@ -1,0 +1,396 @@
+/* ---------------------------------------------------------------------------
+   Dashboard — eigen laag boven de tokens van de landingspagina.
+   Rustig, tekstueel en dicht, zodat veel leads tegelijk leesbaar blijven.
+--------------------------------------------------------------------------- */
+
+.dash {
+  --dash-bg: #fafafa;
+  --dash-panel: #ffffff;
+  --dash-line: var(--color-line);
+  --dash-ink: var(--color-ink);
+  --dash-muted: var(--color-ink-muted);
+  --dash-accent: #0a0a0a;
+  --dash-ok: #2f8f5b;
+  --dash-warn: #b8860b;
+  --dash-bad: #c45c5c;
+  --dash-radius: 10px;
+
+  min-height: 100vh;
+  background: var(--dash-bg);
+  color: var(--dash-ink);
+  font-size: 14px;
+}
+
+.dash a { color: inherit; }
+
+/* ------------------------------------------------------------------ layout */
+
+.dash__bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  height: 60px;
+  background: rgb(255 255 255 / 0.9);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--dash-line);
+}
+
+.dash__brand {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.dash__nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.dash__nav a {
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: var(--dash-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dash__nav a:hover { color: var(--dash-ink); }
+
+.dash__nav a.is-active {
+  background: var(--dash-ink);
+  color: #fff;
+}
+
+.dash__main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+.dash__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.dash__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.dash__lede {
+  margin: 4px 0 0;
+  color: var(--dash-muted);
+}
+
+/* ------------------------------------------------------------------ panels */
+
+.panel {
+  background: var(--dash-panel);
+  border: 1px solid var(--dash-line);
+  border-radius: var(--dash-radius);
+  padding: 20px;
+}
+
+.panel + .panel { margin-top: 20px; }
+
+.panel__title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.panel__note {
+  margin: 0 0 16px;
+  color: var(--dash-muted);
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 900px) {
+  .grid--2 { grid-template-columns: 1fr 1fr; }
+  .grid--sidebar { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+}
+
+/* --------------------------------------------------------------------- kpi */
+
+.kpis {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-bottom: 20px;
+}
+
+.kpi {
+  background: var(--dash-panel);
+  border: 1px solid var(--dash-line);
+  border-radius: var(--dash-radius);
+  padding: 14px 16px;
+}
+
+.kpi__label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--dash-muted);
+}
+
+.kpi__value {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.kpi__sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--dash-muted);
+}
+
+/* ------------------------------------------------------------------ funnel */
+
+.funnel { display: grid; gap: 10px; }
+
+.funnel__row { display: grid; gap: 6px; }
+
+.funnel__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.funnel__label { font-weight: 500; }
+
+.funnel__numbers { color: var(--dash-muted); }
+
+.funnel__track {
+  height: 22px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.funnel__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-cool), var(--color-warm));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* ------------------------------------------------------------------- table */
+
+.table-wrap { overflow-x: auto; }
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.data th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--dash-muted);
+  padding: 0 12px 8px;
+  border-bottom: 1px solid var(--dash-line);
+  white-space: nowrap;
+}
+
+table.data td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #f2f2f2;
+  vertical-align: top;
+}
+
+table.data tbody tr:hover { background: #fbfbfb; }
+
+table.data .num { text-align: right; white-space: nowrap; }
+
+/* ------------------------------------------------------------------- badge */
+
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: nowrap;
+  background: #f0f0f0;
+  color: #4a4a4a;
+}
+
+.badge--won, .badge--appointment_scheduled { background: #e6f4ec; color: var(--dash-ok); }
+.badge--quoted, .badge--qualified { background: #eaf2fb; color: #2c6ba8; }
+.badge--calling, .badge--follow_up { background: #fdf3e0; color: var(--dash-warn); }
+.badge--lost, .badge--unreachable, .badge--do_not_contact { background: #fbeaea; color: var(--dash-bad); }
+
+/* ----------------------------------------------------------------- filters */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.filters input,
+.filters select,
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--dash-ink);
+  min-width: 0;
+}
+
+.filters input:focus,
+.filters select:focus,
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus {
+  outline: 2px solid var(--dash-ink);
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ knoppen */
+
+.btn {
+  font: inherit;
+  padding: 8px 14px;
+  border: 1px solid var(--dash-ink);
+  border-radius: 999px;
+  background: var(--dash-ink);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--dash-ink);
+  border-color: var(--dash-line);
+}
+
+.btn--ghost:hover:not(:disabled) { border-color: var(--dash-ink); }
+
+.btn--small { padding: 6px 11px; font-size: 12.5px; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ----------------------------------------------------------------- formulier */
+
+.form-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.form-grid label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--dash-muted);
+}
+
+.form-grid .full { grid-column: 1 / -1; }
+
+.form-grid input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  justify-self: start;
+}
+
+/* ---------------------------------------------------------------- tijdlijn */
+
+.timeline { display: grid; gap: 0; }
+
+.timeline__item {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 14px;
+  padding-bottom: 18px;
+  position: relative;
+}
+
+.timeline__dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--dash-ink);
+}
+
+.timeline__item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 16px;
+  bottom: 0;
+  width: 1px;
+  background: var(--dash-line);
+}
+
+.timeline__title { margin: 0; font-weight: 500; }
+
+.timeline__meta { margin: 2px 0 0; font-size: 12px; color: var(--dash-muted); }
+
+.timeline__desc { margin: 5px 0 0; color: #4a4a4a; }
+
+/* ------------------------------------------------------------------ divers */
+
+.notice {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--dash-line);
+  background: #fff;
+  margin-bottom: 16px;
+}
+
+.notice--ok { border-color: #bfe0cd; background: #f2faf5; }
+.notice--bad { border-color: #eecccc; background: #fdf5f5; }
+
+.muted { color: var(--dash-muted); }
+.small { font-size: 12.5px; }
+.empty { padding: 28px 0; text-align: center; color: var(--dash-muted); }
+
+.transcript {
+  margin: 8px 0 0;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid var(--dash-line);
+  white-space: pre-wrap;
+  font-size: 12.5px;
+  line-height: 1.6;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
+dl.facts dt { color: var(--dash-muted); }
+dl.facts dd { margin: 0; }

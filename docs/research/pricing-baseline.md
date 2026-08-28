@@ -1,0 +1,170 @@
+# Voorlopige prijs- en montagetijdbasis (airco-installatie NL)
+
+**Status: VOORLOPIG.** KlimaatX heeft nog geen eigen inkoop-, marge- en normtijdcijfers
+aangeleverd. Alle bedragen hieronder zijn afgeleid uit openbaar marktonderzoek
+(augustus 2026) en dienen als startwaarde. Ze zijn volledig aanpasbaar via
+**Dashboard → Catalogus** en **Dashboard → Instellingen → Prijsstelling**;
+de seeder overschrijft nooit bestaande records.
+
+Alle bedragen in dit document zijn **exclusief btw** tenzij anders vermeld.
+
+---
+
+## 1. Gebruikte bronnen
+
+| # | Bron | Wat is eruit gehaald |
+|---|------|----------------------|
+| 1 | technim.nl (installatiegroothandel) | Single split vanaf ± €400 inkoop; A-merken Daikin/Fujitsu/Haier/LG |
+| 2 | installatieplatform.nl | Mitsubishi MSZ-HR €1.500–1.900, MSZ-AP €1.700–2.300, MSZ-EF €1.900–2.500, MSZ-LN €2.200–2.800 (incl. btw én montage); multisplit 2 units €3.000–4.500, 3–4 units €4.000–6.000 |
+| 3 | aircoprijzen.nl | Montageloon split €690, multisplit €825, extra binnenunit €600–810; meerprijs wifi €90–190 (incl. btw) |
+| 4 | cvkoopjes.nl / airco-webwinkel.nl | Koelleidingsets: 1/4"x3/8" 3 m €39, 5 m €59–64, 10 m €117–119, 15 m €162–179; 1/4"x1/2" 5 m €89 (incl. btw) |
+| 5 | werkspot.nl / klussendirect.nl | Meerprijs leiding ± €15/m; condenspomp ± €200; standaard 3–5 m leiding inbegrepen |
+| 6 | offerteadviseur.nl / mijnzzp.nl / knab.nl | Uurtarief airco-monteur zzp €50–85, gemiddeld €65 excl. btw |
+| 7 | profijtairco.nl / homedeal.nl | Montageduur single split 3–8 uur, multisplit 5–8 uur, grote multisplit soms meerdere dagen |
+| 8 | noordpool-airconditioning.nl / degoedkoopsteaircoshop.nl / slimster.nl | Vuistregel koellast 30/40/50 W per m³ (goed/gemiddeld/slecht geïsoleerd), ± 75/100/125 W per m² bij 2,5 m plafond; kamertype→kW tabel |
+
+---
+
+## 2. Afleidingsmethode
+
+Webshopprijzen zijn consumentenprijzen **inclusief** 21% btw. De inkoopprijs voor een
+installateur is daaruit benaderd met:
+
+```
+inkoop_ex_btw ≈ (consumentenprijs_incl_btw / 1,21) × 0,80
+```
+
+De factor 0,80 modelleert de gebruikelijke installateurskorting bij een groothandel
+(bron 1: "vanaf €400" tegenover consumentenprijzen van €560+ voor dezelfde klasse).
+De uitkomsten zijn afgerond op logische inkoopstaffels.
+
+Controle achteraf: de gegenereerde offerte voor een 3,5 kW single split premium komt uit
+op ± €2.400 incl. btw en voor budget op ± €1.650 incl. btw. Beide vallen binnen de in
+bronnen 2 en 3 waargenomen marktrange van €1.600–2.800.
+
+---
+
+## 3. Capaciteitsbepaling (sizing)
+
+Koellast = inhoud (m³) × isolatiefactor.
+
+| Isolatie | W/m³ | W/m² bij 2,5 m |
+|----------|------|-----------------|
+| goed (nieuwbouw / na 2010) | 30 | 75 |
+| gemiddeld (standaard) | 40 | 100 |
+| slecht (voor 1990 / zolder) | 50 | 125 |
+
+Wordt de ruimte in m² opgegeven, dan rekenen we met een plafondhoogte van 2,60 m.
+De uitkomst wordt opgehoogd naar de eerstvolgende standaardklasse:
+**2,0 / 2,5 / 3,5 / 5,0 / 7,1 kW**. Boven 7,1 kW of bij meer dan één ruimte
+adviseert de engine een multisplit.
+
+---
+
+## 4. Apparatuur — inkoopprijs per klasse (excl. btw)
+
+Drie kwaliteitstiers:
+
+* **budget** — Gree, Haier, Lamborghini
+* **mid** — LG, Fujitsu, Toshiba
+* **premium** — Daikin, Mitsubishi Electric
+
+### Single split (buiten- + binnenunit als set)
+
+| kW | budget | mid | premium |
+|----|--------|-----|---------|
+| 2,0 | € 360 | € 520 | € 730 |
+| 2,5 | € 380 | € 560 | € 780 |
+| 3,5 | € 450 | € 650 | € 900 |
+| 5,0 | € 620 | € 850 | € 1.150 |
+| 7,1 | € 850 | € 1.150 | € 1.500 |
+
+### Multisplit buitenunits
+
+| Aansluitingen | budget | mid | premium |
+|---------------|--------|-----|---------|
+| 2 | € 700 | € 900 | € 1.100 |
+| 3 | € 950 | € 1.250 | € 1.550 |
+| 4 | € 1.250 | € 1.600 | € 2.000 |
+| 5 | € 1.600 | € 2.050 | € 2.550 |
+
+### Losse binnenunits (multisplit)
+
+| kW | budget | mid | premium |
+|----|--------|-----|---------|
+| 2,0 | € 210 | € 280 | € 340 |
+| 2,5 | € 220 | € 300 | € 360 |
+| 3,5 | € 260 | € 350 | € 430 |
+| 5,0 | € 340 | € 460 | € 570 |
+
+Standaardmarge apparatuur: **45%**.
+
+---
+
+## 5. Materialen — inkoopprijs (excl. btw)
+
+| SKU | Omschrijving | Eenheid | Inkoop | Marge | Montagetijd |
+|-----|--------------|---------|--------|-------|-------------|
+| MAT-LEIDING-5M | Koelleidingset 1/4"x3/8" 5 m, geïsoleerd | set | € 42 | 60% | 0 min (in basis) |
+| MAT-LEIDING-EXTRA | Extra koelleiding boven 5 m | meter | € 9 | 60% | 9 min |
+| MAT-BEUGEL | Trillingsvrije wandbeugel buitenunit | stuk | € 35 | 60% | 0 min (in basis) |
+| MAT-CONDENS | Condensafvoer + slang | set | € 18 | 60% | 0 min (in basis) |
+| MAT-CONDENSPOMP | Condenspomp (bij ontbreken natuurlijk afschot) | stuk | € 110 | 60% | 45 min |
+| MAT-KABELGOOT | Leidinggoot + elektrakabel | meter | € 7 | 60% | 6 min |
+| MAT-KERNBORING | Kernboring gevel Ø 65 mm | stuk | € 12 | 60% | 30 min |
+| MAT-KLEIN | Klein materiaal, stikstof, vacuüm, bevestiging | post | € 30 | 60% | 0 min (in basis) |
+| MAT-FGAS | F-gassenregistratie en afvoerbijdrage | post | € 15 | 0% | 0 min |
+| MAT-GROEP | Extra elektragroep in meterkast | stuk | € 95 | 60% | 120 min |
+| MAT-DAKDOORVOER | Dakdoorvoer waterdicht afgewerkt | stuk | € 65 | 60% | 60 min |
+
+---
+
+## 6. Arbeid en normtijden
+
+* Verkooptarief arbeid: **€ 75 per monteursuur excl. btw** (inkoop/kostprijs € 65, bron 6).
+* Ploeggrootte standaard **2 monteurs**.
+* Doorlooptijd op locatie = monteursuren ÷ ploeggrootte, afgerond op halve uren, minimaal 2,0 uur.
+
+| Normtijd | Monteursuren |
+|----------|--------------|
+| Basis single split (incl. 5 m leiding, beugel, condens, 1 kernboring) | 6,0 |
+| — waarvan op de apparatuurregel (de kernboring is een eigen regel) | 5,5 |
+| Basis multisplit buitenunit (incl. 1 kernboring) | 7,0 |
+| Per extra binnenunit (incl. eigen kernboring) | 3,5 |
+| Per extra meter leiding boven 5 m | 0,15 |
+| Kernboring (per stuk, ook de eerste) | 0,5 |
+| Condenspomp | 0,75 |
+| Plaatsing op verdieping ≥ 2 of gevelwerk op hoogte | 1,5 |
+| Extra elektragroep | 2,0 |
+| Dakdoorvoer | 1,0 |
+
+De normtijden worden per offerteregel opgeteld; de kernboring staat als eigen
+regel in de calculatie, zodat een tweede doorvoer vanzelf meetelt.
+
+Voorbeeld: single split 3,5 kW, 8 m leiding, 1 kernboring →
+5,5 + 0,5 + 3×(0,15+0,10) = 6,75 monteursuren → ± 3,5 uur op locatie met 2 monteurs.
+Voor het inplannen van de afspraak wordt daar 30 minuten reis- en opruimtijd bij geteld.
+
+---
+
+## 7. Overige instelbare parameters
+
+| Parameter | Startwaarde | Toelichting |
+|-----------|-------------|-------------|
+| Btw-tarief | 21% | Aanpasbaar; als voor een deel van het werk een verlaagd tarief geldt, in het dashboard wijzigen |
+| Voorrijkosten | € 0 tot 30 km, daarna € 0,55/km | Vanaf vestigingspostcode |
+| Minimale opdrachtwaarde | € 950 excl. btw | Onder deze waarde wordt de offerte opgehoogd |
+| Geldigheid offerte | 21 dagen | |
+| Standaard tier | mid | Voorgesteld tenzij de lead anders aangeeft |
+| Korting bij direct akkoord tijdens conversiegesprek | 3%, max € 150 | Argument voor de voice agent |
+
+---
+
+## 8. Wat KlimaatX zelf moet aanleveren om dit definitief te maken
+
+1. Werkelijke inkoopprijslijst van de eigen groothandel (per merk/model/kW).
+2. Eigen gehanteerde margestaffels per productgroep.
+3. Eigen normtijden per werksoort en de werkelijke ploeggrootte.
+4. Werkelijk uurtarief en voorrijregeling.
+5. Vestigingspostcode en werkgebied.
+6. Merken/modellen die daadwerkelijk gevoerd worden, inclusief garantietermijnen.

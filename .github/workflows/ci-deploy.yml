@@ -11,6 +11,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  api:
+    name: API tests and static analysis
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, pdo_sqlite, sodium, zip, dom
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Code style
+        run: vendor/bin/pint --test
+
+      - name: Static analysis
+        run: php -d memory_limit=1G vendor/bin/phpstan analyse --no-progress
+
+      - name: Tests
+        run: vendor/bin/phpunit --no-coverage
+
+      - name: Dependency audit
+        run: composer audit --no-interaction --format=plain
+
   ci:
     name: Build and typecheck
     runs-on: ubuntu-latest
@@ -36,10 +68,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Dependency audit
+        run: pnpm audit --prod
+
       - name: Typecheck
         run: pnpm run typecheck
 
       - name: Generate static site
+        env:
+          NUXT_PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
         run: pnpm run generate
 
       - name: Verify generate output
@@ -49,7 +86,7 @@ jobs:
 
   deploy:
     name: Deploy production
-    needs: ci
+    needs: [ci, api]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production

@@ -2,8 +2,8 @@
 
 ## Stack
 
-- Web: Nuxt 3 under `apps/web` (pnpm)
-- API: deferred in v1 (no `apps/api`)
+- Web: Nuxt 3 onder `apps/web` (pnpm) — landingspagina en het CRM-dashboard onder `/dashboard`
+- API: Laravel 12 onder `apps/api` (composer, MySQL) — CRM, agent-workflow en integraties
 
 ## Docker
 
@@ -12,9 +12,34 @@ docker compose up -d --build
 docker compose exec web pnpm run typecheck
 docker compose exec web pnpm run build
 docker compose logs -f web
+
+docker compose exec api php artisan migrate --force
+docker compose exec api php artisan db:seed --force
+docker compose exec api composer test
+docker compose exec api composer analyse
+docker compose exec api vendor/bin/pint --test
 ```
 
-Open: http://localhost:3010
+Open: http://localhost:3010 (web) en http://localhost:8010 (api)
+
+## Agent-workflow
+
+De workflow draait op twee processen: de scheduler (hartslag) en een queue-worker.
+
+```bash
+# Hartslag: gesprekken doorzetten en opvolgstappen uitvoeren (elke minuut)
+docker compose exec api php artisan schedule:work
+
+# Wachtrij: verrijken, offertes mailen, afspraken boeken
+docker compose exec api php artisan queue:work --tries=3
+
+# Handmatig een stap forceren
+docker compose exec api php artisan leads:poll-mailbox
+docker compose exec api php artisan agent:tick
+```
+
+In productie draaien deze als systemd-units of via cron; zie
+[agent-workflow.md](./agent-workflow.md).
 
 ## Production deploy (VPS / DirectAdmin)
 
@@ -26,7 +51,8 @@ make deploy-production-dry-run
 make rollback-production
 ```
 
-See [deploy-production.md](./deploy-production.md).
+See [deploy-production.md](./deploy-production.md). De API wordt apart uitgerold;
+zie [agent-workflow.md](./agent-workflow.md).
 
 **Auto-deploy:** merging a PR into `main` triggers `.github/workflows/ci-deploy.yml` (CI → SSH deploy → optional smoke). Configure the `production` environment in GitHub (secret: `VPS_SSH_KEY`; variables: host, user, deploy path — see deploy runbook).
 
@@ -35,4 +61,5 @@ See [deploy-production.md](./deploy-production.md).
 - Locally: do not run `pnpm` on the host; use `docker compose exec web …`.
 - On the VPS: `make deploy-production` uses host Node 22.14+ + pnpm 9.15.9 (documented exception).
 - Playwright / e2e service: deferred (Lane I follow-up). Never run Playwright on the host.
-- Gate D PHPStan / `composer audit`: N/A until `apps/api` exists — see `artifacts/current/infra-review.md`.
+- `NUXT_PUBLIC_API_BASE` moet bij het bouwen van de web-app op de publieke API-URL staan,
+  anders wijst het formulier en het dashboard naar localhost.
