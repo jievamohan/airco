@@ -134,8 +134,33 @@ onderbouwing en bronnen staan in `docs/research/pricing-baseline.md`. Vervang ze
 via **Dashboard → Catalogus**. De seeder is idempotent: hij vult alleen aan wat
 ontbreekt en overschrijft nooit een aangepaste regel.
 
-Algemene calculatieparameters (btw, uurtarief, ploeggrootte, minimale
-opdrachtwaarde, standaardklasse) staan onder **Instellingen → Prijsstelling**.
+Algemene calculatieparameters (btw, uurtarief, ploeggrootte, standaardklasse)
+staan onder **Instellingen → Prijsstelling**.
+
+### Vanaf-prijs
+
+De geadverteerde "vanaf"-prijs staat als bedrag **inclusief btw** onder
+Instellingen, in dezelfde termen als de advertentie. Hij werkt als ondergrens:
+geen enkele offerte komt eronder.
+
+Wil je een eenvoudige instapklus daadwerkelijk voor die prijs aanbieden — ook als
+dat onder de kostprijs uitkomt — zet dan **Instappakket** aan. Dat topt een
+offerte af op de vanaf-prijs, maar alleen als de klus er echt onder valt:
+
+* enkele binnenunit, single split
+* niet meer dan het ingestelde maximale vermogen (standaard 2,5 kW)
+* leidinglengte binnen de standaard 5 meter
+* begane grond of eerste verdieping
+* geen condenspomp en geen extra elektragroep
+
+Valt de klus daarbuiten, dan rekent de engine gewoon door. Elke offerte krijgt
+een kostprijs en een brutomarge; zakt die onder de **margedrempel**, dan wordt de
+offerte gemarkeerd, komt er een regel in de tijdlijn en staat de waarschuwing in
+de notificatiemail naar de ondernemer.
+
+Onder **Catalogus → Vanaf-prijs** rekent het dashboard continu door of de
+geadverteerde prijs nog haalbaar is met de huidige inkoopprijzen en normtijden,
+en wat de prijs zou moeten zijn om de margedrempel te halen.
 
 ---
 
@@ -150,6 +175,7 @@ opdrachtwaarde, standaardklasse) staan onder **Instellingen → Prijsstelling**.
 | Offerte niet verstuurd | `email_messages` bij de lead: status `failed` wijst op de mailserver, `skipped` op proefmodus. |
 | Afspraak niet in de agenda | Het veld `sync_error` op de afspraak zegt waarom; de afspraak zelf is wel vastgelegd. |
 | Lead blijft hangen | Dashboard → lead → "Stappen opnieuw aftrappen". Elke actie maakt een nieuwe poging; niets wordt overschreven. |
+| Offerte gemarkeerd als "onder de margedrempel" | De verkoopprijs zit te dicht op de kostprijs. Kijk op Catalogus → Vanaf-prijs of de advertentieprijs nog klopt, of verhoog de inkoop-/margegegevens. |
 
 Logs: `apps/api/storage/logs/`. Er worden bewust geen transcripten of
 persoonsgegevens naar de logstream geschreven; die staan alleen in de database.

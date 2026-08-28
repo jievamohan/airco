@@ -375,6 +375,8 @@ table.data .num { text-align: right; white-space: nowrap; }
 .notice--bad { border-color: #eecccc; background: #fdf5f5; }
 
 .muted { color: var(--dash-muted); }
+.is-bad { color: var(--dash-bad); font-weight: 600; }
+.is-ok { color: var(--dash-ok); font-weight: 600; }
 .small { font-size: 12.5px; }
 .empty { padding: 28px 0; text-align: center; color: var(--dash-muted); }
 

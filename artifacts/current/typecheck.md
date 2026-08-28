@@ -18,7 +18,7 @@ composer run analyse   # PHPStan 2.2.9 + larastan, level 6
 → [OK] No errors
 ```
 
-Startpunt was 83 meldingen. Die zijn opgelost door het onderliggende probleem aan
+Startpunt was 83 meldingen (en blijft schoon na het toevoegen van de vanaf-prijslogica). Die zijn opgelost door het onderliggende probleem aan
 te pakken, niet door ze te onderdrukken:
 
 * Alle Eloquent-modellen hebben nu een volledig `@property`-blok, zodat PHPStan

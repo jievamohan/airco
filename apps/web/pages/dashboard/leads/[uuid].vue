@@ -131,6 +131,10 @@
               Montage ± {{ fmt.duration(quote.onsite_minutes) }} · geldig tot {{ fmt.date(quote.valid_until) }}
               <template v-if="quote.sent_at"> · verstuurd {{ fmt.dateTime(quote.sent_at) }}</template>
             </p>
+            <p class="small" style="margin: 4px 0 0" :class="quote.margin_warning ? 'is-bad' : 'muted'">
+              Kostprijs {{ fmt.euro(quote.cost_cents) }} · marge {{ fmt.number(quote.margin_pct, 1) }}%
+              <template v-if="quote.margin_warning"> — onder de ingestelde drempel</template>
+            </p>
             <details style="margin-top: 6px">
               <summary class="small muted" style="cursor: pointer">Regels tonen</summary>
               <table class="data" style="margin-top: 8px">

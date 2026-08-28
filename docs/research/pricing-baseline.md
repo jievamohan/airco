@@ -22,6 +22,7 @@ Alle bedragen in dit document zijn **exclusief btw** tenzij anders vermeld.
 | 6 | offerteadviseur.nl / mijnzzp.nl / knab.nl | Uurtarief airco-monteur zzp €50–85, gemiddeld €65 excl. btw |
 | 7 | profijtairco.nl / homedeal.nl | Montageduur single split 3–8 uur, multisplit 5–8 uur, grote multisplit soms meerdere dagen |
 | 8 | noordpool-airconditioning.nl / degoedkoopsteaircoshop.nl / slimster.nl | Vuistregel koellast 30/40/50 W per m³ (goed/gemiddeld/slecht geïsoleerd), ± 75/100/125 W per m² bij 2,5 m plafond; kamertype→kW tabel |
+| 9 | aircodoc.nl / dsg-aircotechniek.nl / haanservice.nl | Laagst geadverteerde installatieprijzen: € 1.295 en € 1.300 inclusief montage; actieprijs € 1.199 (LG 2,5–3,5 kW met montage) — gebruikt voor de toets in §8 |
 
 ---
 
@@ -153,14 +154,53 @@ Voor het inplannen van de afspraak wordt daar 30 minuten reis- en opruimtijd bij
 |-----------|-------------|-------------|
 | Btw-tarief | 21% | Aanpasbaar; als voor een deel van het werk een verlaagd tarief geldt, in het dashboard wijzigen |
 | Voorrijkosten | € 0 tot 30 km, daarna € 0,55/km | Vanaf vestigingspostcode |
-| Minimale opdrachtwaarde | € 950 excl. btw | Onder deze waarde wordt de offerte opgehoogd |
+| Geadverteerde vanaf-prijs | € 899 incl. btw | Ondergrens voor elke offerte; zie §9 |
+| Instappakket op de vanaf-prijs | uit | Aan betekent: een eenvoudige instapklus wordt afgetopt op de vanaf-prijs, ook onder de kostprijs |
+| Margedrempel | 15% | Daaronder wordt een offerte gemarkeerd en de ondernemer gewaarschuwd |
+| Kostprijs arbeid | € 65 per monteursuur excl. btw | Nodig om de marge te bepalen; verkoop staat op € 75 |
 | Geldigheid offerte | 21 dagen | |
 | Standaard tier | mid | Voorgesteld tenzij de lead anders aangeeft |
 | Korting bij direct akkoord tijdens conversiegesprek | 3%, max € 150 | Argument voor de voice agent |
 
 ---
 
-## 8. Wat KlimaatX zelf moet aanleveren om dit definitief te maken
+## 8. De geadverteerde vanaf-prijs van € 899
+
+KlimaatX adverteert met "vanaf € 899". Op de hier vastgelegde basis is dat
+**niet haalbaar voor een geïnstalleerd systeem**. De rekensom voor de
+goedkoopst mogelijke klus (2,0 kW voordelig, 5 m leiding, begane grond, geen
+extra voorzieningen):
+
+| Post | Bedrag excl. btw |
+|------|------------------|
+| Apparaat, inkoop | € 360,00 |
+| Materiaal, inkoop | € 152,00 |
+| Arbeid, 6,0 monteursuren × € 65 | € 390,00 |
+| **Kostprijs** | **€ 902,00** |
+| Verkoop bij € 899 incl. btw | € 742,98 |
+| **Resultaat per klus** | **− € 159,02** |
+
+Ter vergelijking: de laagste installatieprijzen die in augustus 2026 in de
+Nederlandse markt geadverteerd werden, liggen op € 1.295 tot € 1.300 inclusief
+montage (aircodoc.nl, dsg-aircotechniek.nl); de goedkoopste actieprijs die we
+vonden was € 1.199 (haanservice.nl). Niemand adverteert een geïnstalleerd
+systeem vanaf € 899.
+
+Wat wél kan:
+
+| Invulling | Uitkomst |
+|-----------|----------|
+| € 899 voor **het apparaat**, montage apart | Ruim haalbaar: op een inkoop van € 360 is dat 51% marge. Marktconform: losse units van 3,5 kW gaan online voor € 450 tot € 909. |
+| € 899 **inclusief montage** als lokkertje | € 159 verlies per klus, plus overhead. Alleen zinnig als er structureel wordt bijverkocht. Het systeem markeert elke zo'n offerte. |
+| € 1.295 inclusief montage | 15,7% marge — precies op de markbodem en net boven de drempel. |
+| € 1.449 inclusief montage | 24,7% marge — dit is waar de calculatie vanzelf op uitkomt. |
+
+Het dashboard rekent dit continu door onder **Catalogus → Vanaf-prijs**, zodat
+het antwoord meebeweegt zodra de inkoopprijzen of normtijden veranderen.
+
+---
+
+## 9. Wat KlimaatX zelf moet aanleveren om dit definitief te maken
 
 1. Werkelijke inkoopprijslijst van de eigen groothandel (per merk/model/kW).
 2. Eigen gehanteerde margestaffels per productgroep.
@@ -168,3 +208,4 @@ Voor het inplannen van de afspraak wordt daar 30 minuten reis- en opruimtijd bij
 4. Werkelijk uurtarief en voorrijregeling.
 5. Vestigingspostcode en werkgebied.
 6. Merken/modellen die daadwerkelijk gevoerd worden, inclusief garantietermijnen.
+7. Wat de advertentieprijs van € 899 precies dekt: het apparaat, of apparaat plus montage.

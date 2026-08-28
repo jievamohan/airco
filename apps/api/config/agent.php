@@ -144,7 +144,18 @@ return [
         'vat_rate' => (float) env('PRICING_VAT_RATE', 21.0),
         'labour_sell_rate_cents' => (int) env('PRICING_LABOUR_RATE_CENTS', 7500),
         'crew_size' => (int) env('PRICING_CREW_SIZE', 2),
-        'minimum_job_cents' => (int) env('PRICING_MINIMUM_JOB_CENTS', 95000),
+        // De geadverteerde "vanaf"-prijs, inclusief btw en in dezelfde termen
+        // als de advertentie. Geen offerte komt hieronder uit.
+        'entry_price_cents' => (int) env('PRICING_ENTRY_PRICE_CENTS', 89900),
+        // Zet je dit aan, dan wordt een eenvoudige instapklus afgetopt op de
+        // vanaf-prijs, ook als dat onder de kostprijs uitkomt. Elke offerte die
+        // daardoor onder de margedrempel zakt, wordt gemarkeerd en gemeld.
+        'entry_package_enabled' => (bool) env('PRICING_ENTRY_PACKAGE_ENABLED', false),
+        'entry_package_max_kw' => (float) env('PRICING_ENTRY_PACKAGE_MAX_KW', 2.5),
+        // Onder deze brutomarge wordt een offerte gemarkeerd als margewaarschuwing.
+        'minimum_margin_pct' => (float) env('PRICING_MINIMUM_MARGIN_PCT', 15.0),
+        // Kostprijs van een monteursuur; nodig om de marge te kunnen bepalen.
+        'labour_cost_rate_cents' => (int) env('PRICING_LABOUR_COST_CENTS', 6500),
         'default_tier' => env('PRICING_DEFAULT_TIER', 'mid'),
         'direct_agreement_discount_pct' => (float) env('PRICING_DIRECT_DISCOUNT_PCT', 3.0),
         'direct_agreement_discount_max_cents' => (int) env('PRICING_DIRECT_DISCOUNT_MAX_CENTS', 15000),

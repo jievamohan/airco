@@ -18,6 +18,13 @@ geen bestaande tabel gewijzigd behalve `users` (één kolom erbij).
 | `email_messages` | uitgaande mail per lead | `lead_id` cascade |
 | `sequences`, `sequence_steps`, `lead_sequence_runs` | opvolgcadans en de uitvoering ervan | cascade binnen de keten |
 
+Bij de vanaf-prijs zijn er drie kolommen op `quotes` bijgekomen:
+`cost_cents`, `margin_pct` en `margin_warning`. De kostprijs wordt per offerte
+**bevroren**, net als de regelprijzen: wijzigt de ondernemer later een
+inkoopprijs, dan blijft de marge op oude offertes kloppen. De migratie is
+omkeerbaar (`dropColumn` op de drie kolommen) en de defaults (0, 0, false) maken
+hem veilig op een tabel met bestaande rijen.
+
 ## Wijziging op een bestaande tabel
 
 `users` krijgt `role` (string, default `operator`) na `email`. De `down()` laat

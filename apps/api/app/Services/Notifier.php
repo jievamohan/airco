@@ -39,11 +39,23 @@ class Notifier
 
     public function quoteSent(Lead $lead, Quote $quote): void
     {
-        $this->send($lead, 'Offerte verstuurd: '.$lead->name, [
+        $lines = [
             sprintf('Offerte %s is gemaild: € %s incl. btw.', $quote->number, number_format($quote->total_cents / 100, 2, ',', '.')),
             sprintf('Geschatte montageduur op locatie: %s uur.', number_format($quote->onsite_minutes / 60, 1, ',', '.')),
             sprintf('Over %d minuten belt de agent na om de opdracht rond te maken.', $this->settings->int('agent.workflow.conversion_call_delay_minutes', 60)),
-        ]);
+        ];
+
+        if ($quote->margin_warning) {
+            $lines[] = sprintf(
+                'Let op: op deze offerte zit %s marge (€ %s op een kostprijs van € %s excl. btw). Dat is onder de ingestelde drempel van %s%%.',
+                number_format($quote->margin_pct, 1, ',', '.').'%',
+                number_format(($quote->subtotal_cents - $quote->cost_cents) / 100, 2, ',', '.'),
+                number_format($quote->cost_cents / 100, 2, ',', '.'),
+                number_format($this->settings->float('agent.pricing.minimum_margin_pct', 15.0), 0, ',', '.'),
+            );
+        }
+
+        $this->send($lead, ($quote->margin_warning ? 'Offerte verstuurd onder de margedrempel: ' : 'Offerte verstuurd: ').$lead->name, $lines);
     }
 
     public function appointmentBooked(Lead $lead, Appointment $appointment): void

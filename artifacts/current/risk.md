@@ -20,10 +20,39 @@
 | De agent blijft nabellen | laag | irritatie, AVG-klacht | Maximaal aantal pogingen (standaard 4); daarna status `unreachable` en geen acties meer. `do_not_contact` stopt alles onmiddellijk. |
 | Een verkeerd geparste mail levert een onzinlead | midden | verspilde belpoging | Een bericht zonder naam én zonder e-mail of telefoon wordt overgeslagen, niet aangemaakt. Overgeslagen berichten worden gemeld in de commando-uitvoer. |
 | Dubbele aanvraag levert twee belrondes | midden | irritatie | Ontdubbeling op e-mail plus telefoon binnen 30 dagen; de bestaande lead wordt aangevuld. |
-| De offerte is te laag door verkeerde aannames | **hoog** | verlies per klus | Zie hieronder: de prijsbasis is voorlopig. Elke offerte vermeldt de gemaakte aannames en het voorbehoud bij de schouw. |
+| De offerte is te laag door verkeerde aannames | **hoog** | verlies per klus | Zie hieronder: de prijsbasis is voorlopig. Elke offerte vermeldt de gemaakte aannames en het voorbehoud bij de schouw, en legt kostprijs en marge vast met een waarschuwing onder de drempel. |
 | ElevenLabs of de agenda is onbereikbaar | midden | stilstand | Elke integratie vangt de fout af, legt hem vast op het gesprek of de afspraak, en zet de lead in de opvolgcadans in plaats van hem te laten hangen. |
 | De queue-worker staat stil | midden | leads blijven liggen | `next_action_at` en `lead_sequence_runs.next_run_at` blijven staan; zodra de worker draait, wordt alles alsnog uitgevoerd. Wel monitoren. |
 | Webhook komt dubbel binnen | midden | dubbele offerte | Een gesprek dat al `completed` is, wordt niet nogmaals verwerkt. Getest. |
+
+## De geadverteerde vanaf-prijs van € 899
+
+KlimaatX adverteert met "vanaf € 899". Op de huidige basis is dat **niet
+haalbaar voor een geïnstalleerd systeem**: de goedkoopst mogelijke klus kost
+€ 902 excl. btw en levert bij € 899 incl. btw een verlies van € 159,02 per klus,
+nog vóór overhead. De laagste installatieprijzen in de markt liggen op
+€ 1.295–1.300 inclusief montage. Volledige uitwerking in
+`docs/research/pricing-baseline.md` §8.
+
+Hoe het systeem hiermee omgaat:
+
+* De vanaf-prijs is een instelbare **ondergrens** op elke offerte; standaard
+  € 899 incl. btw. Bij een geïnstalleerde klus bindt die grens niet, want de
+  calculatie komt daar sowieso boven uit.
+* Het **instappakket** — dat een eenvoudige instapklus daadwerkelijk aftopt op
+  de vanaf-prijs — staat **standaard uit**. Aanzetten is een bewuste keuze voor
+  een lokkertje, geen ongeluk.
+* Elke offerte legt kostprijs en brutomarge vast. Zakt die onder de
+  margedrempel (standaard 15%), dan wordt de offerte gemarkeerd, komt er een
+  regel in de tijdlijn en staat de waarschuwing in de mail naar de ondernemer.
+  Verlies gaat dus nooit stilletjes.
+* **Catalogus → Vanaf-prijs** rekent continu door of de advertentie nog klopt en
+  wat de prijs zou moeten zijn om de drempel te halen. Verandert de inkoop, dan
+  verandert het antwoord mee.
+
+Zolang het instappakket uitstaat, is de laagste geoffreerde prijs € 1.459,50
+incl. btw. Dat wijkt af van de advertentie; dat verschil is een marketingkeuze
+die de ondernemer moet maken, niet iets wat de code kan oplossen.
 
 ## Het grootste risico: de prijsbasis
 

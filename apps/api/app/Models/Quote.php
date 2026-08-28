@@ -25,6 +25,9 @@ use Illuminate\Support\Carbon;
  * @property int $vat_cents
  * @property int $total_cents
  * @property int $discount_cents
+ * @property int $cost_cents
+ * @property float $margin_pct
+ * @property bool $margin_warning
  * @property string $currency
  * @property int $labour_minutes
  * @property int $onsite_minutes
@@ -54,6 +57,8 @@ class Quote extends Model
             'declined_at' => 'datetime',
             'vat_rate' => 'float',
             'total_kw' => 'float',
+            'margin_pct' => 'float',
+            'margin_warning' => 'bool',
         ];
     }
 

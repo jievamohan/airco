@@ -12,6 +12,50 @@
       rekent de agent daarmee. De onderbouwing staat in <code>docs/research/pricing-baseline.md</code>.
     </p>
 
+    <section v-if="check" class="panel">
+      <h2 class="panel__title">Vanaf-prijs</h2>
+      <p class="panel__note">
+        Klopt de prijs uit jullie advertentie nog met de huidige inkoopprijzen en normtijden?
+        Deze berekening loopt mee zodra je hieronder iets aanpast.
+      </p>
+
+      <p class="notice" :class="check.achievable ? 'notice--ok' : 'notice--bad'" role="status">
+        {{ check.message }}
+      </p>
+
+      <dl class="facts">
+        <dt>Geadverteerde vanaf-prijs</dt>
+        <dd>{{ fmt.euro(check.entry_price_cents) }} incl. btw</dd>
+        <dt>Goedkoopst mogelijke klus</dt>
+        <dd>{{ fmt.euro(check.cheapest_total_cents) }} incl. btw</dd>
+        <dt>Kostprijs van die klus</dt>
+        <dd>{{ fmt.euro(check.cheapest_cost_cents) }} excl. btw</dd>
+        <dt>Break-even</dt>
+        <dd>{{ fmt.euro(check.break_even_total_cents) }} incl. btw</dd>
+        <dt>Resultaat op de vanaf-prijs</dt>
+        <dd :class="check.result_at_entry_price_cents < 0 ? 'is-bad' : 'is-ok'">
+          {{ fmt.euro(check.result_at_entry_price_cents) }}
+          ({{ fmt.number(check.margin_at_entry_price_pct, 1) }}% marge)
+        </dd>
+        <dt>Advies bij {{ fmt.number(check.minimum_margin_pct, 0) }}% marge</dt>
+        <dd>{{ fmt.euro(check.advised_entry_price_cents) }} incl. btw</dd>
+        <dt>Instappakket</dt>
+        <dd>
+          {{ check.entry_package_enabled ? 'Aan' : 'Uit' }} —
+          <span class="muted">
+            {{ check.entry_package_enabled
+              ? 'een eenvoudige instapklus wordt afgetopt op de vanaf-prijs'
+              : 'de vanaf-prijs geldt als ondergrens, niet als actieprijs inclusief montage' }}
+          </span>
+        </dd>
+      </dl>
+
+      <p class="small muted" style="margin-top: 10px">
+        De vanaf-prijs, het instappakket en de margedrempel stel je in onder
+        <NuxtLink to="/dashboard/instellingen">Instellingen → Prijsstelling</NuxtLink>.
+      </p>
+    </section>
+
     <p v-if="flash" class="notice notice--ok" role="status">{{ flash }}</p>
     <p v-if="error" class="notice notice--bad" role="alert">{{ error }}</p>
 
@@ -21,7 +65,8 @@
         <dt>Btw-tarief</dt><dd>{{ fmt.number(pricing.vat_rate, 0) }}%</dd>
         <dt>Uurtarief arbeid</dt><dd>{{ fmt.euro(pricing.labour_sell_rate_cents) }} per monteursuur, excl. btw</dd>
         <dt>Ploeggrootte</dt><dd>{{ pricing.crew_size }} monteurs</dd>
-        <dt>Minimale opdrachtwaarde</dt><dd>{{ fmt.euro(pricing.minimum_job_cents) }} excl. btw</dd>
+        <dt>Kostprijs arbeid</dt><dd>{{ fmt.euro(pricing.labour_cost_rate_cents) }} per monteursuur, excl. btw</dd>
+        <dt>Margedrempel</dt><dd>{{ fmt.number(pricing.minimum_margin_pct, 0) }}%</dd>
         <dt>Standaardklasse</dt><dd>{{ tierLabels[pricing.default_tier] ?? pricing.default_tier }}</dd>
       </dl>
       <p class="small muted" style="margin-top: 10px">
@@ -109,9 +154,26 @@ type Item = {
 type Pricing = {
   vat_rate: number
   labour_sell_rate_cents: number
+  labour_cost_rate_cents: number
   crew_size: number
-  minimum_job_cents: number
+  entry_price_cents: number
+  entry_package_enabled: boolean
+  minimum_margin_pct: number
   default_tier: string
+}
+
+type EntryPriceCheck = {
+  entry_price_cents: number
+  entry_package_enabled: boolean
+  cheapest_total_cents: number
+  cheapest_cost_cents: number
+  margin_at_entry_price_pct: number
+  result_at_entry_price_cents: number
+  achievable: boolean
+  minimum_margin_pct: number
+  break_even_total_cents: number
+  advised_entry_price_cents: number
+  message: string
 }
 
 const api = useApi()
@@ -119,6 +181,7 @@ const fmt = useDashboardFormat()
 
 const items = ref<Item[]>([])
 const pricing = ref<Pricing | null>(null)
+const check = ref<EntryPriceCheck | null>(null)
 const kind = ref('')
 const tier = ref('')
 const busy = ref<number | null>(null)
@@ -134,9 +197,12 @@ async function load() {
   if (tier.value) params.set('tier', tier.value)
 
   try {
-    const result = await api.get<{ items: Item[]; pricing: Pricing }>(`/admin/catalog${params.toString() ? `?${params}` : ''}`)
+    const result = await api.get<{ items: Item[]; pricing: Pricing; entry_price_check: EntryPriceCheck }>(
+      `/admin/catalog${params.toString() ? `?${params}` : ''}`,
+    )
     items.value = result.items.map((item) => ({ ...item, cost_euro: item.cost_cents / 100 }))
     pricing.value = result.pricing
+    check.value = result.entry_price_check
   } catch (e) {
     error.value = (e as ApiError).message
   }
@@ -155,6 +221,7 @@ async function save(item: Item) {
       active: item.active,
     })
     flash.value = `${item.name} is bijgewerkt.`
+    await load()
   } catch (e) {
     error.value = (e as ApiError).message
   } finally {

@@ -42,7 +42,11 @@
         <env name="PRICING_VAT_RATE" value="21"/>
         <env name="PRICING_LABOUR_RATE_CENTS" value="7500"/>
         <env name="PRICING_CREW_SIZE" value="2"/>
-        <env name="PRICING_MINIMUM_JOB_CENTS" value="95000"/>
+        <env name="PRICING_ENTRY_PRICE_CENTS" value="89900"/>
+        <env name="PRICING_ENTRY_PACKAGE_ENABLED" value="false"/>
+        <env name="PRICING_ENTRY_PACKAGE_MAX_KW" value="2.5"/>
+        <env name="PRICING_MINIMUM_MARGIN_PCT" value="15"/>
+        <env name="PRICING_LABOUR_COST_CENTS" value="6500"/>
         <env name="PRICING_DEFAULT_TIER" value="mid"/>
         <env name="CONVERSION_CALL_DELAY_MINUTES" value="60"/>
         <env name="MAX_CALL_ATTEMPTS" value="4"/>

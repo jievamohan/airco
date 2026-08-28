@@ -34,6 +34,10 @@ bewust niet in de allowlist: die volgen uit de workflow, niet uit een formulier.
 `CatalogController` en `SequenceController` doen hetzelfde voor hun eigen
 bewerkbare velden. Getest.
 
+De vanaf-prijs, het instappakket en de margedrempel lopen via dezelfde
+settings-allowlist: een onbekende sleutel levert een 422, en de waarden worden
+naar het gedeclareerde type omgezet voordat ze worden opgeslagen.
+
 ## Uitgaande payloads
 
 Conform `47-thin-api-payloads.mdc`. De leadlijst bevat geen e-mail, telefoon,

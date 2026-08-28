@@ -270,6 +270,21 @@ class LeadWorkflow
             ['quote_id' => $quote->id, 'number' => $quote->number, 'total_cents' => $quote->total_cents],
         );
 
+        if ($quote->margin_warning) {
+            $this->timeline->record(
+                $lead,
+                'margin_warning',
+                'Marge onder de drempel',
+                sprintf(
+                    '%s%% marge: € %s opbrengst op € %s kostprijs, beide excl. btw.',
+                    number_format($quote->margin_pct, 1, ',', '.'),
+                    number_format($quote->subtotal_cents / 100, 2, ',', '.'),
+                    number_format($quote->cost_cents / 100, 2, ',', '.'),
+                ),
+                ['quote_id' => $quote->id, 'margin_pct' => $quote->margin_pct, 'cost_cents' => $quote->cost_cents],
+            );
+        }
+
         return $quote;
     }
 

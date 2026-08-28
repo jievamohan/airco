@@ -42,9 +42,16 @@ komt uit op ± € 2.400 incl. btw, binnen de waargenomen marktrange van
 € 1.900–2.800. **Deze cijfers zijn voorlopig** en horen vervangen te worden via
 Dashboard → Catalogus; de seeder overschrijft aangepaste regels nooit.
 
+De geadverteerde vanaf-prijs van € 899 is als instelbare ondergrens opgenomen,
+met een optioneel instappakket dat een eenvoudige klus daadwerkelijk op die
+prijs aftopt (standaard uit, omdat het € 159 per klus kost). Elke offerte legt
+kostprijs en marge vast en wordt gemarkeerd zodra die onder de drempel zakt;
+Dashboard → Catalogus → Vanaf-prijs rekent continu door of de advertentie nog
+klopt.
+
 ## Poorten
 
-* PHPUnit: 78 tests, 320 assertions — groen
+* PHPUnit: 92 tests, 362 assertions — groen
 * PHPStan level 6 met larastan: schoon, zonder baseline of ignores
 * Pint: schoon
 * `nuxt typecheck` en `nuxt build`: schoon
@@ -53,7 +60,8 @@ Dashboard → Catalogus; de seeder overschrijft aangepaste regels nooit.
 
 ## Wat er nog nodig is voordat dit live kan
 
-1. Echte inkoopprijzen, marges en normtijden in de catalogus.
+1. Echte inkoopprijzen, marges en normtijden in de catalogus, plus de keuze wat
+   de advertentieprijs van € 899 dekt: het apparaat of apparaat plus montage.
 2. Koppelingen invullen: mailbox, ElevenLabs (agent, nummer, webhook-secret) en
    een agenda (Google of Apple).
 3. De API uitrollen op de VPS, met een queue-worker en een cron-regel voor

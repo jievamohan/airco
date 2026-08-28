@@ -89,13 +89,15 @@ class QuoteBuilderTest extends TestCase
     }
 
     #[Test]
-    public function een_kleine_klus_wordt_opgehoogd_naar_de_minimale_opdrachtwaarde(): void
+    public function een_kleine_klus_komt_niet_onder_de_geadverteerde_vanaf_prijs(): void
     {
         $lead = Lead::factory()->create(['space_size' => 12, 'space_unit' => 'm2', 'tier' => 'budget', 'building_year' => 2020]);
 
         $calc = app(QuoteBuilder::class)->calculate($lead);
 
-        $this->assertGreaterThanOrEqual(95000, $calc['subtotal_cents']);
+        // De vanaf-prijs staat standaard op € 899 incl. btw; zie EntryPriceTest
+        // voor het gedrag van de ondergrens en het instappakket zelf.
+        $this->assertGreaterThanOrEqual(89900, $calc['total_cents']);
     }
 
     #[Test]

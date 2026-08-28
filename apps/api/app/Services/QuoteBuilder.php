@@ -35,6 +35,7 @@ class QuoteBuilder
      * @return array{
      *     lines: list<array{kind: string, sku: string|null, description: string, quantity: float, unit: string, unit_cost_cents: int, margin_pct: float, unit_price_cents: int, line_total_cents: int, labour_minutes: int, catalog_item_id: int|null}>,
      *     subtotal_cents: int, vat_cents: int, total_cents: int, discount_cents: int,
+     *     cost_cents: int, margin_pct: float, margin_warning: bool,
      *     vat_rate: float, labour_minutes: int, onsite_minutes: int,
      *     system: SystemType, tier: Tier, total_kw: float, assumptions: list<string>
      * }
@@ -144,33 +145,75 @@ class QuoteBuilder
         ];
 
         $subtotal = array_sum(array_column($lines, 'line_total_cents'));
+        $vatRate = $this->settings->float('agent.pricing.vat_rate', 21.0);
 
-        // --- Minimale opdrachtwaarde ---
-        $minimum = $this->settings->int('agent.pricing.minimum_job_cents', 95000);
+        // --- Geadverteerde vanaf-prijs ---
+        // De advertentie noemt een bedrag inclusief btw; hier rekenen we in
+        // dezelfde termen, zodat de ondergrens precies is wat de klant leest.
+        $entryPrice = $this->settings->int('agent.pricing.entry_price_cents', 89900);
+        $entryPriceExVat = (int) round($entryPrice / (1 + $vatRate / 100));
 
-        if ($subtotal < $minimum) {
+        // Landt de offerte op de advertentieprijs, dan wordt het totaal daaraan
+        // vastgepind en volgt de btw uit het verschil. Anders komt er door
+        // afronding een cent bij en klopt het bedrag in de advertentie niet meer.
+        $pinnedTotal = null;
+
+        if ($subtotal < $entryPriceExVat) {
+            $shortfall = $entryPriceExVat - $subtotal;
+
             $lines[] = [
                 'kind' => 'surcharge',
-                'sku' => 'MIN-OPDRACHT',
-                'description' => 'Toeslag minimale opdrachtwaarde',
+                'sku' => 'VANAF-PRIJS',
+                'description' => sprintf('Aanpassing naar de vanaf-prijs van %s', $this->euro($entryPrice)),
                 'quantity' => 1.0,
                 'unit' => 'post',
                 'unit_cost_cents' => 0,
                 'margin_pct' => 0.0,
-                'unit_price_cents' => $minimum - $subtotal,
-                'line_total_cents' => $minimum - $subtotal,
+                'unit_price_cents' => $shortfall,
+                'line_total_cents' => $shortfall,
                 'labour_minutes' => 0,
                 'catalog_item_id' => null,
             ];
-            $subtotal = $minimum;
+
+            $subtotal = $entryPriceExVat;
+            $pinnedTotal = $entryPrice;
+            $assumptions[] = sprintf('Opgehoogd naar de geadverteerde vanaf-prijs van %s.', $this->euro($entryPrice));
         }
 
-        $vatRate = $this->settings->float('agent.pricing.vat_rate', 21.0);
-        $vat = (int) round($subtotal * $vatRate / 100);
+        // --- Instappakket: een eenvoudige klus voor de actieprijs ---
+        if ($this->qualifiesForEntryPackage($lead, $kw, $system, $subtotal, $entryPriceExVat)) {
+            $reduction = $subtotal - $entryPriceExVat;
+
+            $lines[] = [
+                'kind' => 'discount',
+                'sku' => 'INSTAPPAKKET',
+                'description' => sprintf('Instappakket: actieprijs %s inclusief montage', $this->euro($entryPrice)),
+                'quantity' => 1.0,
+                'unit' => 'post',
+                'unit_cost_cents' => 0,
+                'margin_pct' => 0.0,
+                'unit_price_cents' => -$reduction,
+                'line_total_cents' => -$reduction,
+                'labour_minutes' => 0,
+                'catalog_item_id' => null,
+            ];
+
+            $subtotal = $entryPriceExVat;
+            $pinnedTotal = $entryPrice;
+            $assumptions[] = sprintf('Actieprijs instappakket: %s inclusief montage.', $this->euro($entryPrice));
+        }
+
+        $vat = $pinnedTotal !== null
+            ? $pinnedTotal - $subtotal
+            : (int) round($subtotal * $vatRate / 100);
 
         $crew = max(1, $this->settings->int('agent.pricing.crew_size', 2));
         $travelBuffer = $this->settings->int('agent.calendar.travel_buffer_minutes', 30);
         $onsite = max(120, (int) (ceil($labourMinutes / $crew / 30) * 30)) + $travelBuffer;
+
+        $cost = $this->costOf($lines, $labourMinutes);
+        $margin = $subtotal > 0 ? round(($subtotal - $cost) / $subtotal * 100, 2) : 0.0;
+        $minimumMargin = $this->settings->float('agent.pricing.minimum_margin_pct', 15.0);
 
         return [
             'lines' => $lines,
@@ -178,6 +221,9 @@ class QuoteBuilder
             'vat_cents' => $vat,
             'total_cents' => $subtotal + $vat,
             'discount_cents' => 0,
+            'cost_cents' => $cost,
+            'margin_pct' => $margin,
+            'margin_warning' => $margin < $minimumMargin,
             'vat_rate' => $vatRate,
             'labour_minutes' => $labourMinutes,
             'onsite_minutes' => $onsite,
@@ -212,6 +258,9 @@ class QuoteBuilder
                 'vat_cents' => $calc['vat_cents'],
                 'total_cents' => $calc['total_cents'],
                 'discount_cents' => $calc['discount_cents'],
+                'cost_cents' => $calc['cost_cents'],
+                'margin_pct' => $calc['margin_pct'],
+                'margin_warning' => $calc['margin_warning'],
                 'labour_minutes' => $calc['labour_minutes'],
                 'onsite_minutes' => $calc['onsite_minutes'],
                 'assumptions' => $calc['assumptions'],
@@ -274,15 +323,81 @@ class QuoteBuilder
 
         $subtotal = $quote->subtotal_cents - $discount;
         $vat = (int) round($subtotal * $quote->vat_rate / 100);
+        $margin = $subtotal > 0 ? round(($subtotal - $quote->cost_cents) / $subtotal * 100, 2) : 0.0;
 
         $quote->forceFill([
             'discount_cents' => -$discount,
             'subtotal_cents' => $subtotal,
             'vat_cents' => $vat,
             'total_cents' => $subtotal + $vat,
+            'margin_pct' => $margin,
+            'margin_warning' => $margin < $this->settings->float('agent.pricing.minimum_margin_pct', 15.0),
         ])->save();
 
         return $quote;
+    }
+
+    /**
+     * Kostprijs van de offerte, exclusief btw: inkoop van apparatuur en
+     * materiaal plus de kostprijs van de monteursuren. Kortingen en toeslagen
+     * kosten niets, dus die tellen niet mee.
+     *
+     * @param  list<array{kind: string, unit_cost_cents: int, quantity: float}>  $lines
+     */
+    private function costOf(array $lines, int $labourMinutes): int
+    {
+        $materials = 0;
+
+        foreach ($lines as $line) {
+            if ($line['kind'] === 'labour') {
+                continue;
+            }
+
+            $materials += (int) round($line['unit_cost_cents'] * $line['quantity']);
+        }
+
+        $labourRate = $this->settings->int('agent.pricing.labour_cost_rate_cents', 6500);
+
+        return $materials + (int) round($labourMinutes / 60 * $labourRate);
+    }
+
+    /**
+     * Een instapklus is een enkele binnenunit in de kleinste vermogensklasse,
+     * op de begane grond, met een standaard leidinglengte en zonder extra
+     * voorzieningen. Alleen dan mag de actieprijs gelden.
+     */
+    private function qualifiesForEntryPackage(Lead $lead, float $kw, SystemType $system, int $subtotal, int $entryPriceExVat): bool
+    {
+        if (! $this->settings->bool('agent.pricing.entry_package_enabled', false)) {
+            return false;
+        }
+
+        if ($subtotal <= $entryPriceExVat) {
+            return false; // al goedkoper dan de actieprijs
+        }
+
+        if ($system !== SystemType::SingleSplit) {
+            return false;
+        }
+
+        if ($kw > $this->settings->float('agent.pricing.entry_package_max_kw', 2.5)) {
+            return false;
+        }
+
+        if (($lead->pipe_length_m ?? self::INCLUDED_PIPE_M) > self::INCLUDED_PIPE_M) {
+            return false;
+        }
+
+        if (($lead->floor_level ?? 0) >= 2) {
+            return false;
+        }
+
+        return ! $lead->needs_condensate_pump && ! $lead->needs_extra_group;
+    }
+
+    private function euro(int $cents): string
+    {
+        return '€ '.number_format($cents / 100, 2, ',', '.');
     }
 
     private function nextNumber(Lead $lead, int $version): string

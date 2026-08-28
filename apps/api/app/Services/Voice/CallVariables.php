@@ -42,6 +42,10 @@ class CallVariables
             'opmerkingen_klant' => (string) $lead->notes,
             'ontbrekende_gegevens' => $this->missingFields($lead),
             'belpoging' => (string) ($lead->call_attempts + 1),
+            'vanaf_prijs' => $this->euro($this->settings->int('agent.pricing.entry_price_cents', 89900)),
+            'vanaf_prijs_dekking' => $this->settings->bool('agent.pricing.entry_package_enabled', false)
+                ? 'Die vanaf-prijs geldt voor een eenvoudige installatie van de kleinste unit op de begane grond, inclusief montage en tot vijf meter leiding.'
+                : 'Die vanaf-prijs geldt voor het apparaat; de montage wordt apart berekend en hangt af van de situatie ter plaatse.',
         ];
 
         if ($quote !== null) {

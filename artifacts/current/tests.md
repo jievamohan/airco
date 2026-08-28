@@ -4,7 +4,7 @@
 
 ```
 vendor/bin/phpunit --no-coverage
-OK (78 tests, 320 assertions)
+OK (92 tests, 362 assertions)
 ```
 
 | Suite | Wat het bewijst |
@@ -17,6 +17,7 @@ OK (78 tests, 320 assertions)
 | `Feature/ElevenLabsWebhookTest` | geen/verkeerde/verlopen handtekening geven 401, beantwoord gesprek zet transcript weg en start de offerte, kort gesprek telt als niet opgenomen, akkoord zet een afspraak in de wachtrij, dubbele webhook wordt niet twee keer verwerkt, onbekend gesprek geeft 404 |
 | `Feature/SequenceRunnerTest` | de zes cadansstappen lopen af en eindigen op `unreachable`, een stap wacht tot zijn tijd, de cadans stopt zodra de lead reageert, dubbele start maakt geen tweede cadans, lead zonder mailadres slaat mailstappen over zonder te breken |
 | `Feature/AppointmentSchedulerTest` | voorgestelde momenten liggen op werkdagen na de voorbereidingstijd, afspraak wordt vastgelegd en bevestigd, een tijd uit het gesprek wordt als Nederlandse kloktijd gelezen, het ICS-bestand is geldig (inclusief de 75-tekengrens per regel) |
+| `Feature/EntryPriceTest` | kostprijs en marge worden vastgelegd, arbeid telt tegen het kostentarief mee, de vanaf-prijs werkt als ondergrens, het totaal landt exact op de advertentieprijs (geen afrondingscent), het instappakket topt een instapklus af en markeert de marge, klussen die er niet onder vallen blijven ongemoeid, de vanaf-prijs-check keurt € 899 af en € 1.449 goed, de adviesprijs haalt precies de drempel, de waarschuwing komt in de tijdlijn én in de mail naar de ondernemer, en de voice agent krijgt de vanaf-prijs mee |
 | `Feature/AdminApiTest` | formulierintake met normalisatie, weigeren van onbekende velden, afscherming van het dashboard (ook zonder JSON-header), inloggen, filteren en het níét lekken van contactgegevens in de lijst, bewerken, alle her-aftrap-acties, funnelberekening, catalogus die doorwerkt in de offerte, geheimen die niet teruggestuurd worden, cadansbeheer |
 
 ## Web (`apps/web`)
@@ -39,6 +40,7 @@ Uitgevoerd in proefmodus met de fake voice-client:
 7. Afspraak vastgelegd op 15-09-2026 08:00 Nederlandse tijd, offerte op `accepted`, lead op `appointment_scheduled`
 8. Dashboard-API gecontroleerd: leadlijst, funnel (1 lead door alle stappen), catalogus met 51 artikelen
 9. Aparte lead die niet opneemt: cadans doorlopen tot het einde → 3 mails, 3 belpogingen ingepland, indicatie-offerte verstuurd, status `unreachable`, ondernemer geïnformeerd
+10. Vanaf-prijs: `GET /api/admin/catalog` meldt dat € 899 onder de kostprijs ligt (€ 159,02 verlies per klus) en adviseert € 1.284,03; na het instappakket via `PATCH /api/admin/settings` aan te zetten landt een instapklus op precies € 899,00 met een kortingsregel van € 463,22, marge −21,4%, en verschijnt `margin_warning` in de tijdlijn
 
 ## Wat tijdens het bouwen is gevonden en gerepareerd
 
@@ -50,6 +52,7 @@ Uitgevoerd in proefmodus met de fake voice-client:
 | `SettingsRepository` negeerde de config zodra een fallback werd meegegeven, waardoor élke `.env`-instelling genegeerd werd | handmatige doorloop (proefmodus deed niets) | volgorde is nu database → config → fallback; testomgeving vastgepind in `phpunit.xml` |
 | Een verzoek zonder `Accept: application/json` kreeg een 500 in plaats van een 401 | handmatige doorloop | `redirectGuestsTo(null)`, met regressietest |
 | Platgeslagen HTML-tabellen leverden waarden met een afsluitende dubbele punt | parsertest | waarde wordt nu ontdaan van trailing `:` |
+| Een offerte die op de advertentieprijs landde kwam door btw-afronding op € 899,01 uit | test op de vanaf-prijs | het totaal wordt vastgepind op het geadverteerde bedrag en de btw volgt uit het verschil |
 
 ## Niet gedekt
 

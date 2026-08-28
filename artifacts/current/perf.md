@@ -31,6 +31,13 @@ ongecomprimeerd).
 cadansstappen per keer. Daarmee blijft één tick kort, ook als er een achterstand
 is opgelopen; de rest komt de minuut erna.
 
+## Vanaf-prijs-check
+
+`GET /api/admin/catalog` doet er één extra offerteberekening bij (in geheugen,
+zonder opslag) om te bepalen of de geadverteerde prijs nog haalbaar is. Dat zijn
+enkele catalogusquery's op een tabel van 51 rijen; verwaarloosbaar naast de
+lijst die het endpoint toch al ophaalt.
+
 ## Externe aanroepen
 
 Alle uitgaande HTTP-aanroepen (ElevenLabs, Google, CalDAV) staan op een timeout
@@ -41,5 +48,5 @@ tokenrefresh kost.
 ## Testduur
 
 ```
-78 tests in ± 4,5 seconden
+92 tests in ± 6 seconden
 ```

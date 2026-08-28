@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CatalogItem;
+use App\Services\EntryPriceCheck;
 use App\Services\SettingsRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class CatalogController extends Controller
     /** @var list<string> */
     private const EDITABLE = ['name', 'description', 'brand', 'cost_cents', 'margin_pct', 'labour_minutes', 'active'];
 
-    public function index(Request $request, SettingsRepository $settings): JsonResponse
+    public function index(Request $request, SettingsRepository $settings, EntryPriceCheck $check): JsonResponse
     {
         $filters = $request->validate([
             'kind' => ['nullable', 'string'],
@@ -58,10 +59,14 @@ class CatalogController extends Controller
             'pricing' => [
                 'vat_rate' => $settings->float('agent.pricing.vat_rate', 21.0),
                 'labour_sell_rate_cents' => $settings->int('agent.pricing.labour_sell_rate_cents', 7500),
+                'labour_cost_rate_cents' => $settings->int('agent.pricing.labour_cost_rate_cents', 6500),
                 'crew_size' => $settings->int('agent.pricing.crew_size', 2),
-                'minimum_job_cents' => $settings->int('agent.pricing.minimum_job_cents', 95000),
+                'entry_price_cents' => $settings->int('agent.pricing.entry_price_cents', 89900),
+                'entry_package_enabled' => $settings->bool('agent.pricing.entry_package_enabled', false),
+                'minimum_margin_pct' => $settings->float('agent.pricing.minimum_margin_pct', 15.0),
                 'default_tier' => $settings->string('agent.pricing.default_tier', 'mid'),
             ],
+            'entry_price_check' => $check->run(),
         ]);
     }
 

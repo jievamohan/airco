@@ -53,6 +53,20 @@ voor de volledige lijst.
 * **Browsertests voor het dashboard.** De Playwright-service is in dit project
   nog steeds uitgesteld.
 
+## Vanaf-prijs
+
+Op de vraag of de geadverteerde € 899 haalbaar is: niet voor een geïnstalleerd
+systeem. De kostprijs van de goedkoopst mogelijke klus is € 902 excl. btw; bij
+€ 899 incl. btw is dat € 159,02 verlies per klus. Rest van de analyse in
+`risk.md` en `docs/research/pricing-baseline.md` §8.
+
+Wat er in plaats van een blind doorgevoerde prijsverlaging is gebouwd: de
+vanaf-prijs is een instelbare ondergrens, er is een optioneel instappakket dat
+een eenvoudige klus wél op die prijs aftopt (standaard uit), elke offerte legt
+kostprijs en marge vast met een waarschuwing onder de drempel, en het dashboard
+rekent continu door of de advertentie nog klopt. Zo blijft de keuze bij de
+ondernemer, maar wordt hij nooit onbewust gemaakt.
+
 ## Belangrijkste voorbehoud
 
 De prijzen en montagetijden zijn **voorlopig** en afgeleid uit openbaar
@@ -68,5 +82,5 @@ zodra de eigen cijfers in de catalogus staan.
 | Gate C — type-safety | PASS (`vue-tsc` schoon, PHPStan level 6 schoon, geen baseline of ignores) |
 | Gate D — security | PASS (`composer audit` en `pnpm audit --prod` schoon, geen secrets in de repo) |
 | Gate F — performance | PASS (build slaagt, geen nieuwe runtime-deps voor de web-app) |
-| Tests | PASS (78 tests, 320 assertions) |
+| Tests | PASS (92 tests, 362 assertions) |
 | Codestijl | PASS (Pint) |

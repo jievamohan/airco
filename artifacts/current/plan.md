@@ -126,6 +126,14 @@ Uitgewerkt in `docs/research/pricing-baseline.md`. Kern:
   standaardklasse 2,0 / 2,5 / 3,5 / 5,0 / 7,1 kW.
 * Offerteregel = `hoeveelheid × inkoopprijs × (1 + marge)`; arbeid apart tegen
   verkooptarief per monteursuur.
+* Elke offerte legt naast de verkoopprijs ook de **kostprijs** vast (inkoop plus
+  arbeid tegen het kostentarief) en daarmee de brutomarge. Onder de ingestelde
+  drempel wordt de offerte gemarkeerd, komt er een tijdlijnregel en gaat er een
+  waarschuwing naar de ondernemer.
+* De geadverteerde **vanaf-prijs** is een ondergrens op het offertetotaal,
+  uitgedrukt inclusief btw zodat hij één op één matcht met de advertentie. Het
+  optionele **instappakket** topt een eenvoudige instapklus juist af op die
+  prijs; dat staat standaard uit omdat het onder de kostprijs kan uitkomen.
 * Montageduur = som van normtijden; doorlooptijd op locatie = monteursuren ÷ ploeggrootte.
 * Alle parameters zitten in `catalog_items` en `settings` en zijn dus in het dashboard
   aan te passen. De seeder is idempotent en overschrijft nooit gewijzigde records.
