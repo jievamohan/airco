@@ -23,8 +23,26 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!--
+            De tests draaien op MySQL, niet op sqlite. Productie is MySQL, en de
+            verschillen zitten juist in het schema: sqlite accepteert kolomtypes
+            en defaults die MySQL weigert, dus een groene sqlite-run zei niets
+            over de migratie die het op de VPS zou doen.
+
+            Eigen database (`db-test` in docker-compose), want RefreshDatabase
+            gooit het schema bij elke run weg — dat mag niet over je
+            ontwikkeldata heen.
+
+            Zonder `force` overschrijft PHPUnit een variabele niet die de
+            omgeving al zet; CI wijst DB_HOST daarmee naar 127.0.0.1. Het
+            wachtwoord staat hier bewust niet: dat komt uit de omgeving, net als
+            bij de api-container zelf.
+        -->
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_HOST" value="db-test"/>
+        <env name="DB_PORT" value="3306"/>
+        <env name="DB_DATABASE" value="klimaatx_test"/>
+        <env name="DB_USERNAME" value="klimaatx"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

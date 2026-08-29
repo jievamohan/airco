@@ -20,6 +20,22 @@ docker compose exec api composer analyse
 docker compose exec api vendor/bin/pint --test
 ```
 
+### Databases
+
+Er draaien er twee, met opzet:
+
+| Service | Poort | Waarvoor |
+|---|---|---|
+| `db` | 3316 | je ontwikkeldata; blijft staan tussen sessies |
+| `db-test` | 3317 | de testsuite; `RefreshDatabase` gooit het schema elke run weg |
+
+De tests draaien op MySQL en niet op sqlite, want productie is MySQL en de
+verschillen zitten juist in het schema: sqlite accepteert kolomtypes en defaults
+die MySQL weigert. `db-test` staat bovendien op
+`explicit_defaults_for_timestamp=OFF`, de stand van de VPS — anders blijft een
+migratie die daar omvalt hier onzichtbaar. De data van `db-test` staat in tmpfs
+en hoeft niets te overleven.
+
 De eerste `up` duurt een paar minuten: `composer install` en `pnpm install`
 draaien dan voor het eerst. De `agent`-container wacht bewust tot de `api`
 gezond is — die deelt zijn `vendor`-map en zou anders omvallen op een
