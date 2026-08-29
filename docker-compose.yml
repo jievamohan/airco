@@ -22,41 +22,25 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     ports:
-      - "8010:8000"
+      - "8010:80"
     volumes:
       - ./apps/api:/app
       - api_vendor:/app/vendor
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - APP_URL=http://localhost:8010
-      - DB_CONNECTION=mysql
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_DATABASE=klimaatx
-      - DB_USERNAME=klimaatx
-      - DB_PASSWORD=klimaatx
-      - QUEUE_CONNECTION=database
-      - CACHE_STORE=database
-      - MAIL_MAILER=log
-      # Beide schrijfwijzen van de host, anders blokkeert CORS zodra je het
-      # dashboard op 127.0.0.1 opent in plaats van op localhost.
-      - DASHBOARD_ORIGINS=http://localhost:3010,http://127.0.0.1:3010
-      # Lokaal draait de agent standaard in proefmodus: geen echte gesprekken,
-      # mails of agenda-afspraken.
-      - AGENT_DRY_RUN=true
+    # Geen environment-sectie: alle applicatie-instellingen staan in
+    # apps/api/.env.docker, dat het startscript naar .env kopieert. Twee
+    # bronnen voor dezelfde sleutel gaven verschil tussen omgevingen.
     command: ["sh", "/app/docker/start.sh", "api"]
     healthcheck:
       # Pas gezond als composer install, de migraties en de seed klaar zijn en
-      # de webserver antwoordt. De agent hangt hieraan.
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/up"]
+      # Apache antwoordt. De agent hangt hieraan.
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/up') === false ? 1 : 0);"]
       interval: 5s
       timeout: 5s
       retries: 60
-      start_period: 240s
+      start_period: 300s
 
   # Hartslag van de workflow plus de wachtrij. Los van de webserver, zodat je
   # de agent kunt stilzetten zonder de API te stoppen.
@@ -72,18 +56,7 @@ services:
         # service_started wacht alleen tot de container draait, niet tot het
         # gedeelde vendor-volume gevuld is. Daarom service_healthy.
         condition: service_healthy
-    environment:
-      - APP_ENV=local
-      - DB_CONNECTION=mysql
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_DATABASE=klimaatx
-      - DB_USERNAME=klimaatx
-      - DB_PASSWORD=klimaatx
-      - QUEUE_CONNECTION=database
-      - CACHE_STORE=database
-      - MAIL_MAILER=log
-      - AGENT_DRY_RUN=true
+    # Leest dezelfde .env als de api-container, via de gedeelde bind-mount.
     command: ["sh", "/app/docker/start.sh", "agent"]
 
   db:

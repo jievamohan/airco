@@ -23,10 +23,25 @@ die pas slaagt als dependencies, migraties en seed klaar zijn en de webserver
 antwoordt; de agent hangt aan `condition: service_healthy`.
 
 Beide containers starten via `apps/api/docker/start.sh`, dat ook `.env`
-aanmaakt vanuit `.env.example` en eenmalig een applicatiesleutel genereert.
-Zonder dat viel een verse clone om op een ontbrekende `APP_KEY`, want `.env`
-staat terecht in `.gitignore`. Het script wordt via de bind-mount ingelezen,
-dus een wijziging vraagt geen rebuild van de image.
+aanmaakt en eenmalig een applicatiesleutel genereert. Zonder dat viel een verse
+clone om op een ontbrekende `APP_KEY`, want `.env` staat terecht in
+`.gitignore`. Het script wordt via de bind-mount ingelezen, dus een wijziging
+vraagt geen rebuild van de image.
+
+De api-container draait **Apache** in plaats van `php artisan serve`. Die
+laatste is PHP's ingebouwde ontwikkelserver: hij verwerkt verzoeken serieel,
+lijkt in niets op productie en gaat aantoonbaar anders om met
+omgevingsvariabelen — een instelling uit de `environment:`-sectie van compose
+kwam in de ene omgeving wel en in de andere niet aan, waardoor CORS het live
+domein terugstuurde terwijl compose iets anders opgaf. De documentroot staat op
+`public/`, zodat de rest van de applicatie niet via de webserver bereikbaar is.
+
+Daarmee samenhangend is de configuratie teruggebracht tot **één** bron:
+`apps/api/.env.docker`, dat het startscript naar `.env` kopieert. De
+`environment:`-secties van de api- en agent-service zijn verwijderd. Een `.env`
+die nog een ongewijzigde kopie van `.env.example` is (aangemaakt door een
+eerdere versie van dit script, met productiewaarden erin) wordt bij het starten
+vervangen.
 
 Lokaal staat `AGENT_DRY_RUN=true`: de workflow loopt volledig, maar er wordt niet
 echt gebeld, gemaild of in een agenda geschreven. Dat voorkomt dat een

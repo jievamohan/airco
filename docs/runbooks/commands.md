@@ -30,9 +30,16 @@ docker compose ps          # toont de healthstatus van api
 docker compose logs -f api
 ```
 
-De api-container maakt zelf `apps/api/.env` aan vanuit `.env.example` en
-genereert eenmalig een applicatiesleutel. Bestaat `.env` al, dan blijft die
-staan.
+De api-container draait **Apache** (`php:8.4-apache`), niet `php artisan serve`:
+die laatste is PHP's ingebouwde ontwikkelserver, verwerkt verzoeken serieel en
+gaat anders om met omgevingsvariabelen dan een echte webserver.
+
+Alle applicatie-instellingen staan in **`apps/api/.env.docker`** — dat is de
+enige bron van waarheid voor deze containers. Het startscript kopieert dat naar
+`.env` bij de eerste start en genereert eenmalig een applicatiesleutel. Wil je
+iets lokaal anders, pas dan `.env` aan (of `.env.docker` voor iedereen); zet het
+niet in de `environment:`-sectie van compose, want twee bronnen voor dezelfde
+sleutel geven verschil tussen omgevingen.
 
 Open: http://localhost:3010 (web) en http://localhost:8010 (api)
 

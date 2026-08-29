@@ -2,7 +2,7 @@
 #
 # Start de api- of de agent-container.
 #
-#   start.sh api     webserver: dependencies, .env, migraties, seed, serve
+#   start.sh api     Apache, na dependencies, .env, migraties en seed
 #   start.sh agent   wachtrij en scheduler
 #
 # Beide containers delen hetzelfde vendor-volume, maar alleen de api vult het.
@@ -17,9 +17,18 @@ if [ "$1" = "api" ]; then
     echo "==> composer install"
     composer install --no-interaction --no-progress
 
+    # .env.docker is de enige bron van waarheid voor deze containers. Twee
+    # bronnen voor dezelfde sleutel (compose-environment naast .env) leverde
+    # verschil op tussen omgevingen; daarom staat alles op een plek.
     if [ ! -f .env ]; then
-        echo "==> .env aanmaken vanuit .env.example"
-        cp .env.example .env
+        echo "==> .env aanmaken vanuit .env.docker"
+        cp .env.docker .env
+    elif cmp -s .env .env.example; then
+        # Een eerdere versie van dit script kopieerde .env.example, dat
+        # productiewaarden bevat: daardoor wees DASHBOARD_ORIGINS naar het
+        # live domein en blokkeerde CORS het lokale dashboard.
+        echo "==> .env is een ongewijzigde kopie van .env.example; vervangen door .env.docker"
+        cp .env.docker .env
     fi
 
     if ! grep -q '^APP_KEY=base64:' .env; then
@@ -27,12 +36,22 @@ if [ "$1" = "api" ]; then
         php artisan key:generate --force
     fi
 
+    # Apache draait als www-data en moet in deze twee mappen kunnen schrijven;
+    # via de bind-mount zijn ze eigendom van de host-gebruiker. Ruim genomen,
+    # want dit is uitsluitend de lokale ontwikkelcontainer.
+    mkdir -p storage/framework/cache/data storage/framework/sessions \
+             storage/framework/views storage/logs bootstrap/cache
+    chmod -R a+rwX storage bootstrap/cache
+
     echo "==> migraties en basisgegevens"
     php artisan migrate --force
     php artisan db:seed --force
 
-    echo "==> webserver op poort 8000"
-    exec php artisan serve --host=0.0.0.0 --port=8000
+    # Configuratie komt uit .env en mag niet blijven hangen tussen herstarts.
+    php artisan config:clear
+
+    echo "==> Apache op poort 80"
+    exec apache2-foreground
 fi
 
 # De healthcheck op de api-service houdt ons hier normaal al tegen; deze lus is
