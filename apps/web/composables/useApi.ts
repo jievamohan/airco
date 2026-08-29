@@ -41,11 +41,24 @@ export function useApi() {
       if (token) headers.Authorization = `Bearer ${token}`
     }
 
-    const response = await fetch(`${base}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
+    let response: Response
+
+    try {
+      response = await fetch(`${base}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
+    } catch {
+      // fetch werpt alleen bij een netwerk- of CORS-fout; het kale
+      // "Failed to fetch" van de browser zegt niemand iets.
+      throw {
+        status: 0,
+        message:
+          `De API op ${base} is niet bereikbaar. Draait de api-container, ` +
+          `en staat ${window.location.origin} in DASHBOARD_ORIGINS?`,
+      } satisfies ApiError
+    }
 
     const text = await response.text()
     const payload = text ? JSON.parse(text) : {}

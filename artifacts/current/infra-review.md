@@ -36,6 +36,12 @@ ontwikkelaar per ongeluk een echte klant belt.
 heeft (`pdo_mysql`, `intl`, `mbstring`, `zip`, `gd`, `bcmath`, `opcache`).
 Geen `imap`-extensie nodig dankzij `webklex/php-imap`.
 
+Verder staat `DASHBOARD_ORIGINS` lokaal op zowel `http://localhost:3010` als
+`http://127.0.0.1:3010`. Met alleen de eerste blokkeerde CORS elke aanroep zodra
+je het dashboard op `127.0.0.1` opende, en toonde het inlogscherm het kale
+"Failed to fetch" van de browser. De API-client vertaalt zo'n netwerk- of
+CORS-fout nu naar een melding die het API-adres en de eigen origin noemt.
+
 ## CI
 
 `.github/workflows/ci-deploy.yml` krijgt een `api`-job vóór de deploy:

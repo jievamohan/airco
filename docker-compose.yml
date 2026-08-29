@@ -42,7 +42,9 @@ services:
       - QUEUE_CONNECTION=database
       - CACHE_STORE=database
       - MAIL_MAILER=log
-      - DASHBOARD_ORIGINS=http://localhost:3010
+      # Beide schrijfwijzen van de host, anders blokkeert CORS zodra je het
+      # dashboard op 127.0.0.1 opent in plaats van op localhost.
+      - DASHBOARD_ORIGINS=http://localhost:3010,http://127.0.0.1:3010
       # Lokaal draait de agent standaard in proefmodus: geen echte gesprekken,
       # mails of agenda-afspraken.
       - AGENT_DRY_RUN=true

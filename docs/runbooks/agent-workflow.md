@@ -174,6 +174,7 @@ en wat de prijs zou moeten zijn om de margedrempel te halen.
 | Webhook geeft 404 | Het `conversation_id` hoort bij geen enkel gesprek in de database — meestal een testaanroep vanuit het ElevenLabs-dashboard. |
 | Offerte niet verstuurd | `email_messages` bij de lead: status `failed` wijst op de mailserver, `skipped` op proefmodus. |
 | Afspraak niet in de agenda | Het veld `sync_error` op de afspraak zegt waarom; de afspraak zelf is wel vastgelegd. |
+| "Failed to fetch" bij het inloggen op het dashboard | De browser komt niet bij de API. Kijk in de melding zelf: die noemt het API-adres en de origin. Meestal staat die origin niet in `DASHBOARD_ORIGINS` — bijvoorbeeld omdat je het dashboard op `127.0.0.1` opent terwijl alleen `localhost` is toegestaan. Anders: draait de api-container en luistert die op de verwachte poort? |
 | Lead blijft hangen | Dashboard → lead → "Stappen opnieuw aftrappen". Elke actie maakt een nieuwe poging; niets wordt overschreven. |
 | Offerte gemarkeerd als "onder de margedrempel" | De verkoopprijs zit te dicht op de kostprijs. Kijk op Catalogus → Vanaf-prijs of de advertentieprijs nog klopt, of verhoog de inkoop-/margegegevens. |
 

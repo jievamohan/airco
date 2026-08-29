@@ -36,7 +36,10 @@ staan.
 
 Open: http://localhost:3010 (web) en http://localhost:8010 (api)
 
-Het CRM-dashboard zit op **http://localhost:3010/dashboard**. Inloggen kan met
+Het CRM-dashboard zit op **http://localhost:3010/dashboard**. Gebruik dezelfde
+hostnaam als in `DASHBOARD_ORIGINS` staat: opent u het op een adres dat daar niet
+in voorkomt, dan blokkeert CORS de aanroepen en meldt het inlogscherm dat de API
+niet bereikbaar is. Inloggen kan met
 het account dat `DatabaseSeeder` aanmaakt: het adres uit
 `OWNER_NOTIFICATION_EMAIL` en het wachtwoord uit `OWNER_INITIAL_PASSWORD`
 (standaard `wachtwoord-wijzigen` — wijzig dat direct).
