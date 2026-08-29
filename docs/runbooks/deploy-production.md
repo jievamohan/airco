@@ -115,6 +115,11 @@ Maak in DirectAdmin een MySQL-database plus gebruiker aan. Dan:
 
 ```bash
 cd /home/sinoxi/domains/airco.sinoxi.nl/apps/api
+
+# artisan draait op de autoloader van composer, dus die moet er eerst zijn.
+# Zonder deze stap eindigt key:generate op een ontbrekende vendor/autoload.php.
+composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
+
 cp .env.example .env
 php artisan key:generate
 ```
@@ -122,6 +127,9 @@ php artisan key:generate
 Vul in `.env` minstens in: `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`,
 de `MAIL_*`-gegevens, en de sleutels van de spraakagent. `APP_URL` staat al op
 `https://airco.sinoxi.nl`. `.env` staat in `.gitignore` en hoort nooit in git.
+
+De deploy draait deze `composer install` daarna bij elke keer opnieuw; hier is
+hij alleen nodig omdat je `artisan` al vóór de eerste deploy gebruikt.
 
 > `php artisan config:cache` legt `.env` vast in een cachebestand. Wijzig je
 > `.env` later met de hand, draai dan `php artisan config:cache` opnieuw —

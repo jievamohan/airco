@@ -125,6 +125,15 @@ require_env() {
     echo "        Maak hem eenmalig aan uit .env.example; zie de runbook." >&2
     exit 1
   fi
+
+  # Zonder applicatiesleutel komt de deploy nog een heel eind en valt de site
+  # daarna om op elke sessie en elk versleuteld veld. Hier stoppen is duidelijker
+  # dan een 500 na afloop.
+  if ! grep -q '^APP_KEY=base64:' "$LARAVEL_ROOT/.env"; then
+    echo "deploy: APP_KEY ontbreekt in $LARAVEL_ROOT/.env." >&2
+    echo "        Draai eenmalig: cd $LARAVEL_ROOT && php artisan key:generate" >&2
+    exit 1
+  fi
 }
 
 # Werkboom naar een vastgepinde commit (CI) of gewoon bijwerken (handmatig).
