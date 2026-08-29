@@ -23,8 +23,10 @@ node-compile-cache/
 # anders kan het startscript geen .env aanmaken.
 !.env.docker
 
-# On-VPS deploy snapshots (created by make deploy-production)
-releases/
+# Deploy-werkbestanden op de VPS: het slot dat twee gelijktijdige deploys
+# tegenhoudt, en de UI-momentopnames waaruit een mislukte deploy terugzet.
+.deploy.lock
+apps/api/.deploy/
 
 # Local tooling
 .venv/
@@ -35,3 +37,7 @@ releases/
 # OS / editor noise
 *.swp
 *~
+
+# Losse werkkopie van de tweede landingspagina (eigen git-repo). De versie die
+# meegaat naar productie staat in apps/web/public/v2/.
+/aircov2/

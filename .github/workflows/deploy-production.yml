@@ -1,0 +1,80 @@
+# Deploy naar productie zodra een pull request naar main gemerged is.
+#
+# Een directe push naar main deployt bewust niet: de gates draaien op de PR, en
+# branch protection houdt merges zonder groene gates tegen. Zo is een deploy
+# altijd code die door CI is gekomen.
+#
+# De VPS wordt op github.sha vastgepind, zodat er precies die commit draait —
+# niet "wat er op dat moment toevallig op main stond".
+#
+# Benodigde secrets op Environment "production":
+#   VPS_SSH_KEY               private deploy-key (hele PEM, inclusief BEGIN/END)
+#   VPS_SSH_KEY_PASSPHRASE    alleen als de key een passphrase heeft
+# Variabelen op datzelfde environment:
+#   VPS_SSH_HOST, VPS_SSH_USER, VPS_DEPLOY_PATH, optioneel VPS_SSH_PORT
+#
+# Zie docs/runbooks/deploy-production.md.
+
+name: Deploy production
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: SSH → make deploy-on-server
+    if: >
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - name: Deploy op de VPS
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+        with:
+          host: ${{ vars.VPS_SSH_HOST }}
+          username: ${{ vars.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_KEY_PASSPHRASE }}
+          port: ${{ vars.VPS_SSH_PORT != '' && vars.VPS_SSH_PORT || 22 }}
+          envs: DEPLOY_SHA,DEPLOY_PATH
+          command_timeout: 25m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            if [ -z "${DEPLOY_PATH}" ]; then
+              echo "fout: variabele VPS_DEPLOY_PATH is niet gezet" >&2
+              exit 1
+            fi
+            # Een niet-interactieve SSH-sessie leest geen loginprofiel; zonder
+            # bash -lc staan nvm en corepack niet op PATH en faalt de build.
+            KLIMAATX_DEPLOY_SHA="${DEPLOY_SHA}" \
+              bash -lc "cd '${DEPLOY_PATH}' && make deploy-on-server"
+
+      - name: Rooktest
+        if: ${{ vars.PRODUCTION_URL != '' }}
+        run: |
+          base="${{ vars.PRODUCTION_URL }}"
+          base="${base%/}"
+          for path in / /v2/ /up; do
+            code="$(curl -fsS -o /dev/null -w '%{http_code}' "${base}${path}" || echo 000)"
+            if [ "${code}" != "200" ]; then
+              echo "fout: ${base}${path} gaf ${code} in plaats van 200" >&2
+              exit 1
+            fi
+            echo "✓ ${base}${path} → ${code}"
+          done

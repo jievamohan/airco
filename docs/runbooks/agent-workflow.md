@@ -48,14 +48,24 @@ De scheduler roept zelf aan:
 * `agent:tick` — elke minuut
 * verlopen offertes opruimen — dagelijks 03:15
 
-Cron-regel op een DirectAdmin-VPS:
+Lokaal doet de `agent`-container beide. Op productie zet de deploy ze zelf neer
+als systemd-units in de gebruikersscope — je hoeft er na de eerste deploy niets
+meer aan te doen:
 
-```
-* * * * * cd /pad/naar/apps/api && php artisan schedule:run >> /dev/null 2>&1
+| Unit | Wat |
+|---|---|
+| `klimaatx-queue.service` | `queue:work --tries=3 --timeout=120`, herstart elk uur |
+| `klimaatx-scheduler.timer` | elke minuut `schedule:run` |
+
+```bash
+systemctl --user status klimaatx-queue
+systemctl --user list-timers klimaatx-scheduler.timer
+journalctl --user -u klimaatx-queue -f
 ```
 
-De queue-worker draait als systemd-unit of onder supervisor; zonder worker
-blijven verrijking, offertes en afspraken in de wachtrij staan.
+Zonder worker blijven verrijking, offertes en afspraken in de wachtrij staan.
+Mag systemd niet van de hoster, dan is cron het alternatief; beide varianten
+staan in [deploy-production.md](./deploy-production.md).
 
 ---
 
