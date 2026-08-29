@@ -57,6 +57,12 @@ je het dashboard op `127.0.0.1` opende, en toonde het inlogscherm het kale
 "Failed to fetch" van de browser. De API-client vertaalt zo'n netwerk- of
 CORS-fout nu naar een melding die het API-adres en de eigen origin noemt.
 
+De web-service krijgt `VITE_USE_POLLING=true`. `CHOKIDAR_USEPOLLING` stond er al,
+maar Nuxt 3 gebruikt de watcher van Vite en die leest een eigen instelling. Zonder
+pollen ziet de dev-server in de container een `git pull` op de host niet, en lijkt
+een doorgevoerde wijziging simpelweg te ontbreken. Buiten Docker staat het uit,
+want pollen kost CPU.
+
 ## CI
 
 `.github/workflows/ci-deploy.yml` krijgt een `api`-job vóór de deploy:

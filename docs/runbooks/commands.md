@@ -95,6 +95,27 @@ zie [agent-workflow.md](./agent-workflow.md).
 
 **Auto-deploy:** merging a PR into `main` triggers `.github/workflows/ci-deploy.yml` (CI → SSH deploy → optional smoke). Configure the `production` environment in GitHub (secret: `VPS_SSH_KEY`; variables: host, user, deploy path — see deploy runbook).
 
+## Wijziging komt niet door in de browser
+
+De dev-servers draaien in containers met een bind-mount naar je werkmap. Een
+`git pull` op de host levert daarbinnen geen inotify-event op, dus Vite ziet de
+wijziging niet vanzelf. Daarom staat `VITE_USE_POLLING=true` op de web-service.
+
+Zie je een wijziging toch niet, controleer dan eerst wat de container heeft:
+
+```bash
+docker compose exec web grep -c "login__remember" pages/dashboard/login.vue
+```
+
+* `0` — de container heeft het bestand niet; je `git pull` is niet gelukt of je
+  staat op een andere branch.
+* `1` of meer — het bestand is er wel. Herstart dan de web-container en doe een
+  harde ververs in de browser (cmd+shift+R):
+
+```bash
+docker compose restart web
+```
+
 ## Secret scan
 
 ```bash

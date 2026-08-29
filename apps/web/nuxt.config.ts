@@ -18,6 +18,18 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'static',
   },
+  vite: {
+    server: {
+      watch: {
+        // In een container met een bind-mount komen bestandswijzigingen van de
+        // host niet als inotify-event binnen; Vite ziet een `git pull` dan
+        // gewoon niet. CHOKIDAR_USEPOLLING helpt daar niet, want Nuxt gebruikt
+        // de watcher van Vite. Buiten Docker laten we het uit: pollen kost CPU.
+        usePolling: process.env.VITE_USE_POLLING === 'true',
+        interval: 400,
+      },
+    },
+  },
   app: {
     head: {
       title: 'KlimaatX — Perfect klimaat. Elk seizoen.',
