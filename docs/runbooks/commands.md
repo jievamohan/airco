@@ -20,6 +20,20 @@ docker compose exec api composer analyse
 docker compose exec api vendor/bin/pint --test
 ```
 
+De eerste `up` duurt een paar minuten: `composer install` en `pnpm install`
+draaien dan voor het eerst. De `agent`-container wacht bewust tot de `api`
+gezond is — die deelt zijn `vendor`-map en zou anders omvallen op een
+ontbrekende `autoload.php`. Volgen kan met:
+
+```bash
+docker compose ps          # toont de healthstatus van api
+docker compose logs -f api
+```
+
+De api-container maakt zelf `apps/api/.env` aan vanuit `.env.example` en
+genereert eenmalig een applicatiesleutel. Bestaat `.env` al, dan blijft die
+staan.
+
 Open: http://localhost:3010 (web) en http://localhost:8010 (api)
 
 Het CRM-dashboard zit op **http://localhost:3010/dashboard**. Inloggen kan met

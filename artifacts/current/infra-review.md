@@ -15,6 +15,19 @@ Drie diensten erbij naast `web`:
 aanvragen meer kan wegschrijven. Beide delen het `api_vendor`-volume zodat
 `composer install` maar één keer hoeft te draaien.
 
+Dat gedeelde volume vraagt wel om volgorde. De agent hing eerst aan
+`condition: service_started`, en dat wacht alleen tot de api-container draait,
+niet tot `composer install` klaar is — de agent viel dan meteen om op een
+ontbrekende `vendor/autoload.php`. De api heeft nu een healthcheck op `/up`,
+die pas slaagt als dependencies, migraties en seed klaar zijn en de webserver
+antwoordt; de agent hangt aan `condition: service_healthy`.
+
+Beide containers starten via `apps/api/docker/start.sh`, dat ook `.env`
+aanmaakt vanuit `.env.example` en eenmalig een applicatiesleutel genereert.
+Zonder dat viel een verse clone om op een ontbrekende `APP_KEY`, want `.env`
+staat terecht in `.gitignore`. Het script wordt via de bind-mount ingelezen,
+dus een wijziging vraagt geen rebuild van de image.
+
 Lokaal staat `AGENT_DRY_RUN=true`: de workflow loopt volledig, maar er wordt niet
 echt gebeld, gemaild of in een agenda geschreven. Dat voorkomt dat een
 ontwikkelaar per ongeluk een echte klant belt.

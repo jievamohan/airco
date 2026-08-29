@@ -46,11 +46,15 @@ services:
       # Lokaal draait de agent standaard in proefmodus: geen echte gesprekken,
       # mails of agenda-afspraken.
       - AGENT_DRY_RUN=true
-    command: >
-      sh -c "composer install --no-interaction &&
-             php artisan migrate --force &&
-             php artisan db:seed --force &&
-             php artisan serve --host=0.0.0.0 --port=8000"
+    command: ["sh", "/app/docker/start.sh", "api"]
+    healthcheck:
+      # Pas gezond als composer install, de migraties en de seed klaar zijn en
+      # de webserver antwoordt. De agent hangt hieraan.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/up"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 240s
 
   # Hartslag van de workflow plus de wachtrij. Los van de webserver, zodat je
   # de agent kunt stilzetten zonder de API te stoppen.
@@ -63,7 +67,9 @@ services:
       - api_vendor:/app/vendor
     depends_on:
       api:
-        condition: service_started
+        # service_started wacht alleen tot de container draait, niet tot het
+        # gedeelde vendor-volume gevuld is. Daarom service_healthy.
+        condition: service_healthy
     environment:
       - APP_ENV=local
       - DB_CONNECTION=mysql
@@ -76,9 +82,7 @@ services:
       - CACHE_STORE=database
       - MAIL_MAILER=log
       - AGENT_DRY_RUN=true
-    command: >
-      sh -c "php artisan queue:work --tries=3 --timeout=120 &
-             php artisan schedule:work"
+    command: ["sh", "/app/docker/start.sh", "agent"]
 
   db:
     image: mysql:8.4
