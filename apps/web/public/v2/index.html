@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solarlex. Koel in juli. Warm in januari.</title>
+<meta name="description" content="Dit is geen zomerairco. Dit is hoe u het huis het hele jaar houdt. Per kamer, zonder gas. Solarlex installeert lucht-lucht warmtepompen (split-airco's).">
+<!--
+  Basis-URL van de lead-API. Leeg laten betekent: zelf uitzoeken — op localhost
+  de api-container op poort 8010, en anders /api op hetzelfde domein. Vul hem
+  wanneer de API ergens anders draait dan de site.
+-->
+<meta name="klimaatx:api-base" content="">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SOLARLEX homepage
+   Zelfstandige implementatie van het Claude Design handoff-pakket
+   (Solarlex Homepage v2 / Solarlex Mobile v2). Geen build-stap,
+   geen dependencies. Desktop + mobiel in één responsieve pagina.
+   Breekpunt: 900px.
+   ============================================================ */
+
+:root{
+  --ink:#141414;
+  --paper:#ffffff;
+  --offwhite:#faf9f7;
+  --cream:#f3efe8;
+  --light:#f7f5f1;
+
+  --on-dark:#b8b2a8;
+  --on-dark-2:#8f897e;
+  --on-dark-3:#7d786e;
+  --on-dark-4:#57534c;
+
+  --body:#55534e;
+  --muted:#8a8781;
+  --faint:#b5b1a8;
+
+  --hair:#ececea;
+  --hair-2:#e6e4e0;
+  --hair-3:#dad7d0;
+  --input-border:#cfccc5;
+
+  --warm:oklch(0.62 0.09 60);
+  --warm-dark:oklch(0.7 0.12 60);
+  --warm-label:oklch(0.5 0.09 60);
+  --warm-track:oklch(0.85 0.03 60);
+  --warm-panel:oklch(0.97 0.015 60);
+  --warm-section:oklch(0.97 0.012 60);
+
+  --cool:oklch(0.62 0.09 250);
+  --cool-dark:oklch(0.7 0.1 250);
+  --cool-label:oklch(0.5 0.09 250);
+  --cool-track:oklch(0.85 0.03 250);
+  --cool-panel:oklch(0.97 0.015 250);
+  --cool-section:oklch(0.965 0.012 250);
+
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Hanken Grotesk',system-ui,-apple-system,sans-serif;
+
+  /* 12px-spacing: 6 12 18 24 36 48 60 72 96 120 144 */
+  --s-2xs:6px;
+  --s-xs:12px;
+  --s-sm:18px;
+  --s-md:24px;
+  --s-lg:36px;
+  --s-xl:48px;
+  --s-2xl:60px;
+  --s-3xl:72px;
+  --s-4xl:96px;
+  --s-5xl:120px;
+  --s-6xl:144px;
+
+  --pad:var(--s-xl);
+  --sq:60px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+img{max-width:100%;display:block}
+a{color:var(--ink)}
+a:hover{color:var(--cool)}
+::selection{background:var(--ink);color:#fff}
+section[id]{scroll-margin-top:var(--s-3xl)}
+a,button{transition:background .18s ease,color .18s ease,transform .18s ease}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* --- layout ------------------------------------------------- */
+.container{max-width:1280px;margin:0 auto;padding:0 var(--pad)}
+.container--narrow{max-width:860px}
+.container--form{max-width:760px}
+.section{padding-block:var(--s-6xl) var(--s-5xl)}
+.section--band{padding-block:var(--s-5xl)}
+
+.h1{margin:0;font-size:clamp(52px,6vw,92px);line-height:1.02;font-weight:700;letter-spacing:-.035em;text-wrap:balance}
+.h2{margin:0;font-size:clamp(38px,4.2vw,60px);font-weight:700;letter-spacing:-.03em;line-height:1.05;text-wrap:balance}
+.lede{margin:0;font-size:18px;line-height:1.6;color:var(--body);max-width:540px;text-wrap:pretty}
+.mono{font-family:var(--mono);letter-spacing:.16em;margin:0}
+.dark{background:var(--ink)}
+.dark .h2{color:var(--light)}
+.dark .lede{color:var(--on-dark)}
+.br-desktop{display:inline}
+.br-mobile{display:none}
+
+/* --- knoppen ------------------------------------------------ */
+.btn{
+  display:inline-block;font-family:var(--sans);font-size:15px;font-weight:600;
+  text-decoration:none;padding:var(--s-sm) var(--s-md);border-radius:2px;border:none;cursor:pointer;
+  background:var(--ink);color:#fff;
+}
+.btn:hover{background:#2b2b2b;color:#fff;transform:translateY(-2px)}
+.btn--light{background:var(--light);color:var(--ink)}
+.btn--light:hover{background:#fff;color:var(--ink);transform:translateY(-2px)}
+.btn--nav{font-size:13.5px;padding:var(--s-xs) var(--s-sm)}
+.btn--nav:hover{transform:none}
+
+/* --- nav ---------------------------------------------------- */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:var(--s-xs) var(--pad);background:var(--paper);border-bottom:1px solid var(--hair);
+}
+.wordmark{font-weight:800;font-size:15px;letter-spacing:.14em;text-decoration:none}
+.nav__links{display:flex;align-items:center;gap:var(--s-md)}
+.nav__list{position:relative;display:flex;align-items:center;gap:var(--s-md)}
+.nav__list a{font-size:14px;font-weight:500;text-decoration:none;padding:8px 0}
+.nav__indicator{
+  position:absolute;left:0;bottom:2px;height:1.5px;width:0;
+  background:var(--ink);transform:translateX(0);opacity:0;
+  transition:transform .5s var(--ease),width .5s var(--ease),opacity .25s ease;
+  pointer-events:none;
+}
+.nav-spacer{height:var(--s-3xl)}
+
+/* --- hero --------------------------------------------------- */
+.hero{position:relative;height:66vh;min-height:520px;background:#ece7de;display:flex;align-items:center;overflow:hidden}
+.hero__stage{position:absolute;inset:0}
+.hero__season{
+  position:absolute;inset:-1.5%;
+  background:center 38%/cover no-repeat;
+  filter:blur(2px) saturate(1.08);
+}
+.hero__season--summer{background-image:url('uploads/hero-zomer-kamer.png')}
+.hero__season--winter{
+  background-image:url('uploads/hero-winter-kamer.png');
+  /* eindstaat is de bron: zonder animatie blijft de split zichtbaar */
+  clip-path:polygon(58% 0,100% 0,100% 100%,42% 100%);
+  animation:heroWinterIn 1.05s var(--ease) .45s both;
+}
+.hero__veil{
+  position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(247,245,241,.58) 0%,rgba(247,245,241,.22) 38%,transparent 64%);
+}
+.hero__inner{position:relative;z-index:1;width:100%}
+.hero__copy{display:flex;flex-direction:column;gap:var(--s-md);min-width:0;max-width:560px}
+.hero .h1{color:var(--ink);display:flex;flex-direction:column}
+.hero__line{display:block}
+.hero__sub{margin:0;font-size:20px;line-height:1.45;font-weight:500;color:var(--ink);max-width:460px;text-wrap:pretty}
+.hero__cta{display:flex;align-items:center;gap:var(--s-lg);flex-wrap:wrap}
+.hero__link{
+  font-size:16px;font-weight:600;color:var(--ink);
+  text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:1px;
+}
+.hero__link:hover{color:var(--cool)}
+
+/* stroomrichting in de werking-panelen */
+@keyframes solflow{0%{left:2%;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:94%;opacity:0}}
+
+/* hero: zomer + juli staan; winter veegt schuin in; daarna de rest */
+@keyframes heroWinterIn{
+  from{clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%)}
+  to{clip-path:polygon(58% 0,100% 0,100% 100%,42% 100%)}
+}
+@keyframes heroIn{
+  from{opacity:0;filter:blur(8px);transform:translate3d(0,var(--s-md),0)}
+  to{opacity:1;filter:blur(0);transform:none}
+}
+.hero__line--jan{animation:heroIn 1s cubic-bezier(.16,1,.3,1) 1.5s both}
+.hero__sub{animation:heroIn .9s cubic-bezier(.16,1,.3,1) 2.5s both}
+.hero__cta .btn{animation:heroIn .85s cubic-bezier(.16,1,.3,1) 3.1s both}
+.hero__link{animation:heroIn .85s cubic-bezier(.16,1,.3,1) 3.55s both}
+
+/* --- seizoenscène (scrollgestuurd, alle breedtes) ----------- */
+.scene-d{height:320vh;height:320svh;position:relative}
+.scene-d__sticky{position:-webkit-sticky;position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
+.scene-d__layer{position:absolute;inset:0;background-size:cover;background-position:center;transform:translateZ(0)}
+.scene-d__winter{background-image:url('uploads/fotob.png')}
+.scene-d__summer{background-image:url('uploads/fotoa.png')}
+.scene-d__stamp{position:absolute;top:var(--s-4xl);left:var(--pad)}
+.scene-d__stamp p{font-size:12px;margin:0}
+.scene-d__stamp .jul{position:absolute;top:0;left:0;color:var(--ink)}
+.scene-d__stamp .jan{color:#d8d0c4}
+.scene-d__temps{position:absolute;left:var(--pad);bottom:var(--s-2xl);display:flex;gap:var(--s-2xl)}
+.scene-d__temp{position:relative}
+.scene-d__temp .layer-ink{position:absolute;inset:0;color:var(--ink)}
+.scene-d__temp p.label{margin:0 0 var(--s-2xs);font-size:12px}
+.scene-d__temp p.val{margin:0;font-size:72px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.scene-d__temp .layer-light{color:#f4efe6}
+.scene-d__caps{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.scene-d__caps p{
+  grid-area:1/1;margin:0;max-width:1080px;padding:0 var(--pad);text-align:center;
+  font-size:clamp(34px,4vw,58px);font-weight:600;letter-spacing:-.028em;line-height:1.16;text-wrap:balance;
+}
+.scene-d__caps .cap-winter{color:#f4efe6}
+.scene-d__caps .cap-summer{
+  width:max-content;max-width:min(720px, calc(100% - 2 * var(--pad)));
+  padding:var(--s-sm) var(--s-md);border-radius:2px;
+  background:rgba(255,255,255,.52);color:var(--ink);
+  -webkit-backdrop-filter:blur(14px) saturate(1.15);
+  backdrop-filter:blur(14px) saturate(1.15);
+}
+.scene-d__progress{position:absolute;left:0;bottom:0;height:2px;background:var(--ink);opacity:.7;width:0}
+
+/* --- werking ------------------------------------------------ */
+.werking__panels{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-md)}
+.panel{padding:var(--s-lg);display:flex;flex-direction:column;gap:var(--s-lg)}
+.panel--cool{background:var(--cool-panel)}
+.panel--warm{background:var(--warm-panel)}
+.panel__label{font-size:12px}
+.panel--cool .panel__label{color:var(--cool-label)}
+.panel--warm .panel__label{color:var(--warm-label)}
+.panel__diagram{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--s-md)}
+.unit{display:flex;flex-direction:column;align-items:center;gap:var(--s-xs)}
+.unit__label{margin:0;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--muted)}
+.unit-out{width:84px;height:60px;border:1.5px solid var(--ink);border-radius:3px;position:relative;background:#fff}
+.unit-out__fan{position:absolute;left:9px;top:9px;width:40px;height:40px;border:1.5px solid var(--ink);border-radius:50%}
+.unit-out__grille{position:absolute;right:9px;width:16px;height:1.5px;background:var(--ink)}
+.unit-in{width:110px;height:34px;border:1.5px solid var(--ink);border-radius:8px;position:relative;background:#fff}
+.unit-in__slot{position:absolute;left:12px;right:12px;bottom:6px;height:2px;background:var(--ink)}
+.track{position:relative;height:60px}
+.track__rail{position:absolute;left:0;right:0;top:50%;height:1px}
+.track span{position:absolute;top:50%;margin-top:-4px;width:8px;height:8px;border-radius:50%;animation:solflow 3.2s linear infinite}
+.panel--warm .track__rail{background:var(--warm-track)}
+.panel--warm .track span{background:var(--warm)}
+.panel--cool .track__rail{background:var(--warm-track)}
+.panel--cool .track span{background:var(--warm);animation-direction:reverse}
+.track span:nth-child(3){animation-delay:.8s}
+.track span:nth-child(4){animation-delay:1.6s}
+.track span:nth-child(5){animation-delay:2.4s}
+.panel__caption{margin:0;font-size:15px;line-height:1.55;color:var(--body);text-wrap:pretty}
+
+/* --- kosten ------------------------------------------------- */
+.equation{display:flex;align-items:flex-end;gap:var(--s-lg);margin:0 0 var(--s-4xl);flex-wrap:wrap}
+.equation__group{display:flex;flex-direction:column;gap:var(--s-xs)}
+.equation__label{margin:0;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;color:var(--muted)}
+.equation__arrow{margin:0 0 var(--s-lg);font-size:28px;color:var(--faint)}
+.sq{width:var(--sq);height:var(--sq)}
+.sq--light{background:var(--cream)}
+.sq--warm{background:var(--warm-dark)}
+.equation__blocks{display:flex;gap:6px;align-items:flex-end}
+
+.bars{display:flex;flex-direction:column;gap:var(--s-md);max-width:860px}
+.bar-row{display:grid;grid-template-columns:210px 1fr 110px;align-items:center;gap:var(--s-md)}
+.bar-row__label{margin:0;font-size:15px;font-weight:600;color:var(--ink)}
+.bar-row__track{height:var(--s-md);background:var(--cream)}
+.bar-row__fill{height:100%}
+.bar-row__fill--gas{width:100%;background:var(--hair-3)}
+.bar-row__fill--airco{background:var(--warm-dark)}
+.bar-row__val{margin:0;font-family:var(--mono);font-size:15px;font-weight:500;text-align:right;color:var(--ink)}
+.footnote{margin:6px 0 0;font-family:var(--mono);font-size:11.5px;letter-spacing:.03em;line-height:1.7;color:var(--muted)}
+
+/* --- comfort ------------------------------------------------ */
+/* klimaatpaneel: maakt "elke kamer zijn eigen klimaat" letterlijk zichtbaar */
+.comfort{overflow:hidden;background:var(--warm-section)}
+.comfort__grid{display:grid;grid-template-columns:minmax(360px,1fr) 56%;align-items:center;padding:var(--s-6xl) 0 var(--s-5xl) var(--pad)}
+.comfort__text{position:relative;z-index:1}
+.comfort__text .h2{margin:0 -180px var(--s-md) 0}
+.comfort__text p{margin:0;font-size:18px;line-height:1.6;color:var(--body);max-width:440px;text-wrap:pretty}
+.comfort__photo{position:relative;height:min(86vh,780px)}
+.comfort__photo>div{position:absolute;inset:0;background-image:url('uploads/fotoc.png');background-size:cover;background-position:60% center}
+.comfort__photo::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;
+  background:linear-gradient(to top,rgba(15,12,10,.6),rgba(15,12,10,0));
+}
+.comfort__cap{
+  position:absolute;left:var(--s-md);bottom:var(--s-md);z-index:1;margin:0;
+  font-family:var(--mono);font-size:13px;letter-spacing:.14em;color:var(--light);
+}
+
+/* --- cijfers: typografische specificatie -------------------- */
+.cijfers{
+  display:flex;flex-direction:column;align-items:center;
+  background:var(--ink);
+}
+.cijfers__line{
+  display:grid;grid-template-columns:repeat(4,17.5rem);
+  justify-content:center;width:max-content;max-width:100%;
+  margin:0 auto;padding:var(--s-3xl) var(--pad);column-gap:var(--s-md);
+}
+.cijfers__fact{
+  margin:0;padding:0 var(--s-xl);
+  display:flex;flex-direction:column;align-items:center;gap:var(--s-md);
+  text-align:center;
+}
+.cijfers__stage{position:relative;display:grid;place-items:center;width:9.5rem;height:9.5rem}
+.cijfers__ring{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.cijfers__ring-track{fill:none;stroke:var(--on-dark-4);stroke-width:1.5}
+.cijfers__ring-draw{
+  fill:none;stroke:var(--light);stroke-width:1.5;stroke-linecap:round;
+  stroke-dasharray:326.73;stroke-dashoffset:0;
+  transform:rotate(-90deg);transform-origin:center;
+  transition:stroke-dashoffset 1.25s var(--ease);
+  transition-delay:var(--d,0ms);
+}
+.reveal-ready .cijfers__fact:not(.is-in) .cijfers__ring-draw{stroke-dashoffset:326.73}
+.cijfers__num{
+  position:relative;z-index:1;margin:0;
+  font-size:clamp(40px,4.4vw,56px);font-weight:700;
+  letter-spacing:-.038em;line-height:1;
+  font-variant-numeric:tabular-nums;
+  color:var(--light);
+}
+.cijfers__txt{margin:0;font-size:16px;line-height:1.35;color:var(--on-dark);max-width:16ch;text-wrap:pretty}
+
+/* --- recensies ---------------------------------------------- */
+.recensies{background:var(--cool-section)}
+.star-defs{position:absolute;width:0;height:0;overflow:hidden}
+.reviews__inner{max-width:1280px;margin:0 auto;padding:var(--s-5xl) var(--pad)}
+.reviews__head{
+  display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-sm) var(--s-md);
+  margin-bottom:var(--s-3xl);width:fit-content;
+  text-decoration:none;color:inherit;
+}
+.reviews__g{display:block;width:28px;height:28px;flex-shrink:0}
+.reviews__head:hover .reviews__num,.reviews__head:focus-visible .reviews__num{color:var(--cool)}
+.stars{display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
+.star{display:block;width:32px;height:32px}
+.star__fill{fill:var(--ink)}
+.reviews__num{
+  margin:0;font-size:32px;font-weight:700;
+  letter-spacing:-.03em;line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.reviews__count{
+  margin:0;font-family:var(--mono);font-size:15px;letter-spacing:.04em;
+  color:var(--muted);
+}
+.reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-md)}
+.review{
+  margin:0;display:flex;flex-direction:column;gap:var(--s-sm);
+  padding:var(--s-lg);background:var(--paper);border:1px solid var(--hair-3);border-radius:2px;
+}
+.review q{
+  margin:0;flex:1;font-size:18px;line-height:1.45;letter-spacing:-.018em;
+  font-weight:500;text-wrap:pretty;quotes:'\201C' '\201D';
+}
+.review__by{
+  margin:0;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);
+}
+/* --- installatie -------------------------------------------- */
+.installatie{background:var(--offwhite)}
+.gallery{width:100%;margin:0 0 var(--s-4xl)}
+.gallery__stage{position:relative}
+.gallery__viewport{overflow:hidden}
+.gallery__track{display:flex;gap:var(--s-xs);transition:transform 1.8s cubic-bezier(.45,.05,.2,1)}
+.gallery figure{flex:0 0 calc((100% - 48px) / 5);margin:0}
+.gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.gallery__dots{display:flex;gap:var(--s-2xs);justify-content:center;margin-top:var(--s-xs)}
+.gallery__dot{
+  width:4px;height:4px;padding:0;border:0;border-radius:50%;
+  background:var(--hair-3);opacity:.35;cursor:pointer;
+}
+.gallery__dot.is-on{background:var(--ink);opacity:.22}
+.gallery__ctrl{
+  position:absolute;top:50%;z-index:2;width:var(--s-lg);height:var(--s-lg);padding:0;
+  display:grid;place-items:center;
+  border:1px solid var(--ink);border-radius:2px;
+  background:var(--paper);color:var(--ink);cursor:pointer;
+  opacity:0;pointer-events:none;
+  transform:translateY(-50%);
+  transition:opacity .2s ease;
+}
+.gallery__ctrl svg{display:block}
+.gallery__ctrl--prev{left:var(--s-sm)}
+.gallery__ctrl--next{right:var(--s-sm)}
+.gallery__stage:hover .gallery__ctrl,
+.gallery__stage:focus-within .gallery__ctrl{
+  opacity:1;pointer-events:auto;
+}
+@media (hover:none){
+  .gallery__ctrl{opacity:1;pointer-events:auto}
+}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-width:860px}
+.step{display:grid;grid-template-columns:90px 260px 1fr;gap:var(--s-md);padding:var(--s-lg) 0;border-top:1px solid var(--hair-2)}
+.step:last-child{border-bottom:1px solid var(--hair-2)}
+.step__no{margin:0;font-family:var(--mono);font-size:13px;color:var(--faint)}
+.step__title{margin:0;font-size:19px;font-weight:600}
+.step__body{margin:0;font-size:16px;line-height:1.6;color:var(--body);text-wrap:pretty}
+
+/* --- merken ------------------------------------------------- */
+.merken{border-top:1px solid var(--hair)}
+.merken .h2{margin-bottom:var(--s-2xl)}
+.merken .invite{border-top:none;padding-top:var(--s-xl)}
+.brands{
+  list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2);
+}
+.brands li{
+  margin:0;display:grid;place-items:center;
+  padding:var(--s-2xl) var(--s-md);
+  border-right:1px solid var(--hair-2);
+}
+.brands li:last-child{border-right:none}
+.brands img{width:min(100%,220px);height:56px;object-fit:contain}
+
+/* --- vanaf -------------------------------------------------- */
+.vanaf{background:var(--ink)}
+.vanaf__inner{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s-lg);
+  padding-block:var(--s-3xl);
+}
+.vanaf .h2{color:var(--light);margin:0;font-size:clamp(15px,2.1vw + 8px,40px);letter-spacing:-.03em;white-space:nowrap}
+
+/* --- certificaten ------------------------------------------- */
+.certs__title{margin:0 0 var(--s-xl)}
+.certs{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--s-xs);align-items:center}
+.cert{margin:0}
+.cert__logo{
+  display:block;width:100%;height:72px;
+  background:#fff;border-radius:2px;padding:var(--s-2xs) var(--s-xs);
+}
+.cert__logo img{width:100%;height:100%;object-fit:contain}
+
+/* --- vragen ------------------------------------------------- */
+.faq{display:flex;flex-direction:column}
+.faq__item{border-top:1px solid var(--hair-2)}
+.faq__q{
+  display:flex;justify-content:space-between;align-items:baseline;gap:var(--s-md);width:100%;
+  padding:var(--s-md) 0;background:none;border:none;cursor:pointer;text-align:left;font-family:var(--sans);
+}
+.faq__q{align-items:center}
+.faq__q span.faq__text{font-size:17px;font-weight:600;color:var(--ink);transition:transform .3s var(--ease)}
+.faq__q:hover span.faq__text{transform:translateX(3px)}
+.faq__sign{position:relative;display:block;width:14px;height:14px;flex:none}
+.faq__sign i{
+  position:absolute;left:0;top:6.25px;width:14px;height:1.5px;background:var(--muted);
+  transition:transform .4s var(--ease),background .22s ease;
+}
+.faq__sign i:last-child{transform:rotate(90deg)}
+.faq__item.is-open .faq__sign i:last-child{transform:rotate(0)}
+.faq__q:hover .faq__sign i{background:var(--ink)}
+.faq__a-wrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
+.faq__item.is-open .faq__a-wrap{grid-template-rows:1fr}
+.faq__a-inner{overflow:hidden}
+.faq__a{
+  margin:0;padding:0 var(--s-2xl) var(--s-md) 0;font-size:16px;line-height:1.65;color:var(--body);text-wrap:pretty;
+  opacity:0;transform:translateY(-6px);transition:opacity .35s ease,transform .35s ease;
+}
+.faq__item.is-open .faq__a{opacity:1;transform:none;transition-delay:.12s}
+
+/* --- advies (formulier) ------------------------------------- */
+.advies{background:var(--cream)}
+.advies .section{padding-block:var(--s-6xl)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-xs);max-width:620px}
+.form input{
+  font-family:var(--sans);font-size:16px;padding:var(--s-sm);
+  border:1px solid var(--input-border);border-radius:2px;background:#fff;color:var(--ink);width:100%;
+}
+.form input:focus{outline:1.5px solid var(--ink);outline-offset:0}
+.form textarea{
+  font-family:var(--sans);font-size:16px;padding:var(--s-sm);
+  border:1px solid var(--input-border);border-radius:2px;background:#fff;color:var(--ink);width:100%;
+  resize:vertical;min-height:120px;
+}
+.form textarea:focus{outline:1.5px solid var(--ink);outline-offset:0}
+.form .full{grid-column:1/-1}
+.form input:user-invalid{border-color:oklch(.55 .16 25)}
+.form input[aria-invalid=true],.form textarea[aria-invalid=true]{border-color:oklch(.55 .16 25)}
+.form__measure{position:relative}
+.form__measure input{padding-right:108px}
+.form__units{
+  position:absolute;right:var(--s-xs);top:50%;transform:translateY(-50%);
+  display:flex;align-items:center;gap:var(--s-2xs);
+}
+.form__unit{
+  position:relative;padding:4px 1px 6px;border:0;background:none;cursor:pointer;
+  font-family:var(--mono);font-size:13px;letter-spacing:.04em;color:var(--faint);
+}
+.form__unit.is-on{color:var(--ink)}
+.form__unit.is-on::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:1.5px;background:var(--ink);
+}
+.form__units-div{color:var(--hair-3);font-family:var(--mono);font-size:13px;line-height:1}
+.form__rooms{grid-column:1/-1}
+.form__rooms-opts{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-xs)}
+.form__room{
+  font-family:var(--sans);font-size:16px;font-weight:500;
+  padding:var(--s-sm);border:1px solid var(--input-border);border-radius:2px;
+  background:#fff;color:var(--muted);cursor:pointer;
+}
+.form__room.is-on{border-color:var(--ink);color:var(--ink)}
+.form__error{grid-column:1/-1;margin:0;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:oklch(.5 .16 25);display:none}
+.form__error.is-visible{display:block}
+.invite{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s-sm) var(--s-lg);
+  margin:var(--s-2xl) 0 0;padding-top:var(--s-lg);
+  border-top:1px solid var(--hair-2);
+}
+.invite p{margin:0;font-size:18px;line-height:1.45;color:var(--body);max-width:36em;text-wrap:pretty}
+.invite .btn{margin:0;padding:var(--s-xs) var(--s-md);font-size:14px}
+.comfort__cta{margin:var(--s-md) 0 0}
+.advies .btn{margin-top:var(--s-xs)}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.thanks{border-top:1px solid var(--hair-2);padding:var(--s-lg) 0 0}
+.thanks h3{margin:0 0 var(--s-xs);font-size:28px;font-weight:700;letter-spacing:-.02em}
+.thanks p{margin:0;font-size:17px;line-height:1.6;color:var(--body);max-width:480px}
+
+/* --- footer ------------------------------------------------- */
+.footer{background:var(--offwhite);border-top:1px solid var(--hair)}
+.footer__inner{
+  max-width:1280px;margin:0 auto;
+  padding:var(--s-4xl) var(--pad) var(--s-xl);
+  display:flex;flex-direction:column;gap:var(--s-2xl);
+}
+.footer__name{margin:0 0 var(--s-2xs);font-weight:800;font-size:15px;letter-spacing:.14em}
+.footer__tag{margin:0;font-size:16px;line-height:1.45;color:var(--body)}
+.footer__grid{
+  display:grid;grid-template-columns:1.15fr 1fr 1fr;
+  gap:var(--s-2xl);padding-top:var(--s-xl);
+  border-top:1px solid var(--hair-2);
+}
+.footer__nav{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-xs)}
+.footer__nav a{font-size:15px;font-weight:500;text-decoration:none;color:var(--ink)}
+.footer__reach{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-xs)}
+.footer__tel{
+  font-size:22px;font-weight:600;letter-spacing:-.025em;line-height:1.2;
+  text-decoration:none;
+}
+.footer__mail{font-size:15px;text-decoration:none;color:var(--ink)}
+.footer__place{
+  margin:0;font-style:normal;font-family:var(--mono);font-size:12px;
+  letter-spacing:normal;line-height:1.75;color:var(--body);
+}
+.footer__bar{
+  display:flex;flex-wrap:wrap;gap:var(--s-md);
+  padding-top:var(--s-lg);border-top:1px solid var(--hair);
+}
+.footer__bar a{font-size:13px;color:var(--muted);text-decoration:none}
+
+.wa{
+  position:fixed;right:var(--s-md);bottom:var(--s-md);z-index:40;
+  width:var(--s-2xl);height:var(--s-2xl);border-radius:50%;
+  display:grid;place-items:center;
+  background:#25D366;color:#fff;
+}
+.wa:hover,.wa:focus-visible{background:#1dae55;color:#fff;transform:none}
+.wa svg{display:block}
+
+/* ============================================================
+   Scroll-reveals, IntersectionObserver-gestuurd.
+   De verbergende regels staan achter .reveal-ready, die pas door
+   JS wordt gezet: zonder JS is de hele pagina gewoon zichtbaar.
+   --d = stagger-vertraging, per groep door JS gezet.
+   ============================================================ */
+.reveal-ready [data-reveal]{
+  opacity:0;transform:translateY(var(--s-md));
+  transition:opacity .85s var(--ease),transform .85s var(--ease);
+  transition-delay:var(--d,0ms);
+}
+.reveal-ready [data-reveal="left"]{transform:translateX(calc(var(--s-md) * -1))}
+.reveal-ready [data-reveal="right"]{transform:translateX(var(--s-md))}
+.reveal-ready [data-reveal="fade"]{transform:none}
+.reveal-ready [data-reveal].is-in{opacity:1;transform:none}
+
+.reveal-ready [data-grow]{
+  transform:scaleY(0);transform-origin:bottom;
+  transition:transform .9s var(--ease);transition-delay:var(--d,0ms);
+}
+.reveal-ready [data-grow].is-in{transform:none}
+
+.reveal-ready [data-groww]{
+  transform:scaleX(0);transform-origin:left;
+  transition:transform 1s var(--ease);transition-delay:var(--d,0ms);
+}
+.reveal-ready [data-groww].is-in{transform:none}
+
+/* de comfortfoto komt langzaam tot rust */
+.reveal-ready .comfort__photo>div{transform:scale(1.06);transition:transform 1.6s var(--ease)}
+.reveal-ready .comfort__photo.is-in>div{transform:none}
+
+/* ============================================================
+   Micro-interacties
+   ============================================================ */
+.nav{transition:border-color .35s ease}
+.nav.is-scrolled{border-bottom-color:var(--hair-3)}
+
+.footer__nav a,.footer__bar a,.footer__mail,.footer__tel{position:relative}
+.footer__nav a::after,.footer__bar a::after,.footer__mail::after{
+  content:'';position:absolute;left:0;right:0;bottom:-3px;height:1px;background:currentColor;
+  transform:scaleX(0);transform-origin:right;transition:transform .3s var(--ease);
+}
+.footer__nav a:hover::after,.footer__bar a:hover::after,.footer__mail:hover::after{transform:scaleX(1);transform-origin:left}
+
+.btn:active{transform:translateY(0)}
+
+.step{transition:background .35s ease}
+.step__no{transition:color .35s ease}
+.cert__logo{transition:transform .45s var(--ease)}
+.panel{transition:transform .45s var(--ease)}
+.form input,.form textarea{transition:border-color .22s ease}
+
+@media (hover:hover){
+  .step:hover{background:rgba(20,20,20,.022)}
+  .step:hover .step__no{color:var(--ink)}
+  .cert:hover .cert__logo{transform:scale(1.03)}
+  .panel:hover{transform:translateY(-3px)}
+  .form input:hover,.form textarea:hover{border-color:var(--muted)}
+}
+
+@media (max-width:1100px){
+  .nav__links{gap:var(--s-sm)}
+  .nav__list{gap:var(--s-sm)}
+  .nav__list a{font-size:13px}
+  .certs{grid-template-columns:repeat(6,1fr);gap:var(--s-2xs)}
+  .cert__logo{height:56px;padding:4px}
+}
+
+/* ============================================================
+   MOBIEL: eigen choreografie, geen verkleinde desktop
+   ============================================================ */
+@media (max-width:900px){
+  :root{--pad:var(--s-md);--sq:var(--s-lg)}
+  section[id]{scroll-margin-top:var(--s-3xl)}
+  .br-desktop{display:none}
+  .br-mobile{display:inline}
+
+  .nav{padding:var(--s-xs) var(--pad)}
+  .nav .wordmark{font-size:14px}
+  .nav__list{display:none}
+  .btn--nav{font-size:13px;padding:var(--s-xs) var(--s-sm)}
+  .nav-spacer{height:var(--s-3xl)}
+
+  .section{padding-block:var(--s-3xl)}
+  .section--band{padding-block:var(--s-2xl)}
+  .h1{font-size:42px;line-height:1.05;letter-spacing:-.03em}
+  .h2{font-size:32px;letter-spacing:-.025em;line-height:1.08}
+  .lede{font-size:16px}
+
+  .hero{height:62vh;min-height:480px}
+  .hero__season{filter:blur(1.5px) saturate(1.08)}
+  .hero__copy{gap:var(--s-md)}
+  .hero__sub{font-size:18px;max-width:none}
+  .hero__cta{gap:var(--s-sm)}
+  .hero__cta .btn{padding:var(--s-xs) var(--s-md)}
+  .hero__link{display:none}
+  @keyframes solflow{0%{left:2%;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:90%;opacity:0}}
+
+  .scene-d{height:280vh;height:280svh}
+  .scene-d__sticky{height:100vh;height:100svh}
+  .scene-d__stamp{top:calc(var(--s-3xl) + var(--s-xs));left:var(--pad)}
+  .scene-d__temps{
+    left:var(--pad);gap:var(--s-lg);
+    bottom:max(var(--s-md), env(safe-area-inset-bottom, 0px));
+  }
+  .scene-d__temp p.val{font-size:48px}
+  .scene-d__caps{align-content:center;padding:var(--s-5xl) 0 22vh}
+  .scene-d__caps p{font-size:clamp(22px,6.6vw,32px);line-height:1.2;letter-spacing:-.024em}
+  .scene-d__caps .cap-summer{
+    width:auto;max-width:calc(100% - 2 * var(--pad));
+    padding:var(--s-xs) var(--s-sm);
+  }
+
+  .werking{border-top:1px solid var(--hair)}
+  .werking .lede{margin-bottom:var(--s-lg)}
+  .werking__panels{grid-template-columns:1fr;gap:var(--s-sm)}
+  .panel{padding:var(--s-md);gap:var(--s-md)}
+  .panel__label{font-size:11px}
+  .panel__diagram{gap:12px}
+  .unit-out{width:66px;height:50px}
+  .unit-out__fan{left:7px;top:7px;width:34px;height:34px}
+  .unit-out__grille{right:7px;width:12px}
+  .unit-in{width:88px;height:28px;border-radius:7px}
+  .unit-in__slot{left:10px;right:10px;bottom:5px}
+  .unit__label{font-size:9px;letter-spacing:.1em}
+  .track{height:50px}
+  .track span{margin-top:-3.5px;width:7px;height:7px;animation-duration:2.8s}
+  .track span:nth-child(3){animation-delay:.95s}
+  .track span:nth-child(4){animation-delay:1.9s}
+  .track span:nth-child(5){display:none}
+  .panel__caption{font-size:14.5px}
+
+  .equation{gap:var(--s-md);margin-bottom:var(--s-xl)}
+  .equation__group{gap:var(--s-xs)}
+  .equation__label{font-size:10px;letter-spacing:.08em}
+  .equation__arrow{margin-bottom:var(--s-md);font-size:20px}
+  .equation__blocks{gap:var(--s-2xs)}
+  .bars{gap:24px}
+  .bar-row{
+    grid-template-columns:1fr auto;
+    grid-template-areas:"label val" "track track";
+    gap:var(--s-xs);align-items:baseline;
+  }
+  .bar-row__label{font-size:14.5px;grid-area:label}
+  .bar-row__val{font-size:14px;grid-area:val}
+  .bar-row__track{height:24px;grid-area:track}
+  .footnote{font-size:10.5px;letter-spacing:.02em}
+
+  .comfort__grid{grid-template-columns:1fr;padding:var(--s-3xl) var(--pad);gap:var(--s-md)}
+  .comfort__text .h2{margin:0 0 var(--s-sm)}
+  .comfort__text p{font-size:16px;max-width:none}
+  .comfort__photo{height:auto;aspect-ratio:3/4;margin:0 calc(var(--pad) * -1)}
+  .comfort__cap{left:var(--s-md);bottom:var(--s-sm);font-size:11.5px;letter-spacing:.12em}
+
+  /* één specificatieregel: de ringen vragen te veel breedte voor vier kolommen */
+  .cijfers__line{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    width:100%;max-width:none;
+    padding:var(--s-xl) var(--s-xs);
+    column-gap:0;
+  }
+  .cijfers__fact{padding:0 var(--s-2xs);gap:var(--s-2xs);position:relative}
+  .cijfers__fact + .cijfers__fact::before{
+    content:'';position:absolute;left:0;top:18%;bottom:18%;width:1px;
+    background:rgba(247,245,241,.12);
+  }
+  .cijfers__stage{width:auto;height:auto}
+  .cijfers__ring{display:none}
+  .cijfers__num{font-size:clamp(24px,7vw,32px);letter-spacing:-.03em}
+  .cijfers__txt{font-size:11px;line-height:1.3;max-width:10ch;letter-spacing:-.01em;min-height:calc(1.3em * 3)}
+
+  .reviews__inner{padding:var(--s-3xl) var(--pad)}
+  .reviews__head{margin-bottom:var(--s-xl);gap:var(--s-xs) var(--s-sm)}
+  .reviews__g{width:24px;height:24px}
+  .star{width:26px;height:26px}
+  .reviews__num{font-size:26px}
+  .reviews{grid-template-columns:1fr;gap:var(--s-sm)}
+  .review{padding:var(--s-md);gap:var(--s-xs)}
+  .review q{font-size:17px;line-height:1.45}
+  .gallery{margin-bottom:var(--s-xl)}
+  .gallery figure{flex-basis:100%}
+  .gallery__ctrl{width:var(--s-lg);height:var(--s-lg)}
+  .gallery__ctrl--prev{left:var(--s-xs)}
+  .gallery__ctrl--next{right:var(--s-xs)}
+  .steps{max-width:none}
+  .step{
+    position:relative;
+    grid-template-columns:2.75rem 1fr;
+    grid-template-areas:"no title" ". body";
+    column-gap:var(--s-sm);row-gap:var(--s-2xs);
+    padding:0 0 var(--s-lg);border:none;align-items:start;
+  }
+  .step:last-child{padding-bottom:0;border:none}
+  .step__no{
+    grid-area:no;font-size:14px;letter-spacing:.08em;color:var(--ink);
+    line-height:1.2;padding-top:.18em;text-align:center;
+  }
+  .step__title{grid-area:title;font-size:20px;letter-spacing:-.022em;line-height:1.15}
+  .step__body{grid-area:body;font-size:15px;line-height:1.55}
+  .step:not(:last-child)::after{
+    content:'';position:absolute;left:1.375rem;top:1.45em;bottom:4px;
+    width:1px;margin-left:-0.5px;
+    background:var(--hair-3);transform-origin:top;
+    transition:transform .7s var(--ease);
+  }
+  .reveal-ready .step:not(.is-in):not(:last-child)::after{transform:scaleY(0)}
+
+  .merken .h2{margin-bottom:var(--s-lg)}
+  .brands{grid-template-columns:1fr}
+  .brands li{padding:var(--s-lg) 0;border-right:none;border-bottom:1px solid var(--hair-2)}
+  .brands li:last-child{border-bottom:none}
+  .brands img{height:48px}
+
+  .vanaf__inner{flex-direction:column;align-items:center;gap:var(--s-md);padding-block:var(--s-2xl);text-align:center}
+  .vanaf .h2{white-space:normal}
+  .certs__title{margin-bottom:var(--s-md)}
+  .certs{grid-template-columns:repeat(3,1fr);gap:var(--s-xs)}
+  .cert__logo{height:64px;padding:var(--s-2xs)}
+
+  .vragen{border-top:1px solid var(--hair)}
+  .faq__q{gap:var(--s-sm);min-height:var(--s-xl);padding:var(--s-sm) 0}
+  .faq__q span.faq__text{font-size:16px}
+  .faq__q:hover span.faq__text{transform:none}
+  .faq__a{padding:0 0 var(--s-md);font-size:15px}
+
+  .advies .section{padding-block:var(--s-3xl) var(--s-4xl)}
+  .form{grid-template-columns:1fr;gap:var(--s-xs)}
+  .form .full,.form__rooms{grid-column:auto}
+  .form__rooms-opts{grid-template-columns:1fr 1fr}
+  .advies .btn{margin-top:var(--s-xs);padding:var(--s-xs) var(--s-md);min-height:var(--s-xl)}
+  .thanks{padding-top:var(--s-lg)}
+  .thanks h3{font-size:24px;margin-bottom:var(--s-xs)}
+  .thanks p{font-size:16px}
+
+  .footer__inner{padding:var(--s-2xl) var(--pad) var(--s-lg);gap:var(--s-xl)}
+  .footer__name{font-size:14px}
+  .footer__tag{font-size:15px}
+  .footer__grid{
+    grid-template-columns:1fr;gap:var(--s-lg);
+    grid-template-areas:"reach" "place" "nav";
+  }
+  .footer__reach{grid-area:reach}
+  .footer__place{grid-area:place}
+  .footer__nav{grid-area:nav;flex-direction:row;flex-wrap:wrap;gap:var(--s-xs) var(--s-md)}
+  .footer__tel{font-size:20px}
+  .wa{right:var(--s-sm);bottom:var(--s-sm);width:var(--s-xl);height:var(--s-xl)}
+
+  .reveal-ready [data-reveal]{transform:translateY(24px)}
+  .reveal-ready [data-reveal="left"],.reveal-ready [data-reveal="right"]{transform:translateY(24px)}
+}
+
+/* respecteert de systeeminstelling voor bewegingsreductie */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+  html{scroll-behavior:auto}
+  .reveal-ready [data-reveal],.reveal-ready [data-grow],.reveal-ready [data-groww]{opacity:1;transform:none}
+  .reveal-ready .comfort__photo>div{transform:none}
+  .reveal-ready .step:not(:last-child)::after{transform:none}
+  .hero__season--winter{clip-path:polygon(58% 0,100% 0,100% 100%,42% 100%)}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= NAV ================= -->
+<nav class="nav">
+  <a class="wordmark" href="#top">SOLARLEX</a>
+  <div class="nav__links">
+    <div class="nav__list">
+      <a href="#werking">Werking</a>
+      <a href="#kosten">Besparing</a>
+      <a href="#comfort">Comfort</a>
+      <a href="#recensies">Recensies</a>
+      <a href="#installatie">Installatie</a>
+      <a href="#vragen">Vragen</a>
+      <span class="nav__indicator" aria-hidden="true"></span>
+    </div>
+    <a class="btn btn--nav" href="#advies">Advies aanvragen</a>
+  </div>
+</nav>
+<div class="nav-spacer" id="top"></div>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="hero__stage" aria-hidden="true">
+    <div class="hero__season hero__season--summer"></div>
+    <div class="hero__season hero__season--winter"></div>
+  </div>
+  <div class="hero__veil" aria-hidden="true"></div>
+  <div class="container hero__inner">
+    <div class="hero__copy">
+      <h1 class="h1">
+        <span class="hero__line hero__line--july">Koel in juli.</span>
+        <span class="hero__line hero__line--jan">Warm in januari.</span>
+      </h1>
+      <p class="hero__sub">Dit is geen zomerairco. Dit is hoe u het huis het hele jaar houdt. Per kamer, zonder gas.</p>
+      <div class="hero__cta">
+        <a class="btn" href="#advies">Vraag advies aan</a>
+        <a class="hero__link" href="#werking">Bekijk hoe het werkt</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= WERKING ================= -->
+<section id="werking" class="werking">
+  <div class="container section">
+    <div data-reveal>
+      <h2 class="h2" style="margin-bottom:24px">Dezelfde techniek.<br class="br-desktop"> Andersom.</h2>
+      <p class="lede" style="margin-bottom:60px">Een split-airco maakt geen warmte en geen kou. Hij verplaatst warmte, en dezelfde techniek werkt twee kanten op.</p>
+    </div>
+    <div class="werking__panels" data-stagger>
+
+      <div class="panel panel--cool" data-reveal="left">
+        <p class="mono panel__label">ZOMER · KOELEN</p>
+        <div class="panel__diagram" aria-hidden="true">
+          <div class="unit">
+            <div class="unit-out">
+              <div class="unit-out__fan"></div>
+              <div class="unit-out__grille" style="top:17px"></div>
+              <div class="unit-out__grille" style="top:25px"></div>
+              <div class="unit-out__grille" style="top:33px"></div>
+            </div>
+            <p class="unit__label">BUITENUNIT</p>
+          </div>
+          <div class="track">
+            <div class="track__rail"></div>
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <div class="unit">
+            <div class="unit-in"><div class="unit-in__slot"></div></div>
+            <p class="unit__label">BINNENUNIT</p>
+          </div>
+        </div>
+        <p class="panel__caption">Warmte uit uw woning wordt naar buiten afgevoerd.</p>
+      </div>
+
+      <div class="panel panel--warm" data-reveal="right">
+        <p class="mono panel__label">WINTER · VERWARMEN</p>
+        <div class="panel__diagram" aria-hidden="true">
+          <div class="unit">
+            <div class="unit-out">
+              <div class="unit-out__fan"></div>
+              <div class="unit-out__grille" style="top:17px"></div>
+              <div class="unit-out__grille" style="top:25px"></div>
+              <div class="unit-out__grille" style="top:33px"></div>
+            </div>
+            <p class="unit__label">BUITENUNIT</p>
+          </div>
+          <div class="track">
+            <div class="track__rail"></div>
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <div class="unit">
+            <div class="unit-in"><div class="unit-in__slot"></div></div>
+            <p class="unit__label">BINNENUNIT</p>
+          </div>
+        </div>
+        <p class="panel__caption">Warmte uit de buitenlucht wordt naar binnen gebracht, ook bij vorst.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========== SEIZOENSCENE (scrollgestuurd) ========== -->
+<section class="scene-d" id="scene" aria-label="Zelfde kamer, zomer en winter">
+  <div class="scene-d__sticky">
+    <div class="scene-d__layer scene-d__winter"></div>
+    <div class="scene-d__layer scene-d__summer" id="sceneSummer"></div>
+
+    <div class="scene-d__stamp">
+      <p class="mono jan" id="sceneJan">JANUARI · 19:47</p>
+      <p class="mono jul" id="sceneJul">JULI · 14:32</p>
+    </div>
+
+    <div class="scene-d__temps">
+      <div class="scene-d__temp">
+        <div class="layer-light">
+          <p class="mono label">BUITEN</p>
+          <p class="val" data-outside>31°</p>
+        </div>
+        <div class="layer-ink" id="sceneInk1">
+          <p class="mono label">BUITEN</p>
+          <p class="val" data-outside>31°</p>
+        </div>
+      </div>
+      <div class="scene-d__temp">
+        <div class="layer-light">
+          <p class="mono label">BINNEN</p>
+          <p class="val">21°</p>
+        </div>
+        <div class="layer-ink" id="sceneInk2">
+          <p class="mono label">BINNEN</p>
+          <p class="val">21°</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="scene-d__caps">
+      <p class="cap-winter" id="sceneCapWinter">Een moderne airco is een warmtepomp die net zo efficiënt verwarmt als hij koelt.</p>
+      <p class="cap-summer" id="sceneCapSummer">Zelfde kamer. Zelfde systeem.</p>
+    </div>
+
+    <div class="scene-d__progress" id="sceneProgress"></div>
+  </div>
+</section>
+
+<!-- ================= KOSTEN ================= -->
+<section id="kosten">
+  <div class="container section">
+    <div data-reveal>
+      <h2 class="h2" style="margin-bottom:24px">Eén kilowattuur stroom.<br class="br-desktop"> Vier kilowattuur warmte.</h2>
+      <p class="lede" style="margin-bottom:72px">Het systeem verplaatst warmte in plaats van die op te wekken. Eén kilowattuur stroom levert zo ongeveer vier kilowattuur warmte.</p>
+    </div>
+
+    <div class="equation" data-reveal>
+      <div class="equation__group">
+        <div class="sq sq--light" data-grow></div>
+        <p class="equation__label">1 kWh STROOM</p>
+      </div>
+      <p class="equation__arrow" aria-hidden="true">→</p>
+      <div class="equation__group">
+        <div class="equation__blocks" id="kwhBlocks" data-stagger></div>
+        <p class="equation__label">≈ <span data-cop></span> kWh WARMTE</p>
+      </div>
+    </div>
+
+    <div class="bars" data-reveal data-stagger>
+      <div class="bar-row">
+        <p class="bar-row__label">Cv-ketel op gas</p>
+        <div class="bar-row__track"><div class="bar-row__fill bar-row__fill--gas" data-groww></div></div>
+        <p class="bar-row__val">€ <span data-cost-gas></span></p>
+      </div>
+      <div class="bar-row">
+        <p class="bar-row__label">Verwarmen met airco</p>
+        <div class="bar-row__track"><div class="bar-row__fill bar-row__fill--airco" id="barAirco" data-groww></div></div>
+        <p class="bar-row__val">€ <span data-cost-airco></span></p>
+      </div>
+      <p class="footnote">PRIJS PER kWh GELEVERDE WARMTE · rekenvoorbeeld bij € <span data-stroom></span>/kWh stroom en € <span data-gas></span>/m³ gas, COP <span data-cop></span>, ketelrendement ca. 85%. Werkelijke kosten hangen af van uw woning, isolatie en verbruik.</p>
+    </div>
+
+    <p class="lede" style="margin-top:60px" data-reveal>Heeft u zonnepanelen? Dan gebruikt u de stroom die u zelf opwekt, en levert u minder terug aan het net.</p>
+    <div class="invite" data-reveal>
+      <p>Wilt u weten wat verwarmen bij u kost?</p>
+      <a class="btn" href="#advies">Vraag een vrijblijvend advies aan</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMFORT ================= -->
+<section id="comfort" class="comfort">
+  <div class="comfort__grid">
+    <div class="comfort__text" data-stagger>
+      <h2 class="h2" data-reveal>Elke kamer zijn<br class="br-desktop"> eigen klimaat.</h2>
+      <p data-reveal>U koelt of verwarmt alleen de kamers die u gebruikt, precies op de temperatuur die u wilt. En u hoort er vrijwel niets van: de binnenunit draait vanaf zo'n 19&nbsp;dB(A), stiller dan een fluistering.</p>
+      <p class="comfort__cta" data-reveal><a class="btn" href="#advies">Vraag advies voor uw kamers aan</a></p>
+    </div>
+    <div class="comfort__photo" data-reveal>
+      <div role="img" aria-label="Slaapkamer met een binnenunit aan de wand"></div>
+      <p class="comfort__cap">19 dB(A) · STILLER DAN EEN FLUISTERING</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CIJFERS ================= -->
+<section id="cijfers" class="cijfers">
+  <dl class="cijfers__line" data-stagger>
+    <div class="cijfers__fact" data-reveal>
+      <div class="cijfers__stage">
+        <svg class="cijfers__ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="cijfers__ring-track" cx="60" cy="60" r="52"/>
+          <circle class="cijfers__ring-draw" cx="60" cy="60" r="52"/>
+        </svg>
+        <dt class="cijfers__num" data-to="35">35</dt>
+      </div>
+      <dd class="cijfers__txt">jaar in het vak</dd>
+    </div>
+    <div class="cijfers__fact" data-reveal>
+      <div class="cijfers__stage">
+        <svg class="cijfers__ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="cijfers__ring-track" cx="60" cy="60" r="52"/>
+          <circle class="cijfers__ring-draw" cx="60" cy="60" r="52"/>
+        </svg>
+        <dt class="cijfers__num" data-to="300">300</dt>
+      </div>
+      <dd class="cijfers__txt">airco-units geplaatst</dd>
+    </div>
+    <div class="cijfers__fact" data-reveal>
+      <div class="cijfers__stage">
+        <svg class="cijfers__ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="cijfers__ring-track" cx="60" cy="60" r="52"/>
+          <circle class="cijfers__ring-draw" cx="60" cy="60" r="52"/>
+        </svg>
+        <dt class="cijfers__num" data-to="2">2</dt>
+      </div>
+      <dd class="cijfers__txt">uur installatie, vanaf</dd>
+    </div>
+    <div class="cijfers__fact" data-reveal>
+      <div class="cijfers__stage">
+        <svg class="cijfers__ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="cijfers__ring-track" cx="60" cy="60" r="52"/>
+          <circle class="cijfers__ring-draw" cx="60" cy="60" r="52"/>
+        </svg>
+        <dt class="cijfers__num" data-to="800">800</dt>
+      </div>
+      <dd class="cijfers__txt">tevreden klanten</dd>
+    </div>
+  </dl>
+</section>
+
+<!-- ================= RECENSIES ================= -->
+<section id="recensies" class="recensies">
+  <svg class="star-defs" aria-hidden="true">
+    <defs>
+      <symbol id="star-shape" viewBox="0 0 24 24">
+        <path d="M12 1.7l2.7 6.4 6.9.7-5.2 4.7 1.5 6.8L12 16.8 5.1 20.3l1.5-6.8L1.4 8.8l6.9-.7z"/>
+      </symbol>
+      <linearGradient id="star-49" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="90%" stop-color="var(--ink)"/>
+        <stop offset="90%" stop-color="var(--hair-3)"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <div class="reviews__inner">
+    <h2 class="visually-hidden">Wat klanten zeggen</h2>
+    <a class="reviews__head" data-reveal href="https://www.google.com/maps/place/Solar+Lex+B.V./@52.0176532,4.2765831,17z/data=!4m8!3m7!1s0x47c5c92af0494db7:0x4302a03194dbac8c!8m2!3d52.0176532!4d4.2765831!9m1!1b1" target="_blank" rel="noopener noreferrer">
+      <svg class="reviews__g" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      <span class="stars" aria-hidden="true">
+        <svg class="star"><use href="#star-shape" class="star__fill"/></svg>
+        <svg class="star"><use href="#star-shape" class="star__fill"/></svg>
+        <svg class="star"><use href="#star-shape" class="star__fill"/></svg>
+        <svg class="star"><use href="#star-shape" class="star__fill"/></svg>
+        <svg class="star"><use href="#star-shape" fill="url(#star-49)"/></svg>
+      </span>
+      <span class="reviews__num"><span data-to="4.9">4,9</span></span>
+      <span class="reviews__count">(19)</span>
+    </a>
+    <div class="reviews" data-stagger>
+      <figure class="review" data-reveal>
+        <q>Vandaag een airco laten plaatsen. Lex is een hele fijne man en komt zijn afspraken na. Goede prijs en een fijn team die het komt plaatsen.</q>
+        <figcaption class="review__by">Rob</figcaption>
+      </figure>
+      <figure class="review" data-reveal>
+        <q>Lex is erg nauwkeurig en komt zijn beloftes goed na. Ik heb airco en elektra door hem laten installeren.</q>
+        <figcaption class="review__by">Ehsan Jamei</figcaption>
+      </figure>
+      <figure class="review" data-reveal>
+        <q>Eerlijk gezegd hadden we hem vooral voor die hete zomerdagen gekocht. Nu staat hij de hele winter aan.</q>
+        <figcaption class="review__by">Sanne</figcaption>
+      </figure>
+    </div>
+    <div class="invite" data-reveal>
+      <p>Lex en zijn team komen ook bij u langs.</p>
+      <a class="btn" href="#advies">Vraag een adviesgesprek aan</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INSTALLATIE ================= -->
+<section id="installatie" class="installatie section">
+  <div class="container">
+    <div data-reveal>
+      <h2 class="h2" style="margin-bottom:60px">Geïnstalleerd in één dag.</h2>
+    </div>
+  </div>
+  <div class="gallery" id="gallery" data-reveal>
+    <div class="gallery__stage">
+      <div class="gallery__viewport">
+        <div class="gallery__track">
+          <figure>
+            <img src="uploads/install-tussenwoning.png" alt="Sfeerbeeld: woonkamer in een tussenwoning met twee binnenunits">
+          </figure>
+          <figure>
+            <img src="uploads/install-appartement.png" alt="Sfeerbeeld: appartement met één binnenunit">
+          </figure>
+          <figure>
+            <img src="uploads/install-vrijstaand.png" alt="Sfeerbeeld: vrijstaande woning met multi-split">
+          </figure>
+          <figure>
+            <img src="uploads/install-slaapkamer.png" alt="Sfeerbeeld: slaapkamer onder schuin dak met één binnenunit">
+          </figure>
+          <figure>
+            <img src="uploads/install-woonkeuken.png" alt="Sfeerbeeld: nieuwbouw woonkeuken met twee binnenunits">
+          </figure>
+          <figure>
+            <img src="uploads/install-werkkamer.png" alt="Sfeerbeeld: werkkamer met één binnenunit">
+          </figure>
+          <figure>
+            <img src="uploads/install-hoekwoning.png" alt="Sfeerbeeld: hoekwoning met twee binnenunits">
+          </figure>
+        </div>
+      </div>
+      <button type="button" class="gallery__ctrl gallery__ctrl--prev" aria-label="Vorige foto">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.25"/>
+        </svg>
+      </button>
+      <button type="button" class="gallery__ctrl gallery__ctrl--next" aria-label="Volgende foto">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.25"/>
+        </svg>
+      </button>
+    </div>
+    <div class="gallery__dots" id="galleryDots"></div>
+  </div>
+  <div class="container">
+    <ol class="steps" data-stagger>
+      <li class="step" data-reveal>
+        <p class="step__no" aria-hidden="true">01</p>
+        <h3 class="step__title">Aanvraag</h3>
+        <p class="step__body">U vraagt advies aan via het formulier of WhatsApp. Wij nemen binnen één werkdag contact op en plannen een afspraak.</p>
+      </li>
+      <li class="step" data-reveal>
+        <p class="step__no" aria-hidden="true">02</p>
+        <h3 class="step__title">Advies aan huis</h3>
+        <p class="step__body">Wij komen langs, bekijken uw woning en meten de ruimtes. U krijgt een vrijblijvend voorstel met een vaste prijs. Geen nacalculatie achteraf.</p>
+      </li>
+      <li class="step" data-reveal>
+        <p class="step__no" aria-hidden="true">03</p>
+        <h3 class="step__title">Installatie</h3>
+        <p class="step__body">Eén team, meestal één dag. Een standaard split-unit is vaak vanaf twee uur klaar; bij meerdere kamers duurt het langer. Nette leidingafwerking, ingesteld, en een schone oplevering. U kunt hem dezelfde dag gebruiken.</p>
+      </li>
+      <li class="step" data-reveal>
+        <p class="step__no" aria-hidden="true">04</p>
+        <h3 class="step__title">Onderhoud</h3>
+        <p class="step__body">Wij blijven aanspreekbaar. Jaarlijks onderhoud houdt het rendement hoog en de garantie geldig: filters, koudemiddel en een controle van het hele systeem.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= VANAF ================= -->
+<section id="vanaf" class="vanaf">
+  <div class="container vanaf__inner">
+    <h2 class="h2" data-reveal>Nu al vanaf €899,- bij u geïnstalleerd.</h2>
+    <a class="btn btn--light" href="#advies" data-reveal>Vraag advies aan</a>
+  </div>
+</section>
+
+<!-- ================= MERKEN ================= -->
+<section id="merken" class="merken">
+  <div class="container section">
+    <div data-reveal>
+      <h2 class="h2">Daikin. Mitsubishi. Samsung.</h2>
+    </div>
+    <ul class="brands" data-stagger>
+      <li data-reveal><img src="uploads/merken/daikin.svg" alt="Daikin" width="280" height="64"></li>
+      <li data-reveal><img src="uploads/merken/mitsubishi.svg" alt="Mitsubishi" width="280" height="64"></li>
+      <li data-reveal><img src="uploads/merken/samsung.svg" alt="Samsung" width="280" height="64"></li>
+    </ul>
+    <div class="invite" data-reveal>
+      <p>Wij adviseren het merk dat bij uw situatie past.</p>
+      <a class="btn" href="#advies">Vraag merkadvies aan</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CERTIFICATEN ================= -->
+<section id="certificaten" class="dark">
+  <div class="container section--band">
+    <div data-reveal>
+      <h2 class="h2 certs__title">Onze certificaten</h2>
+    </div>
+    <div class="certs" data-stagger>
+      <figure class="cert" data-reveal>
+        <div class="cert__logo">
+          <img src="uploads/certs/vca.jpg" alt="VCA" width="315" height="230">
+        </div>
+      </figure>
+      <figure class="cert" data-reveal>
+        <div class="cert__logo">
+          <img src="uploads/certs/scope12.png" alt="Scope 12" width="315" height="230">
+        </div>
+      </figure>
+      <figure class="cert" data-reveal>
+        <div class="cert__logo">
+          <img src="uploads/certs/nen1010.jpg" alt="NEN 1010" width="315" height="230">
+        </div>
+      </figure>
+      <figure class="cert" data-reveal>
+        <div class="cert__logo">
+          <img src="uploads/certs/nen3140.jpg" alt="NEN 3140" width="315" height="230">
+        </div>
+      </figure>
+      <figure class="cert" data-reveal>
+        <div class="cert__logo">
+          <img src="uploads/certs/stek.svg" alt="STEK" width="315" height="230">
+        </div>
+      </figure>
+      <figure class="cert" data-reveal>
+        <div class="cert__logo">
+          <img src="uploads/certs/fgas.svg" alt="F-gassen" width="315" height="230">
+        </div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VRAGEN ================= -->
+<section id="vragen" class="vragen" style="border-top:1px solid var(--hair)">
+  <div class="container container--narrow section">
+    <div data-reveal>
+      <h2 class="h2" style="margin-bottom:60px">Wat u wilt weten.</h2>
+    </div>
+    <div class="faq" id="faq" data-stagger></div>
+    <div class="invite" data-reveal>
+      <p>Niet gevonden wat u zocht?</p>
+      <a class="btn" href="#advies">Stel uw vraag in het adviesgesprek</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ADVIES ================= -->
+<section id="advies" class="advies">
+  <div class="container container--form section">
+    <h2 class="h2" style="margin-bottom:24px" data-reveal>Advies voor uw woning.</h2>
+    <p class="lede" style="max-width:480px;margin-bottom:48px" data-reveal>Wij nemen binnen één werkdag contact met u op. Vrijblijvend.</p>
+
+    <div id="formWrap">
+      <!--
+        De velden hieronder zijn precies de velden die de lead flow gebruikt:
+        naam, e-mail en telefoon zijn verplicht voor het CRM, adres/postcode/
+        plaats voor het huisbezoek, en oppervlakte plus aantal ruimtes voeden de
+        sizing en het belscript. De namen komen één op één overeen met de
+        payload van POST /api/leads.
+      -->
+      <form class="form" id="adviesForm" novalidate data-stagger>
+        <label class="visually-hidden" for="f-naam">Naam</label>
+        <input class="full" data-reveal id="f-naam" name="name" placeholder="Naam" autocomplete="name" required>
+
+        <label class="visually-hidden" for="f-email">E-mailadres</label>
+        <input data-reveal id="f-email" name="email" type="email" placeholder="E-mailadres" autocomplete="email" required>
+
+        <label class="visually-hidden" for="f-tel">Telefoonnummer</label>
+        <input data-reveal id="f-tel" name="phone" type="tel" placeholder="Telefoonnummer" autocomplete="tel" required>
+
+        <label class="visually-hidden" for="f-adres">Adres</label>
+        <input class="full" data-reveal id="f-adres" name="address" placeholder="Adres" autocomplete="street-address" required>
+
+        <label class="visually-hidden" for="f-postcode">Postcode</label>
+        <input data-reveal id="f-postcode" name="postcode" placeholder="Postcode" autocomplete="postal-code" required>
+
+        <label class="visually-hidden" for="f-woonplaats">Woonplaats</label>
+        <input data-reveal id="f-woonplaats" name="city" placeholder="Woonplaats" autocomplete="address-level2" required>
+
+        <div class="form__measure full" data-reveal>
+          <label class="visually-hidden" for="f-opp" id="f-opp-label">Oppervlakte</label>
+          <input id="f-opp" name="space_size" placeholder="Oppervlakte" inputmode="numeric">
+          <div class="form__units" role="group" aria-label="Eenheid">
+            <button type="button" class="form__unit is-on" data-unit="m2" aria-pressed="true">m²</button>
+            <span class="form__units-div" aria-hidden="true">|</span>
+            <button type="button" class="form__unit" data-unit="m3" aria-pressed="false">m³</button>
+          </div>
+          <input type="hidden" name="space_unit" id="f-eenheid" value="m2">
+        </div>
+
+        <div class="form__rooms full" data-reveal>
+          <p class="visually-hidden" id="f-ruimtes-label">Aantal ruimtes</p>
+          <div class="form__rooms-opts" role="group" aria-labelledby="f-ruimtes-label">
+            <button type="button" class="form__room" data-rooms="1" aria-pressed="false">1 ruimte</button>
+            <button type="button" class="form__room" data-rooms="2" aria-pressed="false">2 ruimtes</button>
+            <button type="button" class="form__room" data-rooms="3" aria-pressed="false">3 ruimtes</button>
+            <button type="button" class="form__room" data-rooms="4" aria-pressed="false">4+ ruimtes</button>
+          </div>
+          <input type="hidden" name="rooms_count" id="f-ruimtes" value="">
+        </div>
+
+        <label class="visually-hidden" for="f-notes">Opmerkingen</label>
+        <textarea class="full" data-reveal id="f-notes" name="notes" rows="4" placeholder="Opmerkingen (optioneel)"></textarea>
+
+        <p class="form__error" id="formError" role="alert"></p>
+      </form>
+      <button class="btn" type="submit" form="adviesForm" id="adviesSubmit" data-reveal>Vraag vrijblijvend advies aan</button>
+    </div>
+
+    <div class="thanks" id="thanks" hidden>
+      <h3>Dank u wel.</h3>
+      <p>Wij nemen binnen één werkdag contact met u op om een vrijblijvend huisbezoek in te plannen.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__brand" data-reveal>
+      <p class="footer__name">SOLARLEX</p>
+      <p class="footer__tag">Installateur van lucht-lucht warmtepompen</p>
+    </div>
+    <div class="footer__grid">
+      <nav class="footer__nav" aria-label="Op deze pagina" data-reveal>
+        <a href="#werking">Werking</a>
+        <a href="#kosten">Besparing</a>
+        <a href="#comfort">Comfort</a>
+        <a href="#recensies">Recensies</a>
+        <a href="#installatie">Installatie</a>
+        <a href="#vragen">Vragen</a>
+        <a href="#advies">Advies</a>
+      </nav>
+      <div class="footer__reach" data-reveal>
+        <a class="footer__tel" href="tel:+31624542592">06 24542592</a>
+        <a class="footer__mail" href="mailto:info@solarlex.nl">info@solarlex.nl</a>
+      </div>
+      <address class="footer__place" data-reveal>
+        Molenweer 2<br>
+        2291 NR Wateringen<br>
+        KVK 92106544
+      </address>
+    </div>
+    <div class="footer__bar" data-reveal>
+      <a href="#privacy">Privacyverklaring</a>
+      <a href="#voorwaarden">Algemene voorwaarden</a>
+    </div>
+  </div>
+</footer>
+
+<a class="wa" href="https://wa.me/31624542592" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+</a>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==========================================================
+     CONFIG stuurt alle berekende bedragen in de kostensectie
+     ========================================================== */
+  var CONFIG = {
+    stroomprijs: 0.28,   // € per kWh
+    gasprijs:    1.40,   // € per m³
+    cop:         4,      // rendement warmtepomp
+    ketel:       0.85,   // rendement cv-ketel
+    kwhPerM3:    10      // energie-inhoud aardgas
+  };
+
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var fmt = function (v) { return v.toFixed(2).replace('.', ','); };
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------- Kosten ---------- */
+  function renderKosten() {
+    var costAirco = CONFIG.stroomprijs / CONFIG.cop;
+    var costGas   = CONFIG.gasprijs / (CONFIG.kwhPerM3 * CONFIG.ketel);
+    var pct       = Math.min(100, Math.round(costAirco / costGas * 100));
+
+    $$('[data-cost-airco]').forEach(function (el) { el.textContent = fmt(costAirco); });
+    $$('[data-cost-gas]').forEach(function (el) { el.textContent = fmt(costGas); });
+    $$('[data-stroom]').forEach(function (el) { el.textContent = fmt(CONFIG.stroomprijs); });
+    $$('[data-gas]').forEach(function (el) { el.textContent = fmt(CONFIG.gasprijs); });
+    $$('[data-cop]').forEach(function (el) { el.textContent = String(CONFIG.cop).replace('.', ','); });
+    $('#barAirco').style.width = pct + '%';
+
+    // kWh-blokjes: hele blokken + eventueel een gedeeltelijk blok
+    var wrap = $('#kwhBlocks');
+    var full = Math.floor(CONFIG.cop), frac = CONFIG.cop - full, i, d;
+    wrap.textContent = '';
+    for (i = 0; i < full; i++) {
+      d = document.createElement('div');
+      d.className = 'sq sq--warm';
+      d.setAttribute('data-grow', '');
+      wrap.appendChild(d);
+    }
+    if (frac > 0.05) {
+      d = document.createElement('div');
+      d.className = 'sq sq--warm';
+      d.style.width = 'calc(var(--sq) * ' + frac + ')';
+      d.setAttribute('data-grow', '');
+      wrap.appendChild(d);
+    }
+  }
+
+  /* ---------- FAQ ---------- */
+  var FAQ = [
+    { q: 'Wat kost een installatie?',                 a: 'Een complete installatie begint vanaf 899,-. De prijs hangt af van het type systeem, het vermogen en de situatie in uw woning. In het adviesgesprek krijgt u een vaste prijs.' },
+    { q: 'Welke garantie krijg ik?',                  a: 'Vijf jaar op de installatie, en twee tot vijf jaar fabrieksgarantie op de unit, afhankelijk van het merk.' },
+    { q: 'Plaatsen jullie ook mobiele airco\'s?',     a: 'Nee. Wij plaatsen alleen vaste split- en multi-splitsystemen. Die zijn stiller, zuiniger en beter in staat om een kamer het hele jaar op temperatuur te houden.' },
+    { q: 'Verwarmt een airco ook bij vorst?',        a: 'Ja. Moderne systemen verwarmen efficiënt tot ver onder het vriespunt. Het rendement daalt iets bij strenge vorst, maar blijft ruim boven dat van elektrische kachels.' },
+    { q: 'Hoeveel stroom verbruikt het systeem?',    a: 'Dat hangt af van de grootte van de kamer en de gewenste temperatuur. Als richtwaarde: één binnenunit gebruikt bij verwarmen vaak 300 tot 800 watt, en levert daar drie tot vijf keer zoveel warmte voor terug.' },
+    { q: 'Hoe zit het met geluid buiten?',           a: 'Sinds 2021 gelden er wettelijke geluidseisen voor buitenunits. Wij kiezen stille units en toetsen de plaatsing daaraan, zodat u en uw buren er geen hinder van hebben.' },
+    { q: 'Heb ik een vergunning nodig?',             a: 'Meestal niet. In de meeste gemeenten is een buitenunit vergunningsvrij; bij monumenten of een beschermd stadsgezicht gelden andere regels. Wij zoeken dit voor u uit.' },
+    { q: 'Kan mijn cv-ketel eruit?',                 a: 'Vaak neemt de airco het grootste deel van het stookseizoen over en blijft de ketel als achtervang, bijvoorbeeld voor warm tapwater. Volledig gasloos is soms mogelijk; dat bekijken we in het adviesgesprek.' }
+  ];
+
+  function renderFaq() {
+    var host = $('#faq'), open = 0;
+    FAQ.forEach(function (item, i) {
+      var wrap = document.createElement('div');
+      wrap.className = 'faq__item' + (i === open ? ' is-open' : '');
+      wrap.setAttribute('data-reveal', '');
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'faq__q';
+      btn.setAttribute('aria-expanded', i === open ? 'true' : 'false');
+      btn.setAttribute('aria-controls', 'faq-a-' + i);
+
+      var q = document.createElement('span');
+      q.className = 'faq__text';
+      q.textContent = item.q;
+
+      // + dat naar − draait: de verticale streep roteert weg
+      var sign = document.createElement('span');
+      sign.className = 'faq__sign';
+      sign.setAttribute('aria-hidden', 'true');
+      sign.appendChild(document.createElement('i'));
+      sign.appendChild(document.createElement('i'));
+
+      btn.appendChild(q); btn.appendChild(sign);
+
+      var awrap = document.createElement('div');
+      awrap.className = 'faq__a-wrap';
+      var inner = document.createElement('div');
+      inner.className = 'faq__a-inner';
+      var a = document.createElement('p');
+      a.className = 'faq__a';
+      a.id = 'faq-a-' + i;
+      a.textContent = item.a;
+      inner.appendChild(a); awrap.appendChild(inner);
+
+      btn.addEventListener('click', function () {
+        var wasOpen = wrap.classList.contains('is-open');
+        $$('.faq__item', host).forEach(function (el) {
+          el.classList.remove('is-open');
+          $('.faq__q', el).setAttribute('aria-expanded', 'false');
+        });
+        if (!wasOpen) {
+          wrap.classList.add('is-open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      wrap.appendChild(btn); wrap.appendChild(awrap);
+      host.appendChild(wrap);
+    });
+  }
+
+  /* ---------- Seizoenscène: scrollgestuurd (desktop + mobiel) ---------- */
+  function initScene() {
+    var section = $('#scene');
+    if (!section) return;
+
+    var sticky   = $('.scene-d__sticky', section);
+    var summer   = $('#sceneSummer');
+    var jan      = $('#sceneJan');
+    var jul      = $('#sceneJul');
+    var ink1     = $('#sceneInk1');
+    var ink2     = $('#sceneInk2');
+    var capW     = $('#sceneCapWinter');
+    var capS     = $('#sceneCapSummer');
+    var progress = $('#sceneProgress');
+    var temps    = $$('[data-outside]');
+    var raf = 0, last = -1;
+
+    var ease  = function (t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; };
+    var clamp = function (v) { return v < 0 ? 0 : v > 1 ? 1 : v; };
+    var viewH = function () {
+      return (window.visualViewport && visualViewport.height) || innerHeight;
+    };
+
+    function calc() {
+      var r = section.getBoundingClientRect();
+      var pin = sticky ? sticky.offsetHeight : viewH();
+      var total = r.height - pin;
+      if (total <= 0) return;
+      var p = Math.min(1, Math.max(0, -r.top / total));
+      if (Math.abs(p - last) < 0.002) return;
+      last = p;
+
+      var w = ease(Math.min(1, Math.max(0, (p - 0.35) / 0.3)));
+      var t = Math.round(31 + (-2 - 31) * w);
+
+      // De twee bijschriften hebben verschillende tekst; met een lineaire
+      // crossfade liggen ze halverwege over elkaar. Daarom een estafette:
+      // de zomerregel is weg vóór de winterregel begint.
+      var outS = clamp(1 - w / 0.42);
+      var inW  = clamp((w - 0.58) / 0.42);
+      var inkOp = clamp((0.53 - w) / 0.06);
+
+      summer.style.opacity = String(1 - w);
+      jul.style.opacity    = String(outS);
+      capS.style.opacity   = String(outS);
+      jan.style.opacity    = String(inW);
+      capW.style.opacity   = String(inW);
+      ink1.style.opacity   = String(inkOp);
+      ink2.style.opacity   = String(inkOp);
+      progress.style.width = Math.round(p * 100) + '%';
+      temps.forEach(function (el) { el.textContent = String(t).replace('-', '−') + '°'; });
+    }
+
+    function onScroll() {
+      if (raf) return;
+      raf = requestAnimationFrame(function () { raf = 0; calc(); });
+    }
+
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', onScroll);
+    if (window.visualViewport) visualViewport.addEventListener('resize', onScroll);
+    calc();
+  }
+
+  /* ---------- Formulier ---------- */
+  function initForm() {
+    var form = $('#adviesForm');
+    if (!form) return;
+    var error = $('#formError');
+    var opp = $('#f-opp');
+    var eenheid = $('#f-eenheid');
+    var oppLabel = $('#f-opp-label');
+
+    $$('.form__unit', form).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        $$('.form__unit', form).forEach(function (b) {
+          var on = b === btn;
+          b.classList.toggle('is-on', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        var m3 = btn.getAttribute('data-unit') === 'm3';
+        opp.placeholder = m3 ? 'Inhoud' : 'Oppervlakte';
+        if (oppLabel) oppLabel.textContent = m3 ? 'Inhoud' : 'Oppervlakte';
+        if (eenheid) eenheid.value = btn.getAttribute('data-unit');
+      });
+    });
+
+    var ruimtes = $('#f-ruimtes');
+    $$('.form__room', form).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        // Nogmaals klikken zet hem weer uit: het veld is optioneel.
+        var uit = btn.classList.contains('is-on');
+        $$('.form__room', form).forEach(function (b) {
+          var on = !uit && b === btn;
+          b.classList.toggle('is-on', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        if (ruimtes) ruimtes.value = uit ? '' : (btn.getAttribute('data-rooms') || '');
+      });
+    });
+
+    var submit = $('#adviesSubmit');
+    var submitLabel = submit ? submit.textContent : '';
+
+    /* De labels waarmee we een veld in een foutmelding aanduiden. */
+    var LABELS = {
+      name: 'NAAM', email: 'E-MAILADRES', phone: 'TELEFOONNUMMER',
+      address: 'ADRES', postcode: 'POSTCODE', city: 'WOONPLAATS',
+      space_size: 'OPPERVLAKTE', notes: 'OPMERKINGEN'
+    };
+
+    function toon(melding) {
+      error.textContent = melding;
+      error.classList.add('is-visible');
+    }
+
+    function markeer(velden) {
+      $$('input, textarea', form).forEach(function (el) {
+        el.setAttribute('aria-invalid', velden.indexOf(el.name) !== -1 ? 'true' : 'false');
+      });
+    }
+
+    /* Waar de lead-API staat. Zie de meta-tag bovenaan het document. */
+    function apiBase() {
+      var meta = document.querySelector('meta[name="klimaatx:api-base"]');
+      var ingesteld = meta ? meta.getAttribute('content').trim() : '';
+      if (ingesteld) return ingesteld.replace(/\/$/, '');
+      var lokaal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      return lokaal ? location.protocol + '//' + location.hostname + ':8010/api' : '/api';
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (submit && submit.disabled) return;
+
+      var data = {};
+      $$('input, textarea', form).forEach(function (i) {
+        if (i.name) data[i.name] = i.value.trim();
+      });
+
+      /* ---- controle vooraf, zodat de bezoeker niet op de server hoeft te wachten ---- */
+      var fout = [];
+      ['name', 'email', 'phone', 'address', 'postcode', 'city'].forEach(function (k) {
+        if (!data[k]) fout.push(k);
+      });
+
+      if (fout.length) {
+        markeer(fout);
+        toon('VUL ALSTUBLIEFT ALLE VELDEN IN.');
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) fout.push('email');
+      if (data.phone.replace(/[^0-9]/g, '').length < 8) fout.push('phone');
+      if (!/^[0-9]{4}\s?[A-Za-z]{2}$/.test(data.postcode)) fout.push('postcode');
+      if (data.space_size && !(Number(data.space_size.replace(',', '.')) >= 1)) fout.push('space_size');
+
+      if (fout.length) {
+        markeer(fout);
+        toon('CONTROLEER: ' + fout.map(function (k) { return LABELS[k]; }).join(', ') + '.');
+        return;
+      }
+
+      markeer([]);
+      error.classList.remove('is-visible');
+
+      /* ---- naar het CRM: hier begint de agent-workflow ---- */
+      var payload = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        postcode: data.postcode,
+        city: data.city,
+        notes: data.notes || null,
+        // Zo blijft in het dashboard zichtbaar welke landingspagina de lead
+        // opleverde; de API accepteert alleen bronnen uit haar eigen lijst.
+        source: 'web_form_v2'
+      };
+
+      if (data.space_size) {
+        payload.space_size = Number(data.space_size.replace(',', '.'));
+        payload.space_unit = data.space_unit || 'm2';
+      }
+
+      if (data.rooms_count) payload.rooms_count = Number(data.rooms_count);
+
+      if (submit) {
+        submit.disabled = true;
+        submit.textContent = 'Bezig met versturen…';
+      }
+
+      function klaar() {
+        if (!submit) return;
+        submit.disabled = false;
+        submit.textContent = submitLabel;
+      }
+
+      fetch(apiBase() + '/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (res) {
+        return res.text().then(function (tekst) {
+          return { ok: res.ok, status: res.status, body: tekst ? JSON.parse(tekst) : {} };
+        });
+      }).then(function (res) {
+        if (!res.ok) {
+          klaar();
+          if (res.status === 422 && res.body.errors) {
+            var velden = Object.keys(res.body.errors);
+            markeer(velden);
+            toon('CONTROLEER: ' + velden.map(function (k) { return LABELS[k] || k.toUpperCase(); }).join(', ') + '.');
+            return;
+          }
+          toon('HET VERSTUREN LUKTE NIET. PROBEER HET ZO NOG EENS OF BEL ONS.');
+          return;
+        }
+
+        $('#formWrap').hidden = true;
+        $('#thanks').hidden = false;
+        $('#thanks').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+      }).catch(function () {
+        klaar();
+        toon('GEEN VERBINDING. PROBEER HET ZO NOG EENS OF BEL ONS.');
+      });
+    });
+  }
+
+  /* ---------- Scroll-reveals ----------
+     Elementen komen op met een fade + lift zodra ze in beeld komen.
+     Groepen met [data-stagger] laten hun kinderen na elkaar binnenkomen.
+     IntersectionObserver + een scroll-fallback: op mobiel (iOS-adresbalk,
+     visualViewport) laat de observer het soms afweten.
+     Zonder JS of bij prefers-reduced-motion staat alles gewoon zichtbaar. */
+  function initReveals() {
+    if (reduce) return;
+
+    $$('[data-stagger]').forEach(function (group) {
+      $$('[data-reveal],[data-grow],[data-groww]', group).forEach(function (el, i) {
+        el.style.setProperty('--d', Math.min(i, 8) * 80 + 'ms');
+      });
+    });
+
+    document.documentElement.classList.add('reveal-ready');
+
+    var targets = $$('[data-reveal],[data-grow],[data-groww],.comfort__photo');
+    var pending = targets.slice();
+    var io = null;
+
+    function viewH() {
+      return (window.visualViewport && visualViewport.height) || innerHeight;
+    }
+
+    function reveal(el) {
+      if (!el || el.classList.contains('is-in')) return;
+      el.classList.add('is-in');
+      if (io) io.unobserve(el);
+    }
+
+    function isDue(el) {
+      var r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return false;
+      return r.top < viewH() * 0.92 && r.bottom > 40;
+    }
+
+    function flush() {
+      pending = pending.filter(function (el) {
+        if (isDue(el)) { reveal(el); return false; }
+        return true;
+      });
+    }
+
+    if ('IntersectionObserver' in window) {
+      io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          reveal(en.target);
+        });
+      }, { rootMargin: '0px 0px -6% 0px', threshold: 0 });
+      pending.forEach(function (el) { io.observe(el); });
+    }
+
+    var ticking = false;
+    function onScroll() {
+      if (ticking || !pending.length) return;
+      ticking = true;
+      requestAnimationFrame(function () { ticking = false; flush(); });
+    }
+
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', onScroll);
+    addEventListener('load', flush);
+    if (window.visualViewport) visualViewport.addEventListener('resize', onScroll);
+    requestAnimationFrame(flush);
+  }
+
+  /* ---------- Installatie-carousel ---------- */
+  function initGallery() {
+    var root = $('#gallery');
+    var track = root && $('.gallery__track', root);
+    var dotsHost = $('#galleryDots');
+    var prevBtn = root && $('.gallery__ctrl--prev', root);
+    var nextBtn = root && $('.gallery__ctrl--next', root);
+    if (!root || !track) return;
+
+    var originals = $$('figure', track);
+    var count = originals.length;
+    if (!count) return;
+
+    if (!track.hasAttribute('data-cloned')) {
+      var i, clone;
+      for (i = count - 1; i >= 0; i--) {
+        clone = originals[i].cloneNode(true);
+        clone.setAttribute('aria-hidden', 'true');
+        track.insertBefore(clone, track.firstChild);
+      }
+      originals.forEach(function (fig) {
+        clone = fig.cloneNode(true);
+        clone.setAttribute('aria-hidden', 'true');
+        track.appendChild(clone);
+      });
+      track.setAttribute('data-cloned', '');
+    }
+
+    var slides = $$('figure', track);
+    var index = count;
+    var timer = null;
+    var hovered = false;
+    var snapping = false;
+    var INTERVAL = 6000;
+
+    function stepPx() {
+      var gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 8;
+      return slides[0].getBoundingClientRect().width + gap;
+    }
+
+    function logical() {
+      return ((index % count) + count) % count;
+    }
+
+    function paintDots() {
+      if (!dotsHost) return;
+      var on = logical();
+      $$('.gallery__dot', dotsHost).forEach(function (dot, i) {
+        dot.classList.toggle('is-on', i === on);
+      });
+    }
+
+    function renderDots() {
+      if (!dotsHost) return;
+      dotsHost.textContent = '';
+      var n, btn;
+      for (n = 0; n < count; n++) {
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'gallery__dot' + (n === logical() ? ' is-on' : '');
+        btn.setAttribute('aria-label', 'Foto ' + (n + 1));
+        btn.addEventListener('click', function (from) {
+          return function () { go(count + from); };
+        }(n));
+        dotsHost.appendChild(btn);
+      }
+    }
+
+    function apply(instant) {
+      if (instant) {
+        track.style.transition = 'none';
+        track.style.transform = 'translate3d(' + (-index * stepPx()) + 'px,0,0)';
+        void track.offsetHeight;
+        track.style.transition = '';
+      } else {
+        track.style.transform = 'translate3d(' + (-index * stepPx()) + 'px,0,0)';
+      }
+      paintDots();
+    }
+
+    function go(n) {
+      index = n;
+      apply(false);
+      if (reduce) snapIfClone();
+    }
+
+    function next() { go(index + 1); }
+    function prev() { go(index - 1); }
+
+    function snapIfClone() {
+      if (index >= count * 2) {
+        snapping = true;
+        index -= count;
+        apply(true);
+        snapping = false;
+      } else if (index < count) {
+        snapping = true;
+        index += count;
+        apply(true);
+        snapping = false;
+      }
+    }
+
+    function play() {
+      if (reduce || hovered || timer) return;
+      timer = setInterval(next, INTERVAL);
+    }
+
+    function stop() {
+      clearInterval(timer);
+      timer = null;
+    }
+
+    track.addEventListener('transitionend', function (e) {
+      if (e.target !== track || snapping) return;
+      snapIfClone();
+    });
+
+    if (prevBtn) prevBtn.addEventListener('click', function () { stop(); prev(); if (!hovered) play(); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { stop(); next(); if (!hovered) play(); });
+
+    root.addEventListener('mouseenter', function () { hovered = true; stop(); });
+    root.addEventListener('mouseleave', function () { hovered = false; play(); });
+    addEventListener('resize', function () { apply(true); });
+
+    renderDots();
+    apply(true);
+    play();
+  }
+
+  /* ---------- Cijfers: optellen bij binnenkomst ---------- */
+  function initCijfers() {
+    var nums = $$('#cijfers .cijfers__num');
+    if (!nums.length) return;
+
+    function countUp(node, to) {
+      if (reduce) { node.textContent = String(to); return; }
+      var start = performance.now();
+      var dur = 1200;
+      function frame(now) {
+        var t = Math.min(1, (now - start) / dur);
+        node.textContent = String(Math.round(to * (1 - Math.pow(1 - t, 3))));
+        if (t < 1) requestAnimationFrame(frame);
+      }
+      node.textContent = '0';
+      requestAnimationFrame(frame);
+    }
+
+    function start(node) {
+      if (node.dataset.done) return;
+      node.dataset.done = '1';
+      countUp(node, +node.getAttribute('data-to'));
+    }
+
+    function due(el) {
+      var r = el.getBoundingClientRect();
+      var view = (window.visualViewport && visualViewport.height) || innerHeight;
+      return r.top < view * 0.88 && r.bottom > 40;
+    }
+
+    if (reduce) {
+      nums.forEach(function (node) { start(node); });
+      return;
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        start(en.target);
+        io.unobserve(en.target);
+      });
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0 });
+
+    nums.forEach(function (node) {
+      node.textContent = '0';
+      io.observe(node);
+    });
+
+    addEventListener('scroll', function () {
+      nums.forEach(function (node) { if (due(node)) start(node); });
+    }, { passive: true });
+  }
+
+  /* ---------- Recensies: 4,9 telt op bij binnenkomst ---------- */
+  function initScore() {
+    var node = $('#recensies [data-to]');
+    if (!node) return;
+    var to = parseFloat(node.getAttribute('data-to'));
+    function format(n) { return n.toFixed(1).replace('.', ','); }
+    if (reduce) { node.textContent = format(to); return; }
+
+    function countUp() {
+      var start = performance.now();
+      var dur = 1400;
+      function frame(now) {
+        var t = Math.min(1, (now - start) / dur);
+        var eased = 1 - Math.pow(1 - t, 3);
+        node.textContent = format(to * eased);
+        if (t < 1) requestAnimationFrame(frame);
+      }
+      node.textContent = '0,0';
+      requestAnimationFrame(frame);
+    }
+
+    function start() {
+      if (node.dataset.done) return;
+      node.dataset.done = '1';
+      countUp();
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        start();
+        io.unobserve(node);
+      });
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0 });
+
+    node.textContent = '0,0';
+    io.observe(node);
+
+    addEventListener('scroll', function () {
+      var r = node.getBoundingClientRect();
+      var view = (window.visualViewport && visualViewport.height) || innerHeight;
+      if (r.top < view * 0.88 && r.bottom > 40) start();
+    }, { passive: true });
+  }
+
+  /* ---------- Nav: scroll-spy + schuivende indicator ---------- */
+  function initNav() {
+    var nav = $('.nav');
+    var list = $('.nav__list');
+    var indicator = list ? $('.nav__indicator', list) : null;
+    var links = list ? $$('a', list) : [];
+    var ticking = false;
+    var sections = [
+      { id: 'werking', href: '#werking' },
+      { id: 'scene', href: '#werking' },
+      { id: 'kosten', href: '#kosten' },
+      { id: 'comfort', href: '#comfort' },
+      { id: 'cijfers', href: '#recensies' },
+      { id: 'recensies', href: '#recensies' },
+      { id: 'installatie', href: '#installatie' },
+      { id: 'vanaf', href: '#installatie' },
+      { id: 'merken', href: '#installatie' },
+      { id: 'certificaten', href: '#installatie' },
+      { id: 'vragen', href: '#vragen' },
+      { id: 'advies', href: '#advies' }
+    ];
+
+    function moveIndicator(link) {
+      if (!indicator) return;
+      if (!link) {
+        indicator.style.opacity = '0';
+        return;
+      }
+      indicator.style.width = link.offsetWidth + 'px';
+      indicator.style.transform = 'translateX(' + link.offsetLeft + 'px)';
+      indicator.style.opacity = '1';
+    }
+
+    function currentHref() {
+      var probe = scrollY + nav.offsetHeight + 28;
+      var href = '';
+      var i, el, top;
+      for (i = 0; i < sections.length; i++) {
+        el = document.getElementById(sections[i].id);
+        if (!el) continue;
+        top = el.getBoundingClientRect().top + scrollY;
+        if (top <= probe) href = sections[i].href;
+      }
+      return href;
+    }
+
+    function update() {
+      nav.classList.toggle('is-scrolled', scrollY > 8);
+      var href = currentHref();
+      var active = null;
+      links.forEach(function (a) {
+        var on = href && a.getAttribute('href') === href;
+        a.classList.toggle('is-active', on);
+        if (on) active = a;
+      });
+      moveIndicator(active);
+      ticking = false;
+    }
+
+    function request() {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }
+
+    addEventListener('scroll', request, { passive: true });
+    addEventListener('resize', request);
+    links.forEach(function (a) {
+      a.addEventListener('click', function () {
+        links.forEach(function (b) { b.classList.toggle('is-active', b === a); });
+        moveIndicator(a);
+      });
+    });
+    update();
+  }
+
+  /* ---------- Start ---------- */
+  renderKosten();
+  renderFaq();
+  initScene();
+  initForm();
+  initGallery();
+  initCijfers();
+  initScore();
+  initNav();
+  initReveals();
+})();
+</script>
+</body>
+</html>

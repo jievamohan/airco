@@ -19,7 +19,7 @@ class LeadIntakeController extends Controller
      */
     public function store(StoreLeadRequest $request, LeadIntake $intake): JsonResponse
     {
-        $intake->capture($request->leadAttributes(), 'web_form');
+        $intake->capture($request->leadAttributes(), $request->leadSource());
 
         return response()->json(['ok' => true], 202);
     }

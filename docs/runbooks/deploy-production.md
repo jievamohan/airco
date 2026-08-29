@@ -1,122 +1,294 @@
-# Deploy production (static → DirectAdmin `public_html`)
+# Deploy naar productie (TransIP-VPS, DirectAdmin, geen Docker)
 
-Run **on the TransIP VPS**, inside the git checkout. This flow does **not** use Docker.
+De hele applicatie draait op één domein: **https://airco.sinoxi.nl**.
 
-**Exception to local-dev rule:** on the VPS, `pnpm` runs on the host (Node **22.14+** + corepack). Locally, keep using `docker compose exec web pnpm …`.
+| | Pad |
+|---|---|
+| Git-clone (monorepo) | `/home/sinoxi/domains/airco.sinoxi.nl` |
+| Laravel (`artisan`, `.env`) | `…/apps/api` |
+| Document root | `…/apps/api/public` |
 
-## Prerequisites (VPS)
+Die laatste regel is de kern van de opzet: de statische Nuxt-build wordt in de
+`public/` van Laravel gepubliceerd, naast de front controller. Eén origin dus —
+de site op `/`, de tweede landingspagina op `/v2/`, het dashboard op
+`/dashboard`, de API op `/api`. Geen CORS, geen tweede domein, één deploy.
 
-- Git clone of this repo with access to `origin`
-- Node.js **22.14+** (VPS reference: `v22.14.0`)
-- pnpm **9.15.9** via corepack:
+Paden staan op één plek: [`scripts/deploy/prod-target.sh`](../../scripts/deploy/prod-target.sh).
+Verhuist de boel, dan pas je daar alleen `KLIMAATX_REPO_ROOT` aan.
+
+Lokaal blijft alles in Docker draaien; dit document gaat alleen over de VPS.
+
+## Wat er op de VPS draait
+
+| Onderdeel | Hoe |
+|---|---|
+| Site + API | Apache (DirectAdmin) → `apps/api/public` |
+| Database | MySQL op de VPS zelf |
+| Wachtrij | `klimaatx-queue.service` (systemd, gebruikersscope) |
+| Hartslag van de agent | `klimaatx-scheduler.timer`, elke minuut `schedule:run` |
+
+De wachtrij en de scheduler samen zijn wat lokaal de `agent`-container doet.
+Ze worden bij elke deploy geïnstalleerd of ververst; je hoeft er na de eerste
+keer niets meer aan te doen.
+
+## Eenmalig inrichten
+
+### 1. Software op de VPS
 
 ```bash
+php -v          # 8.2 of nieuwer
+composer -V
+node -v         # 22.x
+pnpm -v         # 9.15.9
+rsync --version
+```
+
+Ontbreekt Node, installeer hem als de deploy-gebruiker:
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+# nieuwe shell, of: source ~/.nvm/nvm.sh
+nvm install 22
+nvm alias default 22
 corepack enable
 corepack prepare pnpm@9.15.9 --activate
-node -v   # v22.14.x or newer 22.x
-pnpm -v   # 9.15.9
 ```
 
-- `rsync`, `tar`, `make`
-- DirectAdmin docroot already exists, e.g. `/home/<user>/domains/<domain>/public_html`
-
-## One-time setup
+GitHub Actions opent een **niet-interactieve** SSH-sessie en leest `~/.bashrc`
+dan niet. `deploy-on-server.sh` sourcet daarom zelf `~/.nvm/nvm.sh`, en de
+workflow draait het commando via `bash -lc`. Werkt dit:
 
 ```bash
-cd /path/to/airco
-cp .env.deploy.example .env.deploy
-# Edit PUBLIC_HTML to your real docroot (must be absolute and end with public_html)
+ssh sinoxi@HOST 'bash -lc "node -v && pnpm -v && php -v"'
 ```
 
-`.env.deploy` is gitignored. Never commit it.
+dan werkt de deploy ook.
 
-## Deploy
+### 2. De clone neerzetten
 
-Manual (on VPS):
+In `/home/sinoxi/domains/airco.sinoxi.nl/` staat de oude prototype-site. Die mag
+weg, maar `git clone` weigert in een niet-lege map. Daarom:
 
 ```bash
-cd /path/to/airco
-make deploy-production
+cd /home/sinoxi/domains/airco.sinoxi.nl
+
+# Kijk eerst wat er staat en bewaar wat je wilt houden.
+ls -A
+tar -czf ~/airco-prototype-$(date +%F).tar.gz .
+
+git init
+git remote add origin git@github.com:jievamohan/airco.git
+git fetch origin main
+git checkout -f -b main origin/main
 ```
 
-### Automatic deploy (GitHub Actions)
+`git checkout -f` overschrijft alleen bestanden die in de repo zitten; oude
+prototype-bestanden blijven staan tot je ze zelf weghaalt. Ruim `public_html/`
+en de rest van het prototype daarna op — de document root gaat naar
+`apps/api/public`, dus `public_html/` doet niets meer.
 
-When a pull request is **merged into `main`**, the workflow [`.github/workflows/ci-deploy.yml`](../../.github/workflows/ci-deploy.yml) runs:
+### 3. Document root omzetten in DirectAdmin
 
-1. **CI** — typecheck + `pnpm run generate` (same checks on every PR to `main`)
-2. **Deploy** — SSH to the VPS, checkout the merge commit, then `make deploy-production` (build + rsync to `PUBLIC_HTML`)
-3. **Smoke check** — optional HTTP 200 against `PRODUCTION_URL`
+DirectAdmin → **Domain Setup** → `airco.sinoxi.nl` → document root naar:
 
-Configure under **Settings → Environments → production** (the deploy job uses `environment: production`).
+```
+/home/sinoxi/domains/airco.sinoxi.nl/apps/api/public
+```
 
-**Environment secret** (1):
-
-| Name | Example |
-|------|---------|
-| `VPS_SSH_KEY` | Private SSH key (PEM) |
-
-**Environment variables**:
-
-| Name | Required | Example |
-|------|----------|---------|
-| `VPS_SSH_HOST` | yes | VPS hostname or IP |
-| `VPS_SSH_USER` | yes | DirectAdmin / SSH user |
-| `VPS_DEPLOY_PATH` | yes | `/home/user/airco` |
-| `VPS_SSH_PORT` | no | `22` |
-| `PRODUCTION_URL` | no | `https://klimaatx.nl/` |
-
-Repository-level secrets/variables work too, but the **production** environment is preferred (optional approval rules, separate config per env).
-
-**CI / SSH note:** GitHub Actions opens a **non-interactive** SSH session (no login profile). Manual `make deploy-production` on the VPS often works because your interactive shell loads `~/.bash_profile` (nvm). The deploy script bootstraps nvm/corepack automatically; the workflow also wraps the command in `bash -lc`.
-
-What the deploy script does (manual or CI):
-
-1. `git fetch` + `git checkout main` + `git pull --ff-only origin main`
-2. `cd apps/web && pnpm install --frozen-lockfile && pnpm run generate`
-3. Abort unless `.output/public/index.html` and `_nuxt/` exist
-4. Snapshot current `PUBLIC_HTML` → `releases/YYYYMMDD-HHMMSS.tar.gz` (keeps last 3)
-5. `rsync -a --delete` from `apps/web/.output/public/` → `PUBLIC_HTML/`, excluding `.well-known` and `.htaccess`
-
-**Warning:** rsync `--delete` removes files inside `PUBLIC_HTML` that are not in the generate output (except the excludes above). Do not point `PUBLIC_HTML` at a shared tree that holds unrelated sites.
-
-## Dry-run (no live delete)
+Kan dat in jouw DirectAdmin niet, dan is een symlink het alternatief:
 
 ```bash
-make deploy-production-dry-run
+cd /home/sinoxi/domains/airco.sinoxi.nl
+rm -rf public_html
+ln -s apps/api/public public_html
 ```
 
-Still pulls and generates; rsync runs with `--dry-run`. No snapshot write to live tree.
+Apache moet dan wel `FollowSymLinks` toestaan op die map.
 
-## Rollback
+Controleer daarna dat `.htaccess` gelezen wordt (`AllowOverride All`) en dat
+`mod_rewrite` aanstaat — zonder die twee krijg je op `/api/...` een 404 in
+plaats van JSON.
+
+### 4. Database en `.env`
+
+Maak in DirectAdmin een MySQL-database plus gebruiker aan. Dan:
 
 ```bash
-make rollback-production
+cd /home/sinoxi/domains/airco.sinoxi.nl/apps/api
+cp .env.example .env
+php artisan key:generate
 ```
 
-Restores the newest archive under `releases/` into `PUBLIC_HTML` (preserves `.well-known` / `.htaccess` if present).
+Vul in `.env` minstens in: `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`,
+de `MAIL_*`-gegevens, en de sleutels van de spraakagent. `APP_URL` staat al op
+`https://airco.sinoxi.nl`. `.env` staat in `.gitignore` en hoort nooit in git.
 
-## Fail-closed behaviour
+> `php artisan config:cache` legt `.env` vast in een cachebestand. Wijzig je
+> `.env` later met de hand, draai dan `php artisan config:cache` opnieuw —
+> anders draait de applicatie nog op de oude waarden.
 
-| Condition | Result |
-|-----------|--------|
-| `PUBLIC_HTML` unset / relative / not ending in `public_html` / missing | Exit non-zero; live site untouched |
-| Generate fails or no `index.html` | Exit non-zero; no rsync |
-| Lockfile mismatch (`pnpm install --frozen-lockfile`) | Exit non-zero; no rsync |
-
-## Smoke checklist (after deploy)
+### 5. Eerste deploy
 
 ```bash
-# Replace with your domain
-curl -sS -o /dev/null -w '%{http_code}\n' https://YOUR_DOMAIN/
-curl -sS -o /dev/null -w '%{http_code}\n' https://YOUR_DOMAIN/media/hero.png
-# Confirm SHA printed by the script matches:
-git rev-parse --short HEAD
+cd /home/sinoxi/domains/airco.sinoxi.nl
+make deploy-on-server
 ```
 
-Expect HTTP `200` and HTML containing `KlimaatX`. Spot-check one `/_nuxt/*.js` URL from `index.html`.
+Die draait migraties, bouwt de site, publiceert hem en zet de wachtrij en de
+scheduler aan. Daarna:
 
-## Notes
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' https://airco.sinoxi.nl/
+curl -sS -o /dev/null -w '%{http_code}\n' https://airco.sinoxi.nl/v2/
+curl -sS -o /dev/null -w '%{http_code}\n' https://airco.sinoxi.nl/up
+systemctl --user status klimaatx-queue
+systemctl --user list-timers klimaatx-scheduler.timer
+```
 
-- Production artifact is **static** (`nitro.preset: static` / `pnpm run generate`), not Nuxt SSR `node-server`.
-- Snapshots live in `releases/` (gitignored) next to the repo root on the VPS.
-- When a Laravel API lands later, it must not be served from this static docroot; use a separate origin or Apache reverse proxy.
+Alle drie de URL's horen `200` te geven. Vul daarna één keer beide formulieren
+in en kijk of de leads in het dashboard verschijnen, met de juiste bron.
+
+### 6. Blijft de wachtrij draaien na uitloggen?
+
+De units draaien in de **gebruikersscope** van systemd, dus zonder sudo. Die
+stoppen bij uitloggen tenzij "linger" aanstaat. Het installatiescript zet dat
+zelf aan; lukt dat niet, dan meldt het dat en doe je het los:
+
+```bash
+loginctl enable-linger sinoxi
+```
+
+Mag dat niet van de hoster, gebruik dan cron in plaats van de systemd-units:
+
+```cron
+* * * * * cd /home/sinoxi/domains/airco.sinoxi.nl/apps/api && php artisan schedule:run >/dev/null 2>&1
+* * * * * cd /home/sinoxi/domains/airco.sinoxi.nl/apps/api && php artisan queue:work --stop-when-empty --tries=3 --timeout=120 >/dev/null 2>&1
+```
+
+## Automatisch deployen na een merge
+
+Zodra een pull request naar `main` **gemerged** is, draait
+[`.github/workflows/deploy-production.yml`](../../.github/workflows/deploy-production.yml)
+via SSH `make deploy-on-server` op de VPS.
+
+Een directe push naar `main` deployt bewust **niet**: de gates draaien op de
+pull request, en met branch protection kan er niets naar `main` zonder groene
+CI. Wat er deployt, is dus altijd code die door CI is gekomen. Handmatig
+starten kan via **Actions → Deploy production → Run workflow**.
+
+De VPS wordt op `github.sha` vastgepind (`git fetch` + `git reset --hard`), dus
+er draait precies de gemergede commit — niet wat er toevallig op `main` stond
+toen de deploy begon.
+
+### Eenmalig: GitHub Environment
+
+Repo → **Settings** → **Environments** → maak `production`.
+
+**Secrets:**
+
+| Naam | Inhoud |
+|---|---|
+| `VPS_SSH_KEY` | Private key (hele PEM, inclusief `BEGIN`/`END`) van een deploy-only sleutelpaar |
+| `VPS_SSH_KEY_PASSPHRASE` | Alleen als die sleutel een passphrase heeft |
+
+**Variables:**
+
+| Naam | Verplicht | Voorbeeld |
+|---|---|---|
+| `VPS_SSH_HOST` | ja | hostnaam of IP van de VPS |
+| `VPS_SSH_USER` | ja | `sinoxi` |
+| `VPS_DEPLOY_PATH` | ja | `/home/sinoxi/domains/airco.sinoxi.nl` |
+| `VPS_SSH_PORT` | nee | `22` |
+| `PRODUCTION_URL` | nee | `https://airco.sinoxi.nl` (zet de rooktest aan) |
+| `PUBLIC_API_BASE` | nee | leeg laten; standaard `/api` |
+
+Sleutel maken (private key niet committen):
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/airco_deploy_ed25519 -C "github-actions-airco-deploy" -N ""
+# publieke helft → ~sinoxi/.ssh/authorized_keys op de VPS
+# private helft  → GitHub-secret VPS_SSH_KEY
+```
+
+De VPS moet zelf ook bij GitHub kunnen (voor `git fetch`): zet daar een
+read-only deploy key voor in de repo.
+
+## Wat de deploy precies doet
+
+Onder een `flock` op `.deploy.lock`, zodat twee deploys elkaar niet in de weg
+lopen:
+
+1. Controleren dat php, composer, rsync, node ≥ 22 en pnpm er zijn, en dat
+   `apps/api/.env` bestaat — **vóór** de git-sync, zodat een half ingerichte
+   server de live site niet aanraakt
+2. Momentopname van de live UI → `apps/api/.deploy/ui.pre-pull/`
+3. Git-sync: met `KLIMAATX_DEPLOY_SHA` een `fetch` + `reset --hard`, anders
+   `git pull --ff-only`
+4. `composer install --no-dev --optimize-autoloader`
+5. `php artisan migrate --force`
+6. `pnpm install --frozen-lockfile` + `nuxt generate` met `NUXT_PUBLIC_API_BASE=/api`
+7. Controle op de build: `index.html`, `_nuxt/`, `v2/index.html`, en of de
+   juiste API-basis erin gebakken is
+8. Publiceren: `rsync --delete` van de build naar `apps/api/public/`, met de
+   bestanden die Laravel zelf meebrengt uitgesloten
+9. `storage:link`, `config:cache`, `route:cache`, `view:cache`
+10. Wachtrij en scheduler installeren/herstarten
+11. Rooktest: `/up`, `/` en `/v2/`
+
+Struikelt stap 4 t/m 8, dan wordt de UI teruggezet uit de momentopname van
+stap 2 en stopt de deploy met een foutcode. Migraties worden **niet**
+teruggedraaid.
+
+Welke bestanden de publicatie met rust laat, wordt afgeleid uit `git ls-files`
+in `apps/api/public` (nu: `index.php`, `.htaccess`, `favicon.ico`) plus
+`storage`, `.well-known` en `.deploy`. Zet je daar later iets bij in git, dan
+blijft dat vanzelf gespaard.
+
+## Terugdraaien
+
+De echte rollback is de vorige commit opnieuw deployen — de site is volledig
+uit git te reproduceren:
+
+```bash
+cd /home/sinoxi/domains/airco.sinoxi.nl
+KLIMAATX_DEPLOY_SHA=<vorige-sha> make deploy-on-server
+```
+
+Alleen de UI terugzetten (na een publicatie die wel slaagde maar niet deugt):
+
+```bash
+make rollback-ui
+```
+
+Dat zet `_nuxt/` en de HTML terug uit `apps/api/.deploy/ui.prev/`. `media/` en
+`v2/` zitten niet in die momentopname — die zijn groot en veranderen zelden;
+opnieuw deployen zet ze terug. Databasemigraties draaien nooit vanzelf terug.
+
+## Losse handelingen
+
+```bash
+make deploy           # vanaf je laptop: SSH → deploy op de VPS
+make deploy-on-server # op de VPS zelf
+make deploy-worker    # alleen de wachtrij en de scheduler bijwerken
+make rollback-ui      # laatste UI-momentopname terugzetten
+```
+
+Logboeken:
+
+```bash
+journalctl --user -u klimaatx-queue -f
+tail -f apps/api/storage/logs/laravel-$(date +%F).log
+```
+
+## Als het misgaat
+
+| Symptoom | Waarschijnlijke oorzaak |
+|---|---|
+| `/` geeft 403 | Er staat geen `index.html` in de document root: de build is niet gepubliceerd. Draai de deploy opnieuw en lees waar hij afhaakt |
+| `/` toont `{"service":"klimaatx-api"}` | De `DirectoryIndex`-regel uit `.htaccess` wordt niet gelezen — `AllowOverride` staat niet op `All` |
+| `/api/leads` geeft 404 in plaats van JSON | `mod_rewrite` uit, of `AllowOverride` staat niet op `All` |
+| `/dashboard/leads/<uuid>` geeft een JSON-404 | De dashboardregel in `.htaccess` staat na de front controller |
+| Formulier meldt "geen verbinding" | De build is gemaakt zonder `NUXT_PUBLIC_API_BASE=/api`; de deploy controleert hierop |
+| Leads komen binnen maar er gebeurt niets | `klimaatx-queue` draait niet, of linger staat uit |
+| Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
+| Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |

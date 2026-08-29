@@ -1,3 +1,25 @@
+# Eén document root voor de hele applicatie: de statische Nuxt-build staat in
+# deze map naast de front controller van Laravel. Bestaat een pad als bestand
+# of map, dan serveert Apache dat; al het overige gaat naar index.php.
+#
+# Volgorde is hier het hele verhaal: de dashboardregel moet vóór de front
+# controller staan, anders beantwoordt Laravel /dashboard/leads/<uuid> met een
+# JSON-404 in plaats van de SPA.
+
+<IfModule mod_dir.c>
+    # / is de landingspagina, niet de API-root. Welke index een host als eerste
+    # probeert verschilt per server, dus dat leggen we hier vast.
+    #
+    # Dit kan niet met een RewriteRule: mod_dir kiest de index van een map al
+    # voordat de regels hieronder aan bod komen, dus `RewriteRule ^$ …` ziet een
+    # verzoek om / nooit langskomen.
+    #
+    # Staat de build niet in deze map, dan geeft / een 403 in plaats van de
+    # API-JSON. Dat is dan ook precies wat er aan de hand is: de deploy heeft
+    # niets gepubliceerd.
+    DirectoryIndex index.html index.php
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
@@ -18,8 +40,25 @@
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
+    # Het dashboard is een client-side SPA met routes die niet als bestand
+    # bestaan (/dashboard/leads/<uuid>). Die komen uit op de Nuxt-fallback.
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^dashboard(/.*)?$ /200.html [L]
+
     # Send Requests To Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Het dashboard hoort niet in zoekmachines, en de tweede landingspagina is
+    # een presentatieversie — twee vindbare varianten is dubbele content.
+    <If "%{REQUEST_URI} =~ m#^/dashboard#">
+        Header always set X-Robots-Tag "noindex, nofollow"
+    </If>
+    <If "%{REQUEST_URI} =~ m#^/v2#">
+        Header always set X-Robots-Tag "noindex, nofollow"
+    </If>
 </IfModule>

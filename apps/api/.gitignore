@@ -13,9 +13,15 @@
 /.zed
 /auth.json
 /node_modules
-/public/build
-/public/hot
-/public/storage
+
+# De statische Nuxt-build wordt op de VPS in public/ gepubliceerd, naast de
+# front controller. Alleen wat Laravel zelf meebrengt hoort in git; de rest
+# (_nuxt/, media/, v2/, de gegenereerde HTML) is een bouwresultaat.
+/public/*
+!/public/index.php
+!/public/.htaccess
+!/public/favicon.ico
+
 /storage/*.key
 /storage/pail
 /vendor

@@ -1,4 +1,4 @@
-name: CI and Deploy
+name: CI
 
 on:
   pull_request:
@@ -96,49 +96,17 @@ jobs:
 
       - name: Generate static site
         env:
-          NUXT_PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
+          # Site en API delen op productie één domein, dus de browser praat met
+          # /api op dezelfde origin. Zelfde waarde als de deploy op de VPS.
+          NUXT_PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE || '/api' }}
         run: pnpm run generate
 
       - name: Verify generate output
         run: |
           test -f .output/public/index.html
           test -d .output/public/_nuxt
-
-  deploy:
-    name: Deploy production
-    needs: [ci, api, secrets]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          DEPLOY_SHA: ${{ github.sha }}
-          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
-        with:
-          host: ${{ vars.VPS_SSH_HOST }}
-          username: ${{ vars.VPS_SSH_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ vars.VPS_SSH_PORT != '' && vars.VPS_SSH_PORT || 22 }}
-          envs: DEPLOY_SHA,DEPLOY_PATH
-          script_stop: true
-          script: |
-            set -euo pipefail
-            if [[ -z "${DEPLOY_PATH}" ]]; then
-              echo "error: VPS_DEPLOY_PATH variable is not set" >&2
-              exit 1
-            fi
-            cd "${DEPLOY_PATH}"
-            # Login shell loads ~/.bash_profile (nvm/corepack PATH) for non-interactive SSH.
-            DEPLOY_REF="${DEPLOY_SHA}" bash -lc 'make deploy-production'
-
-      - name: Smoke check
-        if: ${{ vars.PRODUCTION_URL != '' }}
-        run: |
-          code="$(curl -fsS -o /dev/null -w '%{http_code}' "${{ vars.PRODUCTION_URL }}")"
-          if [[ "${code}" != "200" ]]; then
-            echo "error: expected HTTP 200 from ${{ vars.PRODUCTION_URL }}, got ${code}" >&2
-            exit 1
-          fi
-          echo "✓ smoke check passed (${code})"
+          # Beide landingspagina's moeten in de build zitten: de tweede is een
+          # statisch bestand in public/ en valt stil weg als die map verdwijnt.
+          test -f .output/public/v2/index.html
+          test -f .output/public/dashboard/index.html
+          grep -q 'apiBase:"/api"' .output/public/index.html

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 315 230" role="img" aria-label="STEK">
+  <rect width="315" height="230" fill="#fff"/>
+  <g fill="#141414">
+    <path d="M157.5 54c-18 22-28 42-28 62 0 18 12 32 28 32s28-14 28-32c0-20-10-40-28-62z"/>
+    <path d="M157.5 78c8 12 14 24 14 36 0 9-6 16-14 16s-14-7-14-16c0-12 6-24 14-36z" fill="#fff"/>
+    <rect x="155.5" y="142" width="4" height="22"/>
+  </g>
+  <text x="157.5" y="192" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="28" letter-spacing="6" fill="#141414">STEK</text>
+</svg>

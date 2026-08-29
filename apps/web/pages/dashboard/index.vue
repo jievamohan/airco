@@ -175,7 +175,8 @@ const outcomeLabels: Record<string, string> = {
 }
 
 const sourceLabels: Record<string, string> = {
-  web_form: 'Formulier op de website',
+  web_form: 'Formulier op de website (versie 1)',
+  web_form_v2: 'Formulier op de website (versie 2)',
   mailbox: 'Mailbox',
   api: 'Externe koppeling',
   manual: 'Handmatig ingevoerd',

@@ -43,6 +43,19 @@ sleutel geven verschil tussen omgevingen.
 
 Open: http://localhost:3010 (web) en http://localhost:8010 (api)
 
+Er staan twee landingspagina's naast elkaar, zodat we de klant een keuze kunnen
+laten zien:
+
+| URL | Wat |
+| --- | --- |
+| http://localhost:3010 | Versie 1 — de Nuxt-pagina met scroll-animaties (`apps/web/pages/index.vue`) |
+| http://localhost:3010/v2 | Versie 2 — de statische Solarlex-pagina (`apps/web/public/v2/`) |
+
+Beide formulieren posten naar `POST /api/leads`. Aan `source` is in het
+dashboard te zien welke pagina de lead opleverde: `web_form` voor versie 1,
+`web_form_v2` voor versie 2. Versie 2 staat op `noindex` en in `robots.txt`,
+want twee vindbare varianten van dezelfde site is dubbele content.
+
 Het CRM-dashboard zit op **http://localhost:3010/dashboard**. Gebruik dezelfde
 hostnaam als in `DASHBOARD_ORIGINS` staat: opent u het op een adres dat daar niet
 in voorkomt, dan blokkeert CORS de aanroepen en meldt het inlogscherm dat de API
@@ -82,18 +95,23 @@ In productie draaien deze als systemd-units of via cron; zie
 
 ## Production deploy (VPS / DirectAdmin)
 
-Static site publish runs **on the TransIP VPS** (host pnpm, not Docker):
+Productie draait **zonder Docker** op de TransIP-VPS, alles op één domein:
+https://airco.sinoxi.nl. De document root wijst naar `apps/api/public`, waar de
+statische Nuxt-build naast de front controller van Laravel staat.
 
 ```bash
-make deploy-production
-make deploy-production-dry-run
-make rollback-production
+make deploy             # laptop → SSH → deploy op de VPS
+make deploy-on-server   # op de VPS zelf
+make deploy-worker      # alleen de wachtrij en de scheduler bijwerken
+make rollback-ui        # laatste UI-momentopname terugzetten
 ```
 
-See [deploy-production.md](./deploy-production.md). De API wordt apart uitgerold;
-zie [agent-workflow.md](./agent-workflow.md).
+**Auto-deploy:** een **gemergede** PR naar `main` start
+`.github/workflows/deploy-production.yml` (SSH → `make deploy-on-server` →
+rooktest). Een directe push naar `main` deployt niet; de gates draaien op de PR
+(`.github/workflows/ci.yml`).
 
-**Auto-deploy:** merging a PR into `main` triggers `.github/workflows/ci-deploy.yml` (CI → SSH deploy → optional smoke). Configure the `production` environment in GitHub (secret: `VPS_SSH_KEY`; variables: host, user, deploy path — see deploy runbook).
+Volledige inrichting, secrets en het terugdraaien: [deploy-production.md](./deploy-production.md).
 
 ## Wijziging komt niet door in de browser
 
@@ -134,7 +152,8 @@ Geheimen horen nooit in de repository. Lokale instellingen zet je in
 ## Notes
 
 - Locally: do not run `pnpm` on the host; use `docker compose exec web …`.
-- On the VPS: `make deploy-production` uses host Node 22.14+ + pnpm 9.15.9 (documented exception).
+- On the VPS: `make deploy-on-server` uses host Node 22.14+ + pnpm 9.15.9 (documented exception).
 - Playwright / e2e service: deferred (Lane I follow-up). Never run Playwright on the host.
-- `NUXT_PUBLIC_API_BASE` moet bij het bouwen van de web-app op de publieke API-URL staan,
-  anders wijst het formulier en het dashboard naar localhost.
+- `NUXT_PUBLIC_API_BASE` moet bij het bouwen op de publieke API-basis staan, anders
+  wijzen de formulieren en het dashboard naar localhost. Op productie is dat `/api`
+  (zelfde domein); de deploy zet die waarde zelf en controleert hem in de build.
