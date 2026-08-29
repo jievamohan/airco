@@ -1,7 +1,11 @@
 # Het databasewachtwoord van de lokale ontwikkelcontainer. Geen geheim: de
 # database luistert alleen op localhost en bevat wegwerpdata. Overschrijven kan
 # met KLIMAATX_DB_PASSWORD in een .env naast dit bestand.
-x-db-wachtwoord: &db-wachtwoord ${KLIMAATX_DB_PASSWORD:-lokaal}
+#
+# Verander deze standaardwaarde niet zomaar: MySQL legt het wachtwoord bij de
+# eerste start vast in het volume en negeert latere wijzigingen. Een bestaande
+# installatie kan daarna niet meer inloggen en de api-container valt om.
+x-db-wachtwoord: &db-wachtwoord ${KLIMAATX_DB_PASSWORD:-klimaatx}
 
 services:
   web:

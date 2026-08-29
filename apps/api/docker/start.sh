@@ -23,12 +23,20 @@ if [ "$1" = "api" ]; then
     if [ ! -f .env ]; then
         echo "==> .env aanmaken vanuit .env.docker"
         cp .env.docker .env
-    elif cmp -s .env .env.example; then
-        # Een eerdere versie van dit script kopieerde .env.example, dat
-        # productiewaarden bevat: daardoor wees DASHBOARD_ORIGINS naar het
-        # live domein en blokkeerde CORS het lokale dashboard.
-        echo "==> .env is een ongewijzigde kopie van .env.example; vervangen door .env.docker"
+    elif ! grep -q '^DB_HOST=db$' .env; then
+        # Binnen compose heet de databasehost altijd "db". Staat er iets anders,
+        # dan komt deze .env uit een andere opzet — meestal een kopie van
+        # .env.example met productiewaarden erin, waardoor DASHBOARD_ORIGINS naar
+        # het live domein wees en CORS het lokale dashboard blokkeerde.
+        #
+        # De applicatiesleutel nemen we mee, zodat bestaande sessies blijven werken.
+        echo "==> .env hoort niet bij deze containers; opnieuw opbouwen uit .env.docker"
+        BESTAANDE_SLEUTEL="$(grep '^APP_KEY=base64:' .env || true)"
         cp .env.docker .env
+
+        if [ -n "${BESTAANDE_SLEUTEL}" ]; then
+            sed -i "s#^APP_KEY=.*#${BESTAANDE_SLEUTEL}#" .env
+        fi
     fi
 
     # Het databasewachtwoord staat bewust niet in .env.docker: een wachtwoord
@@ -56,7 +64,24 @@ if [ "$1" = "api" ]; then
     chmod -R a+rwX storage bootstrap/cache
 
     echo "==> migraties en basisgegevens"
-    php artisan migrate --force
+
+    # Loopt dit stuk, dan is de oorzaak bijna altijd hetzelfde: het volume van
+    # de db-container is ooit met een ander wachtwoord aangemaakt. MySQL legt
+    # dat bij de eerste start vast en negeert latere wijzigingen. Zonder deze
+    # uitleg valt de container om met een kale SQLSTATE-melding.
+    if ! php artisan migrate --force; then
+        echo ""
+        echo "!! De migraties zijn mislukt."
+        echo "!! Gaat het om een toegangsfout op de database, dan draait de"
+        echo "!! db-container nog met het wachtwoord waarmee het volume is"
+        echo "!! aangemaakt. Opnieuw beginnen met een leeg volume:"
+        echo "!!"
+        echo "!!     docker compose down -v && docker compose up -d"
+        echo "!!"
+        echo "!! Let op: dat gooit de lokale database weg."
+        exit 1
+    fi
+
     php artisan db:seed --force
 
     # Configuratie komt uit .env en mag niet blijven hangen tussen herstarts.

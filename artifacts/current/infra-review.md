@@ -63,6 +63,19 @@ pollen ziet de dev-server in de container een `git pull` op de host niet, en lij
 een doorgevoerde wijziging simpelweg te ontbreken. Buiten Docker staat het uit,
 want pollen kost CPU.
 
+Het startscript bouwt `.env` opnieuw op zodra die niet bij deze containers hoort
+(herkenbaar aan `DB_HOST` die niet `db` is), met behoud van de bestaande
+applicatiesleutel. De eerdere controle keek of `.env` byte-identiek was aan
+`.env.example`, en die faalde zodra er een sleutel in was gegenereerd: een
+onbruikbare `.env` bleef dan staan.
+
+Het standaard databasewachtwoord is bewust weer `klimaatx`. Het tijdelijk
+wijzigen ervan brak bestaande installaties: MySQL legt het wachtwoord bij de
+eerste start vast in het volume en negeert latere wijzigingen, waardoor de
+api-container niet meer kon inloggen en omviel. Mislukken de migraties, dan
+noemt het startscript nu die oorzaak expliciet in plaats van te eindigen op een
+kale SQLSTATE-melding.
+
 ## CI
 
 `.github/workflows/ci-deploy.yml` krijgt een `api`-job vóór de deploy:
