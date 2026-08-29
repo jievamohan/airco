@@ -68,6 +68,44 @@ Zet `~/bin` ook in `~/.bash_profile` (`export PATH="$HOME/bin:$PATH"`) zodat je
 hem met de hand kunt aanroepen. Voor de deploy is dat niet nodig — die kent
 `~/bin/composer` uit zichzelf.
 
+##### GitHub-token voor composer
+
+Composer haalt de pakketten als zip via de GitHub-API. Zonder token geldt daar
+een limiet van 60 verzoeken per uur **per IP**, en op een gedeelde VPS is die
+vaak al door iemand anders opgemaakt. Je ziet dan bij elk pakket:
+
+```
+Failed to download … from dist: Could not authenticate against github.com
+Source fallback is disabled. Not trying alternative sources.
+```
+
+Eén `composer install` doet meer dan 80 verzoeken, dus dit gaat vanzelf mis en
+blijft misgaan — ook bij elke deploy. Zet daarom eenmalig een token neer:
+
+1. GitHub → Settings → Developer settings → **Personal access tokens** →
+   *Generate new token (classic)*. Dit hoeft **geen enkele scope** te hebben:
+   het gaat alleen om het ophalen van publieke pakketten. Geef hem een lange
+   houdbaarheid, want de deploy heeft hem blijvend nodig.
+2. Op de VPS, als de deploy-gebruiker:
+
+```bash
+composer config --global --auth github-oauth.github.com <token>
+```
+
+Dat schrijft `~/.config/composer/auth.json` (modus 600). Dat bestand hoort
+nooit in de repo — het staat buiten de checkout, en dat moet zo blijven.
+
+Controleren:
+
+```bash
+curl -s https://api.github.com/rate_limit | head -12   # anoniem: limit 60
+composer diagnose 2>&1 | grep -i github
+```
+
+Zolang je geen token hebt kun je ook uitwijken naar `--prefer-source`: dan
+cloont composer met git in plaats van via de API. Dat werkt zonder token, maar
+is trager, en de deploy gebruikt het niet.
+
 #### Node
 
 Ontbreekt Node, installeer hem als de deploy-gebruiker:
@@ -329,4 +367,5 @@ tail -f apps/api/storage/logs/laravel-$(date +%F).log
 | Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
 | Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |
 | `composer: command not found` | Composer staat niet op PATH; installeer hem in `~/bin` (stap 1) — de deploy vindt hem daar zelf |
+| `Could not authenticate against github.com` bij elk pakket | De anonieme GitHub-API-limiet is op. Zet een token neer (stap 1, § GitHub-token voor composer) |
 | `Failed opening required 'vendor/autoload.php'` | `composer install` is nog niet gedraaid in `apps/api` |

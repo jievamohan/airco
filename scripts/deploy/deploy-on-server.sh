@@ -307,6 +307,9 @@ run_deploy() {
 
   if ! install_php_dependencies; then
     echo "deploy: composer install mislukt" >&2
+    echo "        Staat er 'Could not authenticate against github.com' boven, dan" >&2
+    echo "        is de anonieme GitHub-API-limiet op en mist deze server een" >&2
+    echo "        token. Zie docs/runbooks/deploy-production.md § GitHub-token." >&2
     restore_pre_pull_ui
     exit 1
   fi
