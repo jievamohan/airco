@@ -19,6 +19,9 @@ node-compile-cache/
 .env.*
 !.env.example
 !.env.deploy.example
+# Lokale containerconfiguratie, zonder geheimen: moet wel mee de repo in,
+# anders kan het startscript geen .env aanmaken.
+!.env.docker
 
 # On-VPS deploy snapshots (created by make deploy-production)
 releases/

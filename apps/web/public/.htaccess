@@ -1,0 +1,24 @@
+# KlimaatX — statische hosting op DirectAdmin/Apache.
+#
+# De landingspagina is volledig voorgerenderd. Het dashboard is een SPA met
+# dynamische routes (bijvoorbeeld /dashboard/leads/<uuid>) die niet als bestand
+# bestaan; die moeten op de SPA-fallback van Nuxt uitkomen in plaats van op 404.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bestaande bestanden en mappen gewoon serveren.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Alles onder /dashboard naar de client-side fallback.
+    RewriteRule ^dashboard(/.*)?$ /200.html [L]
+</IfModule>
+
+# Het dashboard hoort niet in zoekmachines.
+<IfModule mod_headers.c>
+    <If "%{REQUEST_URI} =~ m#^/dashboard#">
+        Header always set X-Robots-Tag "noindex, nofollow"
+    </If>
+</IfModule>

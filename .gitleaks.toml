@@ -1,0 +1,30 @@
+# Secret scanning voor deze repository.
+#
+# Naast de standaardregels van gitleaks staat hier een eigen regel, omdat de
+# standaard geen generieke wachtwoorden in env-bestanden vangt. Precies dat ging
+# een keer mis: een lokaal databasewachtwoord belandde in een gecommit
+# .env.docker en werd door GitHub gemeld.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "gecommit-env-geheim"
+description = "Een env-bestand in de repository met een ingevulde wachtwoord-, sleutel- of tokenregel"
+# Let op de spatieklassen: met \s zou de regex over de regelgrens heen kijken en
+# een lege sleutel koppelen aan de waarde van de volgende regel. Vandaar [ \t].
+regex = '''(?im)^[A-Z0-9_]*(PASSWORD|SECRET|TOKEN|API_KEY|APIKEY|CREDENTIAL)[A-Z0-9_]*[ \t]*=[ \t]*[^\s#]'''
+path = '''\.env'''
+tags = ["env", "wachtwoord"]
+
+  # Uitzondering, bewust en beperkt tot één commit.
+  #
+  # In e456f9e stond het wachtwoord van de lokale databasecontainer in
+  # apps/api/.env.docker. Dat is geen geheim: die database luistert alleen op
+  # localhost, bevat wegwerpdata en de waarde is inmiddels vervangen. De regel
+  # hierboven is er juist naar aanleiding van deze vondst gekomen.
+  #
+  # Bij een echt geheim hoort hier geen uitzondering te komen, maar rotatie van
+  # de sleutel en het herschrijven van de historie.
+  [rules.allowlist]
+  commits = ["e456f9eb69ad0c398ecb872b04ed0abba031c4d2"]

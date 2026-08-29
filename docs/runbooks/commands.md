@@ -2,8 +2,8 @@
 
 ## Stack
 
-- Web: Nuxt 3 under `apps/web` (pnpm)
-- API: deferred in v1 (no `apps/api`)
+- Web: Nuxt 3 onder `apps/web` (pnpm) — landingspagina en het CRM-dashboard onder `/dashboard`
+- API: Laravel 12 onder `apps/api` (composer, MySQL) — CRM, agent-workflow en integraties
 
 ## Docker
 
@@ -12,9 +12,73 @@ docker compose up -d --build
 docker compose exec web pnpm run typecheck
 docker compose exec web pnpm run build
 docker compose logs -f web
+
+docker compose exec api php artisan migrate --force
+docker compose exec api php artisan db:seed --force
+docker compose exec api composer test
+docker compose exec api composer analyse
+docker compose exec api vendor/bin/pint --test
 ```
 
-Open: http://localhost:3010
+De eerste `up` duurt een paar minuten: `composer install` en `pnpm install`
+draaien dan voor het eerst. De `agent`-container wacht bewust tot de `api`
+gezond is — die deelt zijn `vendor`-map en zou anders omvallen op een
+ontbrekende `autoload.php`. Volgen kan met:
+
+```bash
+docker compose ps          # toont de healthstatus van api
+docker compose logs -f api
+```
+
+De api-container draait **Apache** (`php:8.4-apache`), niet `php artisan serve`:
+die laatste is PHP's ingebouwde ontwikkelserver, verwerkt verzoeken serieel en
+gaat anders om met omgevingsvariabelen dan een echte webserver.
+
+Alle applicatie-instellingen staan in **`apps/api/.env.docker`** — dat is de
+enige bron van waarheid voor deze containers. Het startscript kopieert dat naar
+`.env` bij de eerste start en genereert eenmalig een applicatiesleutel. Wil je
+iets lokaal anders, pas dan `.env` aan (of `.env.docker` voor iedereen); zet het
+niet in de `environment:`-sectie van compose, want twee bronnen voor dezelfde
+sleutel geven verschil tussen omgevingen.
+
+Open: http://localhost:3010 (web) en http://localhost:8010 (api)
+
+Het CRM-dashboard zit op **http://localhost:3010/dashboard**. Gebruik dezelfde
+hostnaam als in `DASHBOARD_ORIGINS` staat: opent u het op een adres dat daar niet
+in voorkomt, dan blokkeert CORS de aanroepen en meldt het inlogscherm dat de API
+niet bereikbaar is. Inloggen kan met
+het account dat `DatabaseSeeder` aanmaakt: het adres uit
+`OWNER_NOTIFICATION_EMAIL` en het wachtwoord uit `OWNER_INITIAL_PASSWORD`
+(standaard `wachtwoord-wijzigen` — wijzig dat direct).
+
+Demodata om het dashboard gevuld te zien:
+
+```bash
+docker compose exec api php artisan db:seed --class='Database\\Seeders\\DemoSeeder'
+```
+
+Die seeder maakt acht leads verspreid over de funnel, met gesprekken,
+transcripten, offertes en afspraken. Alleen voor lokaal en demo, nooit op
+productie.
+
+## Agent-workflow
+
+De workflow draait op twee processen: de scheduler (hartslag) en een queue-worker.
+
+```bash
+# Hartslag: gesprekken doorzetten en opvolgstappen uitvoeren (elke minuut)
+docker compose exec api php artisan schedule:work
+
+# Wachtrij: verrijken, offertes mailen, afspraken boeken
+docker compose exec api php artisan queue:work --tries=3
+
+# Handmatig een stap forceren
+docker compose exec api php artisan leads:poll-mailbox
+docker compose exec api php artisan agent:tick
+```
+
+In productie draaien deze als systemd-units of via cron; zie
+[agent-workflow.md](./agent-workflow.md).
 
 ## Production deploy (VPS / DirectAdmin)
 
@@ -26,13 +90,51 @@ make deploy-production-dry-run
 make rollback-production
 ```
 
-See [deploy-production.md](./deploy-production.md).
+See [deploy-production.md](./deploy-production.md). De API wordt apart uitgerold;
+zie [agent-workflow.md](./agent-workflow.md).
 
 **Auto-deploy:** merging a PR into `main` triggers `.github/workflows/ci-deploy.yml` (CI → SSH deploy → optional smoke). Configure the `production` environment in GitHub (secret: `VPS_SSH_KEY`; variables: host, user, deploy path — see deploy runbook).
+
+## Wijziging komt niet door in de browser
+
+De dev-servers draaien in containers met een bind-mount naar je werkmap. Een
+`git pull` op de host levert daarbinnen geen inotify-event op, dus Vite ziet de
+wijziging niet vanzelf. Daarom staat `VITE_USE_POLLING=true` op de web-service.
+
+Zie je een wijziging toch niet, controleer dan eerst wat de container heeft:
+
+```bash
+docker compose exec web grep -c "login__remember" pages/dashboard/login.vue
+```
+
+* `0` — de container heeft het bestand niet; je `git pull` is niet gelukt of je
+  staat op een andere branch.
+* `1` of meer — het bestand is er wel. Herstart dan de web-container en doe een
+  harde ververs in de browser (cmd+shift+R):
+
+```bash
+docker compose restart web
+```
+
+## Secret scan
+
+```bash
+gitleaks detect --source . --config .gitleaks.toml --redact
+```
+
+Draait ook in CI vóór de deploy. Naast de standaardregels zit er een eigen regel
+in `.gitleaks.toml` die aanslaat op een env-bestand in de repository met een
+ingevulde wachtwoord-, sleutel- of tokenregel. Voorbeeldbestanden mogen die
+sleutels tonen, maar altijd leeg.
+
+Geheimen horen nooit in de repository. Lokale instellingen zet je in
+`apps/api/.env` (gitignored); wat elke ontwikkelaar nodig heeft, staat leeg in
+`apps/api/.env.docker`.
 
 ## Notes
 
 - Locally: do not run `pnpm` on the host; use `docker compose exec web …`.
 - On the VPS: `make deploy-production` uses host Node 22.14+ + pnpm 9.15.9 (documented exception).
 - Playwright / e2e service: deferred (Lane I follow-up). Never run Playwright on the host.
-- Gate D PHPStan / `composer audit`: N/A until `apps/api` exists — see `artifacts/current/infra-review.md`.
+- `NUXT_PUBLIC_API_BASE` moet bij het bouwen van de web-app op de publieke API-URL staan,
+  anders wijst het formulier en het dashboard naar localhost.

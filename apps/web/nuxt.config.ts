@@ -1,9 +1,34 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/dashboard.css'],
+  runtimeConfig: {
+    public: {
+      // Basis-URL van de Laravel-API.
+      // Overschrijven met NUXT_PUBLIC_API_BASE; bij een statische build wordt
+      // die waarde tijdens `nuxt generate` vastgelegd.
+      apiBase: 'http://localhost:8000/api',
+    },
+  },
+  routeRules: {
+    // Het dashboard is een afgeschermde SPA: client-side renderen en niet indexeren.
+    '/dashboard': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/dashboard/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+  },
   nitro: {
     preset: 'static',
+  },
+  vite: {
+    server: {
+      watch: {
+        // In een container met een bind-mount komen bestandswijzigingen van de
+        // host niet als inotify-event binnen; Vite ziet een `git pull` dan
+        // gewoon niet. CHOKIDAR_USEPOLLING helpt daar niet, want Nuxt gebruikt
+        // de watcher van Vite. Buiten Docker laten we het uit: pollen kost CPU.
+        usePolling: process.env.VITE_USE_POLLING === 'true',
+        interval: 400,
+      },
+    },
   },
   app: {
     head: {

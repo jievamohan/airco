@@ -1,3 +1,123 @@
-# Security
+# Security — lead-to-appointment agent
 
-PASS — no API, auth, secrets, or user-input changes. Client-only scroll presentation styles.
+Status: **PASS**, met twee openstaande punten voor de ondernemer (zie onderaan).
+
+## Toegang
+
+| Endpoint | Bescherming |
+|----------|-------------|
+| `POST /api/leads` | publiek, `throttle:10,1`, strikte veldallowlist |
+| `GET /api/quotes/{token}` | 48 tekens willekeurig token, `throttle:60,1`, alleen alfanumeriek |
+| `POST /api/webhooks/elevenlabs/post-call` | HMAC-SHA256-handtekening met tijdvenster |
+| `POST /api/admin/login` | `throttle:10,1` plus 5 pogingen per e-mail/IP per 5 minuten |
+| `/api/admin/**` overig | Sanctum bearertoken |
+
+Een niet-geauthenticeerd verzoek levert een JSON-401, ook zonder `Accept`-header
+(`redirectGuestsTo` geeft `null` terug, want deze applicatie heeft geen inlogpagina).
+
+## Sessieduur
+
+Tokens hadden geen vervaldatum en stonden in `localStorage`: je bleef dus
+onbeperkt ingelogd, ook op een gedeelde computer. Met de "onthoud mij"-optie is
+dat rechtgezet:
+
+* **Zonder vinkje** krijgt het token een vervaldatum van een werkdag (instelbaar,
+  standaard 480 minuten) en gaat het naar `sessionStorage` — leeg zodra de
+  browser sluit.
+* **Met vinkje** geldt de langere termijn (standaard 30 dagen) en gaat het naar
+  `localStorage`.
+
+Sanctum handhaaft de vervaldatum per token, dus een verlopen token geeft een 401
+ook als de browser hem nog heeft. Bij het inloggen worden alleen *verlopen*
+tokens opgeruimd: eerder werden álle tokens gewist, waardoor inloggen op je
+telefoon je op je laptop uitlogde. Uitloggen raakt alleen het eigen apparaat.
+Alle vier deze eigenschappen zijn getest.
+
+## Webhookverificatie
+
+`VerifyElevenLabsSignature` leest de header `t=<unix>,v0=<hex>`, berekent
+`hash_hmac('sha256', "$t.$body", $secret)` en vergelijkt met `hash_equals`
+(constant-time). Verzoeken buiten het tolerantievenster (standaard 30 minuten)
+worden geweigerd, wat replay van een onderschept verzoek beperkt. Ontbreekt het
+secret, dan antwoordt de endpoint 503 in plaats van door te laten — fail closed.
+
+Getest in `tests/Feature/ElevenLabsWebhookTest.php`: zonder handtekening,
+met verkeerd secret en met verlopen tijdstempel geven alle drie een 401.
+
+## Invoervalidatie
+
+`StoreLeadRequest` en `UpdateLeadRequest` werpen 422 bij onbekende sleutels
+(`array_diff` vóór validatie). Statusvelden, tellers en tijdstempels staan
+bewust niet in de allowlist: die volgen uit de workflow, niet uit een formulier.
+`CatalogController` en `SequenceController` doen hetzelfde voor hun eigen
+bewerkbare velden. Getest.
+
+De vanaf-prijs, het instappakket en de margedrempel lopen via dezelfde
+settings-allowlist: een onbekende sleutel levert een 422, en de waarden worden
+naar het gedeclareerde type omgezet voordat ze worden opgeslagen.
+
+## Uitgaande payloads
+
+Conform `47-thin-api-payloads.mdc`. De leadlijst bevat geen e-mail, telefoon,
+notities of interne id's — alleen wat de tabel toont; getest met
+`assertArrayNotHasKey`. Het leaddetail is uitgebreider omdat het scherm dat toont,
+maar gaat via een expliciete resource en niet via `toArray()` op het model.
+
+## Geheimen
+
+Geen enkel secret staat in de repository; alles komt uit `.env` of uit de
+`settings`-tabel. Instellingen met `is_secret` gaan **nooit** terug over de lijn:
+`SettingController::index` stuurt `value: null` en alleen een `is_set`-vlag. Het
+dashboard stuurt een leeg secretveld niet mee, zodat opslaan zonder invullen een
+bestaande sleutel niet wist. Getest.
+
+## Foutafhandeling
+
+Conform `25-api-no-sql-leak.mdc`: `bootstrap/app.php` vangt alles onder `/api/**`
+af en geeft generieke Nederlandse meldingen terug. `QueryException`,
+`PDOException` en onverwachte fouten worden `report()`-ed en komen als
+"Er is een onverwachte fout opgetreden." bij de client. Geen SQL, geen SQLSTATE,
+geen stacktrace.
+
+## Persoonsgegevens
+
+* Transcripten en contactgegevens staan alleen in de database, nooit in de
+  logstream. De integratieklassen loggen bij fouten alleen id's en statuscodes.
+* De klant kan in het gesprek "niet meer benaderen" aangeven; dat zet
+  `do_not_contact` en stopt alle automatische acties, ook een handmatig
+  ingeplande belpoging.
+* De cadans stopt uit zichzelf na een configureerbaar maximum, zodat er niet
+  eindeloos wordt nagebeld.
+* Verwijderen van een lead ruimt via cascade transcripten, offertes, mails en
+  afspraken mee op.
+
+## Secret scanning
+
+`.gitleaks.toml` breidt de standaardregels uit met een eigen regel op
+env-bestanden met een ingevulde wachtwoord-, sleutel- of tokenregel. De
+standaardregels van gitleaks vangen die klasse niet, en juist daar ging het een
+keer mis: het wegwerpwachtwoord van de lokale databasecontainer stond in een
+gecommit `.env.docker` en werd door GitHub gemeld. Geen echt geheim — de
+database luistert alleen op localhost — maar wel de verkeerde gewoonte.
+
+Nu staat het databasewachtwoord alleen nog in `docker-compose.yml`, op één
+plek via een anker, en schrijft het startscript het in `.env`. Elke sleutel in
+`.env.docker` en `.env.example` staat leeg.
+
+De scan draait in CI vóór de deploy, over de volledige historie. Geverifieerd
+dat de regel aanslaat zodra het wachtwoord terugkomt en zwijgt bij lege sleutels.
+
+## CORS
+
+Alleen de origins uit `DASHBOARD_ORIGINS` mogen de API aanroepen; `supports_credentials`
+staat uit (we gebruiken bearertokens, geen cookies).
+
+## Wat de ondernemer nog moet regelen
+
+1. **Bewaartermijn voor gespreksopnames en transcripten.** Die is nu niet
+   automatisch begrensd. Spreek een termijn af en laat er een opruimtaak op los.
+2. **Toestemming en informatieplicht bij het bellen.** Er wordt gebeld op basis
+   van een eigen aanvraag van de klant, wat gerechtvaardigd belang oplevert, maar
+   de voice agent moet aan het begin van het gesprek melden dat het een
+   AI-assistent is en dat er wordt opgenomen. Dat hoort in de agentprompt bij
+   ElevenLabs; wij kunnen het van hieruit niet afdwingen.

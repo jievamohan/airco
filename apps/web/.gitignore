@@ -4,6 +4,9 @@ node_modules/
 .output/
 .data/
 dist/
+# `nuxt generate` legt dist neer als symlink naar .output/public; een
+# directory-patroon met slash matcht die niet.
+dist
 coverage/
 node-compile-cache/
 .cache/

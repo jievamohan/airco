@@ -1,3 +1,12 @@
+# Het databasewachtwoord van de lokale ontwikkelcontainer. Geen geheim: de
+# database luistert alleen op localhost en bevat wegwerpdata. Overschrijven kan
+# met KLIMAATX_DB_PASSWORD in een .env naast dit bestand.
+#
+# Verander deze standaardwaarde niet zomaar: MySQL legt het wachtwoord bij de
+# eerste start vast in het volume en negeert latere wijzigingen. Een bestaande
+# installatie kan daarna niet meer inloggen en de api-container valt om.
+x-db-wachtwoord: &db-wachtwoord ${KLIMAATX_DB_PASSWORD:-klimaatx}
+
 services:
   web:
     build:
@@ -12,9 +21,76 @@ services:
       - HOST=0.0.0.0
       - PORT=3000
       - NODE_ENV=development
+      # Zonder pollen ziet de dev-server in de container een `git pull` op de
+      # host niet: bind-mounts leveren geen inotify-events.
       - CHOKIDAR_USEPOLLING=true
+      - VITE_USE_POLLING=true
       - CI=true
+      - NUXT_PUBLIC_API_BASE=http://localhost:8010/api
     command: sh -c "pnpm install --frozen-lockfile || pnpm install && pnpm run dev --host 0.0.0.0 --port 3000"
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8010:80"
+    volumes:
+      - ./apps/api:/app
+      - api_vendor:/app/vendor
+    depends_on:
+      db:
+        condition: service_healthy
+    # Alleen de databasegegevens: die moeten hoe dan ook bij de db-service
+    # staan, dus dat is hun enige plek. Alle overige applicatie-instellingen
+    # staan in apps/api/.env.docker, dat het startscript naar .env kopieert.
+    environment:
+      DB_PASSWORD: *db-wachtwoord
+    command: ["sh", "/app/docker/start.sh", "api"]
+    healthcheck:
+      # Pas gezond als composer install, de migraties en de seed klaar zijn en
+      # Apache antwoordt. De agent hangt hieraan.
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/up') === false ? 1 : 0);"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 300s
+
+  # Hartslag van de workflow plus de wachtrij. Los van de webserver, zodat je
+  # de agent kunt stilzetten zonder de API te stoppen.
+  agent:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    volumes:
+      - ./apps/api:/app
+      - api_vendor:/app/vendor
+    depends_on:
+      api:
+        # service_started wacht alleen tot de container draait, niet tot het
+        # gedeelde vendor-volume gevuld is. Daarom service_healthy.
+        condition: service_healthy
+    # Leest dezelfde .env als de api-container, via de gedeelde bind-mount.
+    command: ["sh", "/app/docker/start.sh", "agent"]
+
+  db:
+    image: mysql:8.4
+    ports:
+      - "3316:3306"
+    environment:
+      MYSQL_DATABASE: klimaatx
+      MYSQL_USER: klimaatx
+      MYSQL_PASSWORD: *db-wachtwoord
+      MYSQL_ROOT_PASSWORD: *db-wachtwoord
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uklimaatx -p\"$$MYSQL_PASSWORD\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   web_node_modules:
+  api_vendor:
+  db_data:
