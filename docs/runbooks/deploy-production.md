@@ -37,11 +37,96 @@ keer niets meer aan te doen.
 
 ```bash
 php -v          # 8.2 of nieuwer
-composer -V
+composer -V     # of ~/bin/composer -V
 node -v         # 22.x
 pnpm -v         # 9.15.9
 rsync --version
 ```
+
+#### Composer
+
+Op een DirectAdmin-VPS staat `composer` vaak niet op PATH. De deploy zoekt hem
+daarom zelf op, in deze volgorde: PATH, `/usr/local/bin/composer`,
+`/usr/bin/composer`, `~/bin/composer`, `~/.local/bin/composer`, en anders een
+`composer.phar` in `apps/api`, de repo-root of je home. Vindt hij niets, dan
+stopt hij vóór de git-sync met die lijst in beeld.
+
+Staat hij er nog niet, installeer hem dan als de deploy-gebruiker — zonder sudo:
+
+```bash
+mkdir -p ~/bin
+cd ~
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+# Handtekening van de installer controleren voordat je hem uitvoert.
+php -r "if (hash_file('sha384','composer-setup.php') === trim(file_get_contents('https://composer.github.io/installer.sig'))) { echo 'installer ok'.PHP_EOL; } else { echo 'ONGELDIG — niet uitvoeren'.PHP_EOL; unlink('composer-setup.php'); }"
+php composer-setup.php --install-dir="$HOME/bin" --filename=composer
+php -r "unlink('composer-setup.php');"
+~/bin/composer -V
+```
+
+Zet `~/bin` ook in `~/.bash_profile` (`export PATH="$HOME/bin:$PATH"`) zodat je
+hem met de hand kunt aanroepen. Voor de deploy is dat niet nodig — die kent
+`~/bin/composer` uit zichzelf.
+
+##### GitHub-token voor composer
+
+Composer haalt de pakketten als zip via de GitHub-API. Eén `composer install`
+doet daar meer dan tachtig verzoeken, en zonder token ligt de limiet op 60 per
+uur per IP. Deze server heeft dus een geldige token nodig — blijvend, want de
+deploy draait `composer install` elke keer.
+
+Gaat er iets mis met die token, dan zie je bij **elk** pakket:
+
+```
+Failed to download … from dist: Could not authenticate against github.com
+Source fallback is disabled. Not trying alternative sources.
+```
+
+Die melding heeft twee oorzaken, en ze zien er hetzelfde uit:
+
+- er staat een token in `auth.json` die GitHub weigert (verlopen of ingetrokken)
+- er staat geen token en de anonieme limiet is op
+
+`composer diagnose` zegt welke van de twee het is. Een kale
+`curl https://api.github.com/rate_limit` doet dat **niet**: die gaat anoniem en
+zegt dus niets over de token die composer gebruikt.
+
+Zetten of vervangen:
+
+1. GitHub → Settings → Developer settings → **Personal access tokens** →
+   *Generate new token (classic)*. Dit hoeft **geen enkele scope** te hebben:
+   het gaat alleen om het ophalen van publieke pakketten. Geef hem een lange
+   houdbaarheid, want de deploy heeft hem blijvend nodig.
+2. Op de VPS, als de deploy-gebruiker:
+
+```bash
+composer config --global --auth github-oauth.github.com <token>
+```
+
+Dat schrijft `~/.config/composer/auth.json` (modus 600). Dat bestand hoort
+nooit in de repo — het staat buiten de checkout, en dat moet zo blijven.
+
+Controleren — dit gebruikt wél de token uit `auth.json`:
+
+```bash
+composer diagnose 2>&1 | grep -i -A2 github
+```
+
+Een oude token eerst weghalen kan met:
+
+```bash
+composer config --global --unset github-oauth.github.com
+```
+
+Raakt een token buiten de server bekend — in een chat, een ticket, een
+screenshot — trek hem dan in bij GitHub en zet een nieuwe. Vervangen is een
+minuut werk; uitzoeken wat iemand ermee gedaan heeft niet.
+
+Zolang je geen token hebt kun je ook uitwijken naar `--prefer-source`: dan
+cloont composer met git in plaats van via de API. Dat werkt zonder token, maar
+is trager, en de deploy gebruikt het niet.
+
+#### Node
 
 Ontbreekt Node, installeer hem als de deploy-gebruiker:
 
@@ -115,6 +200,12 @@ Maak in DirectAdmin een MySQL-database plus gebruiker aan. Dan:
 
 ```bash
 cd /home/sinoxi/domains/airco.sinoxi.nl/apps/api
+
+# artisan draait op de autoloader van composer, dus die moet er eerst zijn.
+# Zonder deze stap eindigt key:generate op een ontbrekende vendor/autoload.php.
+# Staat composer niet op PATH: gebruik ~/bin/composer (zie stap 1).
+composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
+
 cp .env.example .env
 php artisan key:generate
 ```
@@ -122,6 +213,9 @@ php artisan key:generate
 Vul in `.env` minstens in: `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`,
 de `MAIL_*`-gegevens, en de sleutels van de spraakagent. `APP_URL` staat al op
 `https://airco.sinoxi.nl`. `.env` staat in `.gitignore` en hoort nooit in git.
+
+De deploy draait deze `composer install` daarna bij elke keer opnieuw; hier is
+hij alleen nodig omdat je `artisan` al vóór de eerste deploy gebruikt.
 
 > `php artisan config:cache` legt `.env` vast in een cachebestand. Wijzig je
 > `.env` later met de hand, draai dan `php artisan config:cache` opnieuw —
@@ -292,3 +386,6 @@ tail -f apps/api/storage/logs/laravel-$(date +%F).log
 | Leads komen binnen maar er gebeurt niets | `klimaatx-queue` draait niet, of linger staat uit |
 | Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
 | Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |
+| `composer: command not found` | Composer staat niet op PATH; installeer hem in `~/bin` (stap 1) — de deploy vindt hem daar zelf |
+| `Could not authenticate against github.com` bij elk pakket | De GitHub-token van composer wordt geweigerd, of ontbreekt en de anonieme limiet is op. `composer diagnose` zegt welke (stap 1, § GitHub-token voor composer) |
+| `Failed opening required 'vendor/autoload.php'` | `composer install` is nog niet gedraaid in `apps/api` |

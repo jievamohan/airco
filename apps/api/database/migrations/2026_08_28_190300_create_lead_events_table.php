@@ -17,7 +17,12 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->json('payload')->nullable();
-            $table->timestamp('occurred_at')->index();
+            // dateTime en niet timestamp: met `explicit_defaults_for_timestamp`
+            // uit krijgt de eerste TIMESTAMP NOT NULL van een tabel er
+            // ongevraagd ON UPDATE CURRENT_TIMESTAMP bij. Het moment waarop
+            // iets gebeurde zou dan opschuiven zodra de regel bijgewerkt wordt,
+            // en de tijdlijn van een lead klopt stilletjes niet meer.
+            $table->dateTime('occurred_at')->index();
             $table->timestamps();
         });
     }

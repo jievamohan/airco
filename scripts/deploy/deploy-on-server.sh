@@ -83,15 +83,54 @@ pnpm_version_from_package() {
   printf '%s\n' "${pm:-9.15.9}"
 }
 
+# Composer staat op een DirectAdmin-VPS lang niet altijd op PATH, en in een
+# niet-interactieve SSH-sessie nog minder vaak. Daarom zelf zoeken: eerst PATH,
+# dan de gebruikelijke plekken, dan een composer.phar in de repo.
+COMPOSER_CMD=()
+
+resolve_composer() {
+  local cand
+
+  if command -v composer >/dev/null 2>&1; then
+    COMPOSER_CMD=(composer)
+    return 0
+  fi
+
+  for cand in /usr/local/bin/composer /usr/bin/composer \
+              "$HOME/bin/composer" "$HOME/.local/bin/composer"; do
+    if [[ -x "$cand" ]]; then
+      COMPOSER_CMD=("$cand")
+      return 0
+    fi
+  done
+
+  for cand in "$LARAVEL_ROOT/composer.phar" "$REPO_ROOT/composer.phar" \
+              "$HOME/composer.phar"; do
+    if [[ -f "$cand" ]]; then
+      COMPOSER_CMD=(php "$cand")
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 require_toolchain() {
   local php_major_minor node_major
 
-  for tool in php composer rsync git curl; do
+  for tool in php rsync git curl; do
     if ! command -v "$tool" >/dev/null 2>&1; then
       echo "deploy: $tool staat niet op PATH (zie docs/runbooks/deploy-production.md)" >&2
       exit 1
     fi
   done
+
+  if ! resolve_composer; then
+    echo "deploy: composer niet gevonden — niet op PATH, niet op de gebruikelijke" >&2
+    echo "        plekken, en geen composer.phar in de repo of je home." >&2
+    echo "        Zie docs/runbooks/deploy-production.md § Composer." >&2
+    exit 1
+  fi
 
   php_major_minor="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')"
   case "$php_major_minor" in
@@ -116,13 +155,22 @@ require_toolchain() {
     exit 1
   fi
 
-  echo "deploy: php $(php -r 'echo PHP_VERSION;'), node $(node -v), pnpm $(pnpm -v)"
+  echo "deploy: php $(php -r 'echo PHP_VERSION;'), composer ${COMPOSER_CMD[*]}, node $(node -v), pnpm $(pnpm -v)"
 }
 
 require_env() {
   if [[ ! -f "$LARAVEL_ROOT/.env" ]]; then
     echo "deploy: $LARAVEL_ROOT/.env ontbreekt." >&2
     echo "        Maak hem eenmalig aan uit .env.example; zie de runbook." >&2
+    exit 1
+  fi
+
+  # Zonder applicatiesleutel komt de deploy nog een heel eind en valt de site
+  # daarna om op elke sessie en elk versleuteld veld. Hier stoppen is duidelijker
+  # dan een 500 na afloop.
+  if ! grep -q '^APP_KEY=base64:' "$LARAVEL_ROOT/.env"; then
+    echo "deploy: APP_KEY ontbreekt in $LARAVEL_ROOT/.env." >&2
+    echo "        Draai eenmalig: cd $LARAVEL_ROOT && php artisan key:generate" >&2
     exit 1
   fi
 }
@@ -164,7 +212,7 @@ install_php_dependencies() {
   echo "deploy: composer install (zonder dev)" >&2
   (
     cd "$LARAVEL_ROOT"
-    composer install --no-interaction --no-progress --prefer-dist \
+    "${COMPOSER_CMD[@]}" install --no-interaction --no-progress --prefer-dist \
       --no-dev --optimize-autoloader
   )
 }
@@ -259,6 +307,9 @@ run_deploy() {
 
   if ! install_php_dependencies; then
     echo "deploy: composer install mislukt" >&2
+    echo "        Staat er 'Could not authenticate against github.com' boven, dan" >&2
+    echo "        is de anonieme GitHub-API-limiet op en mist deze server een" >&2
+    echo "        token. Zie docs/runbooks/deploy-production.md § GitHub-token." >&2
     restore_pre_pull_ui
     exit 1
   fi

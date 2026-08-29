@@ -20,8 +20,14 @@ return new class extends Migration
             $table->string('title');
             $table->text('location')->nullable();
             $table->text('notes')->nullable();
-            $table->timestamp('starts_at')->index();
-            $table->timestamp('ends_at');
+            // dateTime en niet timestamp: staat `explicit_defaults_for_timestamp`
+            // uit — de standaard in MariaDB en MySQL 5.7 — dan geeft MySQL de
+            // eerste TIMESTAMP NOT NULL stilzwijgend DEFAULT CURRENT_TIMESTAMP
+            // en elke volgende '0000-00-00', wat in strict mode geweigerd wordt.
+            // Deze tabel draagt bovendien zijn eigen `timezone`-kolom, dus de
+            // UTC-omrekening van TIMESTAMP is hier sowieso niet wat we willen.
+            $table->dateTime('starts_at')->index();
+            $table->dateTime('ends_at');
             $table->string('timezone')->default('Europe/Amsterdam');
             $table->string('status')->default('scheduled')->index(); // scheduled|confirmed|cancelled|completed|no_show
             $table->text('sync_error')->nullable();
