@@ -70,17 +70,28 @@ hem met de hand kunt aanroepen. Voor de deploy is dat niet nodig — die kent
 
 ##### GitHub-token voor composer
 
-Composer haalt de pakketten als zip via de GitHub-API. Zonder token geldt daar
-een limiet van 60 verzoeken per uur **per IP**, en op een gedeelde VPS is die
-vaak al door iemand anders opgemaakt. Je ziet dan bij elk pakket:
+Composer haalt de pakketten als zip via de GitHub-API. Eén `composer install`
+doet daar meer dan tachtig verzoeken, en zonder token ligt de limiet op 60 per
+uur per IP. Deze server heeft dus een geldige token nodig — blijvend, want de
+deploy draait `composer install` elke keer.
+
+Gaat er iets mis met die token, dan zie je bij **elk** pakket:
 
 ```
 Failed to download … from dist: Could not authenticate against github.com
 Source fallback is disabled. Not trying alternative sources.
 ```
 
-Eén `composer install` doet meer dan 80 verzoeken, dus dit gaat vanzelf mis en
-blijft misgaan — ook bij elke deploy. Zet daarom eenmalig een token neer:
+Die melding heeft twee oorzaken, en ze zien er hetzelfde uit:
+
+- er staat een token in `auth.json` die GitHub weigert (verlopen of ingetrokken)
+- er staat geen token en de anonieme limiet is op
+
+`composer diagnose` zegt welke van de twee het is. Een kale
+`curl https://api.github.com/rate_limit` doet dat **niet**: die gaat anoniem en
+zegt dus niets over de token die composer gebruikt.
+
+Zetten of vervangen:
 
 1. GitHub → Settings → Developer settings → **Personal access tokens** →
    *Generate new token (classic)*. Dit hoeft **geen enkele scope** te hebben:
@@ -95,12 +106,21 @@ composer config --global --auth github-oauth.github.com <token>
 Dat schrijft `~/.config/composer/auth.json` (modus 600). Dat bestand hoort
 nooit in de repo — het staat buiten de checkout, en dat moet zo blijven.
 
-Controleren:
+Controleren — dit gebruikt wél de token uit `auth.json`:
 
 ```bash
-curl -s https://api.github.com/rate_limit | head -12   # anoniem: limit 60
-composer diagnose 2>&1 | grep -i github
+composer diagnose 2>&1 | grep -i -A2 github
 ```
+
+Een oude token eerst weghalen kan met:
+
+```bash
+composer config --global --unset github-oauth.github.com
+```
+
+Raakt een token buiten de server bekend — in een chat, een ticket, een
+screenshot — trek hem dan in bij GitHub en zet een nieuwe. Vervangen is een
+minuut werk; uitzoeken wat iemand ermee gedaan heeft niet.
 
 Zolang je geen token hebt kun je ook uitwijken naar `--prefer-source`: dan
 cloont composer met git in plaats van via de API. Dat werkt zonder token, maar
@@ -367,5 +387,5 @@ tail -f apps/api/storage/logs/laravel-$(date +%F).log
 | Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
 | Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |
 | `composer: command not found` | Composer staat niet op PATH; installeer hem in `~/bin` (stap 1) — de deploy vindt hem daar zelf |
-| `Could not authenticate against github.com` bij elk pakket | De anonieme GitHub-API-limiet is op. Zet een token neer (stap 1, § GitHub-token voor composer) |
+| `Could not authenticate against github.com` bij elk pakket | De GitHub-token van composer wordt geweigerd, of ontbreekt en de anonieme limiet is op. `composer diagnose` zegt welke (stap 1, § GitHub-token voor composer) |
 | `Failed opening required 'vendor/autoload.php'` | `composer install` is nog niet gedraaid in `apps/api` |
