@@ -37,11 +37,38 @@ keer niets meer aan te doen.
 
 ```bash
 php -v          # 8.2 of nieuwer
-composer -V
+composer -V     # of ~/bin/composer -V
 node -v         # 22.x
 pnpm -v         # 9.15.9
 rsync --version
 ```
+
+#### Composer
+
+Op een DirectAdmin-VPS staat `composer` vaak niet op PATH. De deploy zoekt hem
+daarom zelf op, in deze volgorde: PATH, `/usr/local/bin/composer`,
+`/usr/bin/composer`, `~/bin/composer`, `~/.local/bin/composer`, en anders een
+`composer.phar` in `apps/api`, de repo-root of je home. Vindt hij niets, dan
+stopt hij vóór de git-sync met die lijst in beeld.
+
+Staat hij er nog niet, installeer hem dan als de deploy-gebruiker — zonder sudo:
+
+```bash
+mkdir -p ~/bin
+cd ~
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+# Handtekening van de installer controleren voordat je hem uitvoert.
+php -r "if (hash_file('sha384','composer-setup.php') === trim(file_get_contents('https://composer.github.io/installer.sig'))) { echo 'installer ok'.PHP_EOL; } else { echo 'ONGELDIG — niet uitvoeren'.PHP_EOL; unlink('composer-setup.php'); }"
+php composer-setup.php --install-dir="$HOME/bin" --filename=composer
+php -r "unlink('composer-setup.php');"
+~/bin/composer -V
+```
+
+Zet `~/bin` ook in `~/.bash_profile` (`export PATH="$HOME/bin:$PATH"`) zodat je
+hem met de hand kunt aanroepen. Voor de deploy is dat niet nodig — die kent
+`~/bin/composer` uit zichzelf.
+
+#### Node
 
 Ontbreekt Node, installeer hem als de deploy-gebruiker:
 
@@ -118,6 +145,7 @@ cd /home/sinoxi/domains/airco.sinoxi.nl/apps/api
 
 # artisan draait op de autoloader van composer, dus die moet er eerst zijn.
 # Zonder deze stap eindigt key:generate op een ontbrekende vendor/autoload.php.
+# Staat composer niet op PATH: gebruik ~/bin/composer (zie stap 1).
 composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
 
 cp .env.example .env
@@ -300,3 +328,5 @@ tail -f apps/api/storage/logs/laravel-$(date +%F).log
 | Leads komen binnen maar er gebeurt niets | `klimaatx-queue` draait niet, of linger staat uit |
 | Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
 | Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |
+| `composer: command not found` | Composer staat niet op PATH; installeer hem in `~/bin` (stap 1) — de deploy vindt hem daar zelf |
+| `Failed opening required 'vendor/autoload.php'` | `composer install` is nog niet gedraaid in `apps/api` |
