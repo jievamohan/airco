@@ -77,6 +77,10 @@ en in HTML-tabellen. Nieuwe labels toevoegen kan in
 
 ### Voice agent (ElevenLabs)
 
+Het volledige gespreksscript, de agent-instellingen en de veldafspraken staan in
+**[voice-agent-prompt.md](./voice-agent-prompt.md)** — plak die prompt en die
+dataverzameling over in het ElevenLabs-dashboard. In het kort:
+
 1. Maak in het ElevenLabs-dashboard een Conversational AI-agent aan in het
    Nederlands en koppel er een uitgaand telefoonnummer aan.
 2. Zet in de agentprompt de dynamische variabelen die wij meesturen:

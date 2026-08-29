@@ -51,7 +51,7 @@ klopt.
 
 ## Poorten
 
-* PHPUnit: 94 tests, 367 assertions — groen
+* PHPUnit: 99 tests, 464 assertions — groen
 * Volledige doorloop van het dashboard in een headless browser: 31/31 checks
 * PHPStan level 6 met larastan: schoon, zonder baseline of ignores
 * Pint: schoon
@@ -69,8 +69,10 @@ klopt.
    `schedule:run` — zie de runbook.
 4. De repository-variabele `PUBLIC_API_BASE` in GitHub zetten, anders wijst de
    gegenereerde site naar localhost.
-5. In de ElevenLabs-prompt melden dat het een AI-assistent is en dat er wordt
-   opgenomen, en een bewaartermijn voor transcripten afspreken.
+5. Het gespreksscript uit `docs/runbooks/voice-agent-prompt.md` overzetten naar
+   het ElevenLabs-dashboard, en een bewaartermijn voor transcripten afspreken.
+   De AI-melding en het opnamebericht zitten al in de openingszin die wij
+   meesturen.
 
 Tot dat rond is, draait de agent veilig met `AGENT_DRY_RUN=true`: de volledige
 workflow loopt, maar er wordt niet gebeld, gemaild of geboekt.

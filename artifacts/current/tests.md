@@ -4,7 +4,7 @@
 
 ```
 vendor/bin/phpunit --no-coverage
-OK (94 tests, 367 assertions)
+OK (99 tests, 464 assertions)
 ```
 
 | Suite | Wat het bewijst |
@@ -18,6 +18,7 @@ OK (94 tests, 367 assertions)
 | `Feature/SequenceRunnerTest` | de zes cadansstappen lopen af en eindigen op `unreachable`, een stap wacht tot zijn tijd, de cadans stopt zodra de lead reageert, dubbele start maakt geen tweede cadans, lead zonder mailadres slaat mailstappen over zonder te breken |
 | `Feature/AppointmentSchedulerTest` | voorgestelde momenten liggen op werkdagen na de voorbereidingstijd, afspraak wordt vastgelegd en bevestigd, een tijd uit het gesprek wordt als Nederlandse kloktijd gelezen, het ICS-bestand is geldig (inclusief de 75-tekengrens per regel) |
 | `Feature/EntryPriceTest` | kostprijs en marge worden vastgelegd, arbeid telt tegen het kostentarief mee, de vanaf-prijs werkt als ondergrens, het totaal landt exact op de advertentieprijs (geen afrondingscent), het instappakket topt een instapklus af en markeert de marge, klussen die er niet onder vallen blijven ongemoeid, de vanaf-prijs-check keurt € 899 af en € 1.449 goed, de adviesprijs haalt precies de drempel, de waarschuwing komt in de tijdlijn én in de mail naar de ondernemer, en de voice agent krijgt de vanaf-prijs mee |
+| `Feature/VoiceAgentPromptTest` | bewaakt het contract met het gespreksscript bij ElevenLabs: elke `{{variabele}}` in de prompt wordt ook echt meegestuurd, geen enkele variabele komt leeg binnen, de openingszin meldt de digitale assistent én de opname, elk gedocumenteerd veld wordt daadwerkelijk op de lead overgenomen, en elke genoemde uitkomst bestaat als `CallOutcome` |
 | `Feature/AdminApiTest` | formulierintake met normalisatie, weigeren van onbekende velden, afscherming van het dashboard (ook zonder JSON-header), inloggen, filteren en het níét lekken van contactgegevens in de lijst, bewerken, alle her-aftrap-acties, funnelberekening, catalogus die doorwerkt in de offerte, geheimen die niet teruggestuurd worden, cadansbeheer |
 
 ## Web (`apps/web`)

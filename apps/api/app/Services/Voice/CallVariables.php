@@ -23,10 +23,13 @@ class CallVariables
      */
     public function build(Lead $lead, CallPurpose $purpose, ?Quote $quote = null): array
     {
+        $bedrijf = $this->settings->string('agent.company.name', 'KlimaatX');
+
         $variables = [
             'gespreksdoel' => $purpose->objective(),
             'gesprekstype' => $purpose->value,
-            'bedrijfsnaam' => $this->settings->string('agent.company.name', 'KlimaatX'),
+            'gespreksopening' => $this->opening($purpose, $bedrijf),
+            'bedrijfsnaam' => $bedrijf,
             'bedrijf_telefoon' => $this->settings->string('agent.company.phone', ''),
             'klant_naam' => $lead->name,
             'klant_voornaam' => $this->firstName($lead->name),
@@ -63,6 +66,31 @@ class CallVariables
         }
 
         return array_map(static fn (string $value): string => $value === '' ? 'onbekend' : $value, $variables);
+    }
+
+    /**
+     * De eerste zin van het gesprek. Die verschilt per gesprekstype, en de
+     * voice agent kan daar zelf niet op sturen: zijn openingsbericht staat vast
+     * bij de provider. Vandaar dat wij hem meegeven.
+     *
+     * Bevat bewust de melding dat het om een digitale assistent gaat en dat er
+     * wordt opgenomen; dat hoort in de eerste zin, niet pas op navraag.
+     */
+    private function opening(CallPurpose $purpose, string $bedrijf): string
+    {
+        $aanhef = sprintf(
+            'Goedendag, u spreekt met de digitale assistent van %s. Dit gesprek wordt opgenomen.',
+            $bedrijf,
+        );
+
+        $reden = match ($purpose) {
+            CallPurpose::Qualification => 'Ik bel over uw aanvraag voor airconditioning. Heeft u een paar minuten?',
+            CallPurpose::Conversion => 'Ik bel over de offerte die u van ons heeft ontvangen. Schikt het u nu even?',
+            CallPurpose::Chase => 'Ik probeer u te bereiken over uw aanvraag voor airconditioning. Komt het nu uit?',
+            CallPurpose::Final => 'Ik bel een laatste keer over uw aanvraag voor airconditioning. Heeft u even?',
+        };
+
+        return $aanhef.' '.$reden;
     }
 
     private function missingFields(Lead $lead): string
