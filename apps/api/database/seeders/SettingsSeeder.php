@@ -26,6 +26,8 @@ class SettingsSeeder extends Seeder
 
         // Werking
         ['key' => 'agent.dry_run', 'group' => 'werking', 'type' => 'bool', 'label' => 'Proefmodus', 'description' => 'Workflow loopt volledig, maar er wordt niet echt gebeld, gemaild of geboekt.'],
+        ['key' => 'agent.auth.session_lifetime_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Sessieduur dashboard (minuten)', 'description' => 'Hoe lang je ingelogd blijft zonder "onthoud mij". Standaard een werkdag.'],
+        ['key' => 'agent.auth.remember_lifetime_days', 'group' => 'werking', 'type' => 'int', 'label' => 'Duur van "onthoud mij" (dagen)'],
         ['key' => 'agent.workflow.first_call_delay_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Wachttijd voor eerste belpoging (minuten)'],
         ['key' => 'agent.workflow.conversion_call_delay_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Wachttijd tot het conversiegesprek (minuten)', 'description' => 'Standaard 60 minuten na het versturen van de offerte.'],
         ['key' => 'agent.workflow.max_call_attempts', 'group' => 'werking', 'type' => 'int', 'label' => 'Maximaal aantal belpogingen'],

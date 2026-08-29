@@ -35,6 +35,8 @@
         <!-- De agent draait in tests met vaste instellingen, los van de .env van de ontwikkelaar. -->
         <env name="APP_TIMEZONE" value="UTC"/>
         <env name="AGENT_DRY_RUN" value="false"/>
+        <env name="AUTH_SESSION_LIFETIME_MINUTES" value="480"/>
+        <env name="AUTH_REMEMBER_LIFETIME_DAYS" value="30"/>
         <env name="ELEVENLABS_ENABLED" value="false"/>
         <env name="MAILBOX_ENABLED" value="false"/>
         <env name="CALENDAR_PROVIDER" value="none"/>

@@ -2,24 +2,46 @@
  * Dunne client voor de KlimaatX-API.
  *
  * Het dashboard is een statische SPA, dus authenticatie loopt via een
- * Sanctum-bearertoken in localStorage in plaats van via cookies.
+ * Sanctum-bearertoken in de browseropslag in plaats van via cookies.
  */
 const TOKEN_KEY = 'klimaatx.dashboard.token'
+
+/**
+ * Waar het token blijft staan, bepaalt hoe lang je ingelogd blijft.
+ *
+ * Zonder "onthoud mij" gaat hij naar sessionStorage: die is leeg zodra het
+ * tabblad of de browser dicht gaat, wat je wilt op een gedeelde computer. Met
+ * "onthoud mij" naar localStorage, en dan bepaalt de vervaldatum van het token
+ * op de server wanneer het afgelopen is.
+ */
+function stores(): Storage[] {
+  return [window.sessionStorage, window.localStorage]
+}
 
 export function readToken(): string | null {
   if (import.meta.server) return null
   try {
-    return window.localStorage.getItem(TOKEN_KEY)
+    for (const store of stores()) {
+      const token = store.getItem(TOKEN_KEY)
+      if (token) return token
+    }
   } catch {
-    return null
+    /* privémodus zonder opslag */
   }
+  return null
 }
 
-export function writeToken(token: string | null) {
+export function writeToken(token: string | null, remember = false) {
   if (import.meta.server) return
   try {
-    if (token === null) window.localStorage.removeItem(TOKEN_KEY)
-    else window.localStorage.setItem(TOKEN_KEY, token)
+    // Altijd eerst beide legen, anders blijft er een oud token achter in de
+    // store die deze keer niet gebruikt wordt.
+    for (const store of stores()) store.removeItem(TOKEN_KEY)
+
+    if (token !== null) {
+      const store = remember ? window.localStorage : window.sessionStorage
+      store.setItem(TOKEN_KEY, token)
+    }
   } catch {
     /* privémodus zonder opslag: de sessie duurt dan tot een refresh */
   }

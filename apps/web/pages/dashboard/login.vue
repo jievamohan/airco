@@ -15,6 +15,16 @@
           <span>Wachtwoord</span>
           <input v-model="password" type="password" autocomplete="current-password" required />
         </label>
+
+        <label class="full login__remember">
+          <input v-model="remember" type="checkbox" />
+          <span>
+            Onthoud mij op dit apparaat
+            <em class="small muted">
+              Doe dit niet op een gedeelde computer. Zonder vinkje ben je uitgelogd zodra je de browser sluit.
+            </em>
+          </span>
+        </label>
       </div>
 
       <button type="submit" class="btn login__submit" :disabled="busy">
@@ -37,6 +47,7 @@ useHead({
 const api = useApi()
 const email = ref('')
 const password = ref('')
+const remember = ref(false)
 const busy = ref(false)
 const error = ref('')
 
@@ -45,8 +56,12 @@ async function submit() {
   error.value = ''
 
   try {
-    const result = await api.post<{ token: string }>('/admin/login', { email: email.value, password: password.value }, false)
-    writeToken(result.token)
+    const result = await api.post<{ token: string }>(
+      '/admin/login',
+      { email: email.value, password: password.value, remember: remember.value },
+      false,
+    )
+    writeToken(result.token, remember.value)
     await navigateTo('/dashboard')
   } catch (e) {
     const err = e as ApiError
@@ -58,6 +73,31 @@ async function submit() {
 </script>
 
 <style scoped>
+.login__remember {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.login__remember input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.login__remember span {
+  display: grid;
+  gap: 2px;
+  color: var(--dash-ink, #0a0a0a);
+}
+
+.login__remember em {
+  font-style: normal;
+  line-height: 1.4;
+}
+
 .login {
   display: grid;
   place-items: center;

@@ -17,6 +17,7 @@ use App\Services\QuoteBuilder;
 use App\Services\Voice\FakeVoiceAgentClient;
 use App\Services\Voice\VoiceAgentClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
@@ -110,6 +111,112 @@ class AdminApiTest extends TestCase
         $this->postJson('/api/admin/login', ['email' => $user->email, 'password' => 'geheim-wachtwoord'])
             ->assertOk()
             ->assertJsonStructure(['token', 'user' => ['name', 'email', 'role']]);
+    }
+
+    /**
+     * Een verzoek met een bearertoken.
+     *
+     * De guard cachet de opgeloste gebruiker binnen een test, dus zonder
+     * forgetGuards() blijft een ingetrokken of verlopen token "geldig" lijken.
+     */
+    private function metToken(string $token): static
+    {
+        $this->app['auth']->forgetGuards();
+
+        return $this->withHeader('Authorization', 'Bearer '.$token);
+    }
+
+    #[Test]
+    public function zonder_onthoud_mij_verloopt_de_sessie_na_een_werkdag(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->postJson('/api/admin/login', [
+            'email' => $user->email,
+            'password' => 'geheim-wachtwoord',
+        ])->assertOk()->assertJsonPath('remembered', false);
+
+        $verval = Carbon::parse($response->json('expires_at'));
+
+        $this->assertEqualsWithDelta(480, now()->diffInMinutes($verval), 2);
+        $this->assertNotNull($user->tokens()->first()?->expires_at, 'Een token zonder vervaldatum blijft eeuwig geldig.');
+    }
+
+    #[Test]
+    public function met_onthoud_mij_blijft_de_sessie_dertig_dagen_staan(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->postJson('/api/admin/login', [
+            'email' => $user->email,
+            'password' => 'geheim-wachtwoord',
+            'remember' => true,
+        ])->assertOk()->assertJsonPath('remembered', true);
+
+        $this->assertEqualsWithDelta(30, now()->diffInDays(Carbon::parse($response->json('expires_at'))), 1);
+    }
+
+    #[Test]
+    public function een_verlopen_token_geeft_geen_toegang_meer(): void
+    {
+        $user = User::factory()->create();
+
+        $token = $this->postJson('/api/admin/login', [
+            'email' => $user->email,
+            'password' => 'geheim-wachtwoord',
+        ])->json('token');
+
+        $this->metToken($token)->getJson('/api/admin/leads')->assertOk();
+
+        $this->travel(9)->hours();
+
+        $this->metToken($token)->getJson('/api/admin/leads')->assertStatus(401);
+    }
+
+    #[Test]
+    public function inloggen_op_een_tweede_apparaat_verbreekt_de_eerste_sessie_niet(): void
+    {
+        $user = User::factory()->create();
+        $credentials = ['email' => $user->email, 'password' => 'geheim-wachtwoord'];
+
+        $laptop = $this->postJson('/api/admin/login', $credentials + ['remember' => true])->json('token');
+        $telefoon = $this->postJson('/api/admin/login', $credentials)->json('token');
+
+        foreach (['laptop' => $laptop, 'telefoon' => $telefoon] as $apparaat => $token) {
+            $this->assertSame(
+                200,
+                $this->metToken($token)->getJson('/api/admin/me')->getStatusCode(),
+                sprintf('De sessie op de %s hoort te blijven werken.', $apparaat),
+            );
+        }
+    }
+
+    #[Test]
+    public function verlopen_tokens_worden_bij_het_inloggen_opgeruimd(): void
+    {
+        $user = User::factory()->create();
+        $credentials = ['email' => $user->email, 'password' => 'geheim-wachtwoord'];
+
+        $this->postJson('/api/admin/login', $credentials)->assertOk();
+        $this->travel(9)->hours();
+        $this->postJson('/api/admin/login', $credentials)->assertOk();
+
+        $this->assertSame(1, $user->tokens()->count(), 'Het verlopen token had opgeruimd moeten worden.');
+    }
+
+    #[Test]
+    public function uitloggen_raakt_alleen_het_eigen_apparaat(): void
+    {
+        $user = User::factory()->create();
+        $credentials = ['email' => $user->email, 'password' => 'geheim-wachtwoord'];
+
+        $laptop = $this->postJson('/api/admin/login', $credentials)->json('token');
+        $telefoon = $this->postJson('/api/admin/login', $credentials)->json('token');
+
+        $this->metToken($telefoon)->postJson('/api/admin/logout')->assertOk();
+
+        $this->metToken($telefoon)->getJson('/api/admin/me')->assertStatus(401);
+        $this->metToken($laptop)->getJson('/api/admin/me')->assertOk();
     }
 
     #[Test]

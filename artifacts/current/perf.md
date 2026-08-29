@@ -48,5 +48,5 @@ tokenrefresh kost.
 ## Testduur
 
 ```
-99 tests in ± 6 seconden
+105 tests in ± 6 seconden
 ```

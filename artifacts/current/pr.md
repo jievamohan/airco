@@ -51,7 +51,7 @@ klopt.
 
 ## Poorten
 
-* PHPUnit: 99 tests, 464 assertions — groen
+* PHPUnit: 105 tests, 481 assertions — groen
 * Volledige doorloop van het dashboard in een headless browser: 31/31 checks
 * PHPStan level 6 met larastan: schoon, zonder baseline of ignores
 * Pint: schoon

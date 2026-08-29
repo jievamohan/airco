@@ -15,6 +15,24 @@ Status: **PASS**, met twee openstaande punten voor de ondernemer (zie onderaan).
 Een niet-geauthenticeerd verzoek levert een JSON-401, ook zonder `Accept`-header
 (`redirectGuestsTo` geeft `null` terug, want deze applicatie heeft geen inlogpagina).
 
+## Sessieduur
+
+Tokens hadden geen vervaldatum en stonden in `localStorage`: je bleef dus
+onbeperkt ingelogd, ook op een gedeelde computer. Met de "onthoud mij"-optie is
+dat rechtgezet:
+
+* **Zonder vinkje** krijgt het token een vervaldatum van een werkdag (instelbaar,
+  standaard 480 minuten) en gaat het naar `sessionStorage` — leeg zodra de
+  browser sluit.
+* **Met vinkje** geldt de langere termijn (standaard 30 dagen) en gaat het naar
+  `localStorage`.
+
+Sanctum handhaaft de vervaldatum per token, dus een verlopen token geeft een 401
+ook als de browser hem nog heeft. Bij het inloggen worden alleen *verlopen*
+tokens opgeruimd: eerder werden álle tokens gewist, waardoor inloggen op je
+telefoon je op je laptop uitlogde. Uitloggen raakt alleen het eigen apparaat.
+Alle vier deze eigenschappen zijn getest.
+
 ## Webhookverificatie
 
 `VerifyElevenLabsSignature` leest de header `t=<unix>,v0=<hex>`, berekent

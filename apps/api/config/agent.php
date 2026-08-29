@@ -22,6 +22,19 @@ return [
 
     /*
     |---------------------------------------------------------------------------
+    | Dashboardsessies
+    |---------------------------------------------------------------------------
+    | Zonder "onthoud mij" verloopt een sessie na een werkdag; het token staat
+    | dan in sessionStorage en verdwijnt zodra de browser sluit. Met "onthoud
+    | mij" blijft hij staan tot de langere termijn hieronder.
+    */
+    'auth' => [
+        'session_lifetime_minutes' => (int) env('AUTH_SESSION_LIFETIME_MINUTES', 480),
+        'remember_lifetime_days' => (int) env('AUTH_REMEMBER_LIFETIME_DAYS', 30),
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
     | Ondernemer-notificaties
     |---------------------------------------------------------------------------
     */

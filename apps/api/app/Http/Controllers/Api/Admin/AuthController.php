@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\SettingsRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,11 +15,14 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(private readonly SettingsRepository $settings) {}
+
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            'remember' => ['sometimes', 'boolean'],
         ]);
 
         $throttleKey = 'login:'.strtolower($credentials['email']).'|'.$request->ip();
@@ -38,10 +42,22 @@ class AuthController extends Controller
         }
 
         RateLimiter::clear($throttleKey);
-        $user->tokens()->delete();
+
+        // Alleen verlopen tokens opruimen. Alle tokens weggooien zou betekenen
+        // dat inloggen op je telefoon je op je laptop uitlogt.
+        $user->tokens()->whereNotNull('expires_at')->where('expires_at', '<', now())->delete();
+
+        $remember = (bool) ($credentials['remember'] ?? false);
+        $expiresAt = $remember
+            ? now()->addDays($this->settings->int('agent.auth.remember_lifetime_days', 30))
+            : now()->addMinutes($this->settings->int('agent.auth.session_lifetime_minutes', 480));
+
+        $token = $user->createToken($remember ? 'dashboard (onthouden)' : 'dashboard', ['*'], $expiresAt);
 
         return response()->json([
-            'token' => $user->createToken('dashboard')->plainTextToken,
+            'token' => $token->plainTextToken,
+            'expires_at' => $expiresAt->toIso8601String(),
+            'remembered' => $remember,
             'user' => ['name' => $user->name, 'email' => $user->email, 'role' => $user->role],
         ]);
     }
