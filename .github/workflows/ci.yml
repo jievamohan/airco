@@ -37,6 +37,27 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    services:
+      # De tests draaien op MySQL, net als productie. Root zonder wachtwoord:
+      # deze container leeft alleen tijdens deze job en is nergens anders
+      # bereikbaar, en zo staat er geen wachtwoord in de repository.
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: klimaatx_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,7 +66,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, intl, pdo_sqlite, sodium, zip, dom
+          extensions: mbstring, intl, pdo_mysql, sodium, zip, dom
           coverage: none
 
       - name: Install dependencies
@@ -56,6 +77,20 @@ jobs:
 
       - name: Static analysis
         run: php -d memory_limit=1G vendor/bin/phpstan analyse --no-progress
+
+      # Zelfde stand als de productie-VPS. Staat deze schakelaar aan — de
+      # standaard van MySQL 8.4 — dan accepteert de testdatabase kolommen die
+      # productie weigert, en zegt een groene run niets over de migratie daar.
+      - name: Testdatabase op de stand van productie zetten
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -e "SET GLOBAL explicit_defaults_for_timestamp = OFF;"
+          stand="$(mysql -h 127.0.0.1 -P 3306 -uroot -N -B -e 'SELECT @@explicit_defaults_for_timestamp;')"
+          if [ "${stand}" != "0" ]; then
+            echo "fout: explicit_defaults_for_timestamp staat op ${stand}; de tests" >&2
+            echo "      missen dan precies de schemafouten die productie wel geeft." >&2
+            exit 1
+          fi
+          echo "✓ explicit_defaults_for_timestamp = 0"
 
       - name: Tests
         run: vendor/bin/phpunit --no-coverage
