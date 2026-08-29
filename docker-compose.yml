@@ -1,3 +1,8 @@
+# Het databasewachtwoord van de lokale ontwikkelcontainer. Geen geheim: de
+# database luistert alleen op localhost en bevat wegwerpdata. Overschrijven kan
+# met KLIMAATX_DB_PASSWORD in een .env naast dit bestand.
+x-db-wachtwoord: &db-wachtwoord ${KLIMAATX_DB_PASSWORD:-lokaal}
+
 services:
   web:
     build:
@@ -29,9 +34,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Geen environment-sectie: alle applicatie-instellingen staan in
-    # apps/api/.env.docker, dat het startscript naar .env kopieert. Twee
-    # bronnen voor dezelfde sleutel gaven verschil tussen omgevingen.
+    # Alleen de databasegegevens: die moeten hoe dan ook bij de db-service
+    # staan, dus dat is hun enige plek. Alle overige applicatie-instellingen
+    # staan in apps/api/.env.docker, dat het startscript naar .env kopieert.
+    environment:
+      DB_PASSWORD: *db-wachtwoord
     command: ["sh", "/app/docker/start.sh", "api"]
     healthcheck:
       # Pas gezond als composer install, de migraties en de seed klaar zijn en
@@ -64,14 +71,14 @@ services:
     ports:
       - "3316:3306"
     environment:
-      - MYSQL_DATABASE=klimaatx
-      - MYSQL_USER=klimaatx
-      - MYSQL_PASSWORD=klimaatx
-      - MYSQL_ROOT_PASSWORD=klimaatx
+      MYSQL_DATABASE: klimaatx
+      MYSQL_USER: klimaatx
+      MYSQL_PASSWORD: *db-wachtwoord
+      MYSQL_ROOT_PASSWORD: *db-wachtwoord
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uklimaatx", "-pklimaatx"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uklimaatx -p\"$$MYSQL_PASSWORD\""]
       interval: 5s
       timeout: 5s
       retries: 20

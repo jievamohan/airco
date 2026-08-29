@@ -73,6 +73,22 @@ geen stacktrace.
 * Verwijderen van een lead ruimt via cascade transcripten, offertes, mails en
   afspraken mee op.
 
+## Secret scanning
+
+`.gitleaks.toml` breidt de standaardregels uit met een eigen regel op
+env-bestanden met een ingevulde wachtwoord-, sleutel- of tokenregel. De
+standaardregels van gitleaks vangen die klasse niet, en juist daar ging het een
+keer mis: het wegwerpwachtwoord van de lokale databasecontainer stond in een
+gecommit `.env.docker` en werd door GitHub gemeld. Geen echt geheim — de
+database luistert alleen op localhost — maar wel de verkeerde gewoonte.
+
+Nu staat het databasewachtwoord alleen nog in `docker-compose.yml`, op één
+plek via een anker, en schrijft het startscript het in `.env`. Elke sleutel in
+`.env.docker` en `.env.example` staat leeg.
+
+De scan draait in CI vóór de deploy, over de volledige historie. Geverifieerd
+dat de regel aanslaat zodra het wachtwoord terugkomt en zwijgt bij lege sleutels.
+
 ## CORS
 
 Alleen de origins uit `DASHBOARD_ORIGINS` mogen de API aanroepen; `supports_credentials`

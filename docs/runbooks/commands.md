@@ -95,6 +95,21 @@ zie [agent-workflow.md](./agent-workflow.md).
 
 **Auto-deploy:** merging a PR into `main` triggers `.github/workflows/ci-deploy.yml` (CI → SSH deploy → optional smoke). Configure the `production` environment in GitHub (secret: `VPS_SSH_KEY`; variables: host, user, deploy path — see deploy runbook).
 
+## Secret scan
+
+```bash
+gitleaks detect --source . --config .gitleaks.toml --redact
+```
+
+Draait ook in CI vóór de deploy. Naast de standaardregels zit er een eigen regel
+in `.gitleaks.toml` die aanslaat op een env-bestand in de repository met een
+ingevulde wachtwoord-, sleutel- of tokenregel. Voorbeeldbestanden mogen die
+sleutels tonen, maar altijd leeg.
+
+Geheimen horen nooit in de repository. Lokale instellingen zet je in
+`apps/api/.env` (gitignored); wat elke ontwikkelaar nodig heeft, staat leeg in
+`apps/api/.env.docker`.
+
 ## Notes
 
 - Locally: do not run `pnpm` on the host; use `docker compose exec web …`.

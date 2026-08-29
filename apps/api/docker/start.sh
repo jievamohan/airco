@@ -31,6 +31,18 @@ if [ "$1" = "api" ]; then
         cp .env.docker .env
     fi
 
+    # Het databasewachtwoord staat bewust niet in .env.docker: een wachtwoord
+    # in een gecommit env-bestand laat secret scanners aanslaan, en terecht.
+    # Compose is de enige plek waar het staat, want de db-container heeft het
+    # sowieso nodig.
+    if [ -n "${DB_PASSWORD:-}" ]; then
+        if grep -q '^DB_PASSWORD=' .env; then
+            sed -i "s#^DB_PASSWORD=.*#DB_PASSWORD=${DB_PASSWORD}#" .env
+        else
+            printf 'DB_PASSWORD=%s\n' "${DB_PASSWORD}" >> .env
+        fi
+    fi
+
     if ! grep -q '^APP_KEY=base64:' .env; then
         echo "==> applicatiesleutel genereren"
         php artisan key:generate --force
