@@ -15,7 +15,8 @@
       </select>
       <select v-model="source" @change="load(1)">
         <option value="">Alle bronnen</option>
-        <option value="web_form">Formulier op de website</option>
+        <option value="web_form">Website — versie 1</option>
+        <option value="web_form_v2">Website — versie 2</option>
         <option value="mailbox">Mailbox</option>
         <option value="api">Externe koppeling</option>
         <option value="manual">Handmatig</option>
@@ -107,7 +108,8 @@ const status = ref('')
 const source = ref('')
 
 const sourceLabels: Record<string, string> = {
-  web_form: 'Website',
+  web_form: 'Website v1',
+  web_form_v2: 'Website v2',
   mailbox: 'Mailbox',
   api: 'Koppeling',
   manual: 'Handmatig',

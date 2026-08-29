@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -17,8 +18,17 @@ class StoreLeadRequest extends FormRequest
     /** @var list<string> */
     private const ALLOWED = [
         'name', 'email', 'phone', 'address', 'postcode', 'city',
-        'space_size', 'space_unit', 'rooms_count', 'notes',
+        'space_size', 'space_unit', 'rooms_count', 'notes', 'source',
     ];
+
+    /**
+     * Welke landingspagina de aanvraag stuurde. Een allowlist, want `source`
+     * belandt ongefilterd in het dashboard en in de tijdlijn; een bezoeker mag
+     * daar geen eigen tekst in kunnen zetten.
+     *
+     * @var list<string>
+     */
+    public const SOURCES = ['web_form', 'web_form_v2'];
 
     public function authorize(): bool
     {
@@ -39,6 +49,7 @@ class StoreLeadRequest extends FormRequest
             'space_unit' => ['nullable', 'in:m2,m3'],
             'rooms_count' => ['nullable', 'integer', 'min:1', 'max:20'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'source' => ['nullable', 'string', Rule::in(self::SOURCES)],
         ];
     }
 
@@ -70,6 +81,20 @@ class StoreLeadRequest extends FormRequest
             $data['postcode'] = strtoupper(preg_replace('/\s+/', ' ', trim($data['postcode'])) ?? $data['postcode']);
         }
 
+        // `source` hoort bij de herkomst, niet bij de leadgegevens: LeadIntake
+        // zet hem zelf op de lead.
+        unset($data['source']);
+
         return $data;
+    }
+
+    /**
+     * Herkomst van de aanvraag, standaard de eerste landingspagina.
+     */
+    public function leadSource(): string
+    {
+        $source = $this->validated('source');
+
+        return is_string($source) && $source !== '' ? $source : 'web_form';
     }
 }

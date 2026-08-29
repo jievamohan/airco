@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" role="img" aria-label="Mitsubishi">
+  <g fill="#141414" transform="translate(108 2) scale(.85)">
+    <path d="M40 2l18 31.2-18 9-18-9L40 2z"/>
+    <path d="M4 62l18-31.2 18 9L22 62H4z"/>
+    <path d="M76 62H58L40 39.8l18-9L76 62z"/>
+  </g>
+</svg>

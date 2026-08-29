@@ -69,6 +69,47 @@ class AdminApiTest extends TestCase
     }
 
     #[Test]
+    public function het_tweede_formulier_komt_als_eigen_bron_binnen(): void
+    {
+        Queue::fake();
+
+        $this->postJson('/api/leads', [
+            'name' => 'Joris Bakker',
+            'email' => 'joris@example.nl',
+            'phone' => '0612345678',
+            'rooms_count' => 3,
+            'source' => 'web_form_v2',
+        ])->assertStatus(202);
+
+        $lead = Lead::firstOrFail();
+        $this->assertSame('web_form_v2', $lead->source, 'De landingspagina hoort in het dashboard herkenbaar te zijn.');
+        $this->assertSame(3, $lead->rooms_count);
+
+        // En het dashboard kan er ook op filteren.
+        $this->actingAsOwner();
+        $this->getJson('/api/admin/leads?source=web_form_v2')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Joris Bakker')
+            ->assertJsonPath('data.0.source', 'web_form_v2');
+
+        $this->getJson('/api/admin/leads?source=web_form')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    #[Test]
+    public function het_formulier_weigert_een_verzonnen_bron(): void
+    {
+        // `source` gaat ongefilterd het dashboard in; een bezoeker mag daar
+        // geen eigen tekst in kunnen zetten.
+        $this->postJson('/api/leads', [
+            'name' => 'Sanne', 'email' => 'sanne@example.nl', 'phone' => '0612345678',
+            'source' => 'gratis-bezoek-deze-site',
+        ])->assertStatus(422)->assertJsonValidationErrors(['source']);
+    }
+
+    #[Test]
     public function het_formulier_weigert_onbekende_velden(): void
     {
         $this->postJson('/api/leads', [

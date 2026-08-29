@@ -135,6 +135,24 @@
             <span v-if="errors.space_size" id="err-space" class="field__error">{{ errors.space_size }}</span>
           </div>
 
+          <div class="field">
+            <span id="rooms-label">Aantal ruimtes</span>
+            <div class="field__rooms" role="group" aria-labelledby="rooms-label">
+              <button
+                v-for="option in roomOptions"
+                :key="option.value"
+                type="button"
+                class="field__room"
+                :class="{ 'is-active': form.rooms_count === option.value }"
+                :aria-pressed="form.rooms_count === option.value"
+                @click="setRooms(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <input type="hidden" name="rooms_count" :value="form.rooms_count ?? ''" />
+          </div>
+
           <label class="field field--full">
             <span>Opmerkingen</span>
             <textarea
@@ -173,6 +191,7 @@ type LeadForm = {
   phone: string
   space_size: string
   space_unit: SpaceUnit
+  rooms_count: number | null
   notes: string
 }
 
@@ -187,8 +206,21 @@ const empty = (): LeadForm => ({
   phone: '',
   space_size: '',
   space_unit: 'm2',
+  rooms_count: null,
   notes: '',
 })
+
+/**
+ * Het aantal ruimtes bepaalt of de sizing op één split-unit of op een
+ * multi-split uitkomt, en het belscript noemt het in het gesprek. "4+" gaat
+ * als 4 mee: het exacte aantal komt bij het huisbezoek.
+ */
+const roomOptions: { value: number; label: string }[] = [
+  { value: 1, label: '1' },
+  { value: 2, label: '2' },
+  { value: 3, label: '3' },
+  { value: 4, label: '4+' },
+]
 
 const form = reactive<LeadForm>(empty())
 const errors = reactive<LeadErrors>({})
@@ -204,6 +236,11 @@ const unitLabel = (unit: SpaceUnit) => (unit === 'm2' ? 'm²' : 'm³')
 function setUnit(unit: SpaceUnit) {
   form.space_unit = unit
   if (errors.space_size) delete errors.space_size
+}
+
+function setRooms(count: number) {
+  // Nogmaals klikken zet hem weer uit: het veld is optioneel.
+  form.rooms_count = form.rooms_count === count ? null : count
 }
 
 function clearErrors() {
@@ -256,6 +293,8 @@ async function onSubmit() {
     payload.space_size = Number(form.space_size.replace(',', '.'))
     payload.space_unit = form.space_unit
   }
+
+  if (form.rooms_count !== null) payload.rooms_count = form.rooms_count
 
   try {
     const response = await fetch(`${useRuntimeConfig().public.apiBase}/leads`, {
@@ -409,6 +448,37 @@ function reset() {
 }
 
 .field__unit:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.field__rooms {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: 2px;
+}
+
+.field__room {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  margin: 0;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.field__room.is-active {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.field__room:focus-visible {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
