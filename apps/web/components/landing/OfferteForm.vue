@@ -7,7 +7,11 @@
       </div>
 
       <div v-if="success" class="offerte__success" data-testid="offerte-success" role="status">
-        <p>Bedankt, uw aanvraag is bij ons binnen.</p>
+        <svg class="offerte__check" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true" focusable="false">
+          <circle class="offerte__check-ring" cx="20" cy="20" r="18" fill="none" />
+          <path class="offerte__check-mark" d="M12.5 20.5 17.8 26 27.5 14.5" fill="none" />
+        </svg>
+        <p class="offerte__success-title">Bedankt, uw aanvraag is bij ons binnen.</p>
         <p class="offerte__success-note">
           We bellen u kort om de laatste details door te nemen en sturen daarna direct een offerte.
         </p>
@@ -169,10 +173,13 @@
         <button
           type="submit"
           class="btn-primary offerte__submit"
+          :class="{ 'is-sending': submitting }"
           data-testid="offerte-submit"
           :disabled="submitting"
         >
-          {{ submitting ? 'Bezig met versturen…' : 'Versturen' }}
+          <span class="offerte__submit-label">
+            {{ submitting ? 'Bezig met versturen…' : 'Versturen' }}
+          </span>
         </button>
       </form>
     </div>
@@ -498,6 +505,137 @@ function reset() {
   cursor: progress;
 }
 
+/* ------------------------------------------------------------------ motion
+
+   Eén idee: de seizoenen lopen over de knop. Diezelfde koel-naar-warm-gradient
+   waarmee de pagina "elk seizoen" zegt, reist tijdens het versturen door de
+   knop, en die beweging draagt daarna de bevestiging binnen. Een spinner had
+   hetzelfde gezegd over elk willekeurig formulier.
+   ------------------------------------------------------------------------ */
+
+.offerte__submit {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.offerte__submit-label {
+  position: relative;
+  z-index: 1;
+}
+
+.offerte__submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-cool) 35%,
+    var(--color-warm) 65%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+}
+
+/* Onbepaalde duur, dus een band die blijft reizen in plaats van een balk die
+   een voortgang voorwendt die we niet kennen. */
+/* Laag genoeg dat het label leesbaar blijft: de band ligt onder witte tekst op
+   een bijna zwarte knop, en op vol vermogen zakt het contrast op het oranje
+   ver onder de drempel. Tegen dat donker is 0.35 nog ruim zichtbaar. */
+.offerte__submit.is-sending::after {
+  opacity: 0.35;
+  animation: offerte-seizoenen 1150ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes offerte-seizoenen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* De bevestiging vervangt het formulier meteen; de animatie ligt daar bovenop.
+   Andersom — de wissel laten wachten op een transitie — maakt de boodschap die
+   de bezoeker moet zien afhankelijk van animatiemachinerie. In een tabblad op
+   de achtergrond staat requestAnimationFrame stil, en dan blijft de
+   bevestiging hangen precies wanneer iemand even wegklikt na het versturen. */
+.offerte__success {
+  animation: offerte-aankomst 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes offerte-aankomst {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.offerte__check {
+  display: block;
+  margin-bottom: 4px;
+  overflow: visible;
+}
+
+.offerte__check-ring {
+  stroke: var(--color-line);
+  stroke-width: 1.5;
+}
+
+.offerte__check-mark {
+  stroke: var(--color-ink);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: offerte-vink 460ms cubic-bezier(0.16, 1, 0.3, 1) 140ms forwards;
+}
+
+@keyframes offerte-vink {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Minder beweging, niet minder duidelijkheid: de knop blijft aangeven dat hij
+   bezig is, de bevestiging komt er nog steeds, en het vinkje staat er meteen
+   helemaal. Alleen het reizen en het verspringen gaan eruit. */
+@media (prefers-reduced-motion: reduce) {
+  .offerte__submit.is-sending::after {
+    opacity: 0.35;
+    transform: none;
+    animation: none;
+    background: linear-gradient(90deg, var(--color-cool), var(--color-warm));
+  }
+
+  .offerte__success {
+    animation: offerte-aankomst-rustig 200ms linear both;
+  }
+
+  @keyframes offerte-aankomst-rustig {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .offerte__check-mark {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 .offerte__error {
   margin: 12px 0 0;
   color: #c45c5c;
@@ -508,6 +646,11 @@ function reset() {
   margin: 0 0 12px;
   font-size: 22px;
   letter-spacing: -0.02em;
+}
+
+.offerte__success-title {
+  font-size: 20px;
+  letter-spacing: -0.01em;
 }
 
 .offerte__success-note {
