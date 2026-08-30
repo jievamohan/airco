@@ -32,18 +32,23 @@ class ChaseMail extends BaseMail
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: self::SUBJECTS[$this->variant] ?? 'Over uw aanvraag bij KlimaatX');
+        $company = $this->company();
+
+        return $this->envelopeFor(
+            self::SUBJECTS[$this->variant] ?? sprintf('Over uw aanvraag bij %s', $company['name']),
+        );
     }
 
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.chase',
+            view: 'mail.chase',
+            text: 'mail.text.chase',
             with: [
                 'lead' => $this->lead,
                 'variant' => $this->variant,
                 'quote' => $this->quote,
-                'company' => config('agent.company'),
+                'company' => $this->company(),
             ],
         );
     }

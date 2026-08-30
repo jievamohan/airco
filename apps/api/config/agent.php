@@ -14,6 +14,7 @@ return [
         'email' => env('COMPANY_EMAIL', 'info@klimaatx.nl'),
         'phone' => env('COMPANY_PHONE', '+31201234567'),
         'website' => env('COMPANY_WEBSITE', 'https://klimaatx.nl'),
+        'address' => env('COMPANY_ADDRESS', ''),
         'postcode' => env('COMPANY_POSTCODE', '1011 AB'),
         'city' => env('COMPANY_CITY', 'Amsterdam'),
         'kvk' => env('COMPANY_KVK', ''),
