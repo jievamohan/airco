@@ -25,6 +25,14 @@ class VoiceAgentSyncEndpointTest extends TestCase
     {
         parent::setUp();
         $this->seedDomain();
+
+        // De instellingen vallen terug op config zodra de databasewaarde leeg
+        // is, en config leest .env. Zonder dit bepaalt de omgeving van de
+        // machine wat deze tests zien: lokaal stond ELEVENLABS_API_KEY leeg in
+        // .env en slaagden ze, in CI bestaat dat bestand niet en faalden ze.
+        foreach (['api_key', 'voice_id', 'agent_id', 'base_url'] as $sleutel) {
+            config()->set('agent.elevenlabs.'.$sleutel, null);
+        }
     }
 
     private function stel(string $key, ?string $waarde): void

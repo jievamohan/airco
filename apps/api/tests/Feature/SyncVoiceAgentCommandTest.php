@@ -15,6 +15,15 @@ use Tests\TestCase;
  */
 class SyncVoiceAgentCommandTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        // putenv werkt op het hele proces: laten staan betekent dat een test
+        // verderop een sleutel ziet die deze test heeft neergezet.
+        putenv('ELEVENLABS_API_KEY');
+
+        parent::tearDown();
+    }
+
     #[Test]
     public function zonder_stem_doet_het_niets(): void
     {
