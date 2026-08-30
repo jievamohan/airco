@@ -14,6 +14,31 @@
     <p v-if="flash" class="notice notice--ok" role="status">{{ flash }}</p>
     <p v-if="error" class="notice notice--bad" role="alert">{{ error }}</p>
 
+    <!--
+      Een herhaalde aanvraag die de bestaande gegevens tegenspreekt is geen
+      mededeling maar een beslissing: correctie, of een tweede klus op hetzelfde
+      adres. Alleen een mens ziet dat verschil, dus staat hij bovenaan en niet
+      als zoveelste regel in de tijdlijn.
+    -->
+    <div v-if="lead.request_conflict" class="conflict">
+      <div class="conflict__tekst">
+        <p class="conflict__titel">Opnieuw aangevraagd, met andere gegevens</p>
+        <ul class="conflict__lijst">
+          <li v-for="verschil in lead.request_conflict.differences" :key="verschil">{{ verschil }}</li>
+        </ul>
+        <p class="conflict__uitleg small">
+          Binnengekomen {{ fmt.dateTime(lead.request_conflict.at) }}. Wat hieronder staat is niet
+          overschreven. Is dit een correctie, pas de gegevens dan aan en sla op. Gaat het om een
+          andere klus, splits hem dan af — dan houdt deze lead zijn offerte en gesprekken.
+        </p>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn--small" :disabled="busy" @click="trigger('split_request')">
+          Afsplitsen naar een eigen lead
+        </button>
+      </div>
+    </div>
+
     <section class="panel">
       <div class="verloop__head">
         <h2 class="panel__title">Verloop</h2>
@@ -1374,6 +1399,42 @@ onBeforeUnmount(() => {
   background: #fdf5f5;
   color: #4a4a4a;
 }
+
+/* --------------------------------------------------------------- conflict
+   Dezelfde kleur als de markering in de leadlijst: daar zag je dat er opnieuw
+   is aangevraagd, hier waarom dat je aandacht vraagt.
+   -------------------------------------------------------------------------- */
+
+.conflict {
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid #cddff2;
+  border-radius: 8px;
+  background: #f4f8fd;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.conflict__tekst { min-width: 0; flex: 1 1 320px; }
+
+.conflict__titel {
+  margin: 0;
+  font-weight: 600;
+  color: #1f4f7d;
+}
+
+.conflict__lijst {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #2f2f2f;
+}
+
+.conflict__uitleg { margin: 8px 0 0; color: #4a4a4a; }
 
 /* ------------------------------------------------------------------ verloop
    De pijplijn vat samen waar de lead staat; alleen de stap die aandacht

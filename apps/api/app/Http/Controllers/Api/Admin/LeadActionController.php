@@ -12,6 +12,7 @@ use App\Jobs\BookAppointmentJob;
 use App\Jobs\SendQuoteJob;
 use App\Models\Lead;
 use App\Services\AppointmentScheduler;
+use App\Services\LeadIntake;
 use App\Services\LeadTimeline;
 use App\Services\LeadWorkflow;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +30,7 @@ class LeadActionController extends Controller
         'enrich', 'call_qualification', 'call_qualification_now', 'call_conversion', 'call_conversion_now',
         'call_close', 'call_close_now', 'send_indication', 'send_quote', 'book_survey', 'mark_surveyed',
         'book_appointment', 'start_chase', 'stop_chase', 'mark_lost', 'mark_won', 'reopen',
+        'split_request',
     ];
 
     public function __invoke(Request $request, string $uuid, LeadWorkflow $workflow, LeadTimeline $timeline, AppointmentScheduler $scheduler): JsonResponse
@@ -70,6 +72,7 @@ class LeadActionController extends Controller
             'stop_chase' => $this->stopChase($workflow, $lead, $data['reason'] ?? 'Handmatig gestopt.'),
             'mark_lost' => $this->markLost($workflow, $lead, $data['reason'] ?? 'Handmatig als verloren gemarkeerd.'),
             'mark_won' => $this->markWon($workflow, $lead),
+            'split_request' => $this->splitRequest($lead),
             default => $this->reopen($workflow, $lead),
         };
 
@@ -162,6 +165,32 @@ class LeadActionController extends Controller
         $workflow->transition($lead, LeadStatus::Won);
 
         return 'De lead staat nu op gewonnen.';
+    }
+
+    /**
+     * Maakt van de laatste herhaalde aanvraag een eigen lead.
+     *
+     * Een herhaalde aanvraag met andere maten kan een correctie zijn of een
+     * tweede klus in hetzelfde pand. Dat verschil kan alleen een mens zien, dus
+     * beslist de code het niet — hij bewaart de aanvraag en zet hem klaar om af
+     * te splitsen.
+     */
+    private function splitRequest(Lead $lead): string
+    {
+        $melding = $lead->events()
+            ->where('type', 'lead_duplicate')
+            ->latest('id')
+            ->first();
+
+        $aanvraag = $melding?->payload['aanvraag'] ?? null;
+
+        if (! is_array($aanvraag) || $aanvraag === []) {
+            return 'Er is geen herhaalde aanvraag bewaard om af te splitsen.';
+        }
+
+        $nieuw = app(LeadIntake::class)->splitFrom($lead, $aanvraag, (string) ($melding?->payload['source'] ?? $lead->source));
+
+        return sprintf('De aanvraag staat nu als eigen lead: %s.', $nieuw->name);
     }
 
     private function reopen(LeadWorkflow $workflow, Lead $lead): string

@@ -52,6 +52,10 @@ class LeadDetailResource extends JsonResource
             'lost_reason' => $this->lost_reason,
             'created_at' => $this->created_at?->toIso8601String(),
 
+            // Een herhaalde aanvraag die iets anders zegt dan wat er staat, is
+            // geen mededeling maar een beslissing: correctie of tweede klus.
+            'request_conflict' => $this->whenLoaded('events', fn (): ?array => $this->requestConflict()),
+
             'events' => $this->whenLoaded('events', fn () => $this->events->map(static fn ($event): array => [
                 'id' => $event->id,
                 'type' => $event->type,
@@ -127,6 +131,38 @@ class LeadDetailResource extends JsonResource
                 // van de poging staat wel vast.
                 'attempted_at' => $email->created_at?->toIso8601String(),
             ])->all()),
+        ];
+    }
+
+    /**
+     * De nieuwste herhaalde aanvraag die de bestaande gegevens tegenspreekt, en
+     * waar nog niets mee gedaan is. Afsplitsen of de lead zelf bijwerken telt
+     * allebei als afgehandeld — dan heeft een mens ernaar gekeken.
+     *
+     * @return array{at: string|null, differences: list<string>}|null
+     */
+    private function requestConflict(): ?array
+    {
+        $melding = $this->events->where('type', 'lead_duplicate')->sortByDesc('id')->first();
+
+        if ($melding === null) {
+            return null;
+        }
+
+        $afwijkend = $melding->payload['afwijkend'] ?? [];
+
+        if (! is_array($afwijkend) || $afwijkend === []) {
+            return null;
+        }
+
+        $afgehandeld = $this->events->contains(
+            static fn ($event): bool => $event->id > $melding->id
+                && in_array($event->type, ['lead_split', 'lead_updated'], true),
+        );
+
+        return $afgehandeld ? null : [
+            'at' => $melding->occurred_at?->toIso8601String(),
+            'differences' => array_values($afwijkend),
         ];
     }
 }
