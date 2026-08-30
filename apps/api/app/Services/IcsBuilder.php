@@ -12,10 +12,13 @@ use App\Models\Appointment;
  */
 class IcsBuilder
 {
+    public function __construct(private readonly CompanyProfile $profile) {}
+
     public function forAppointment(Appointment $appointment): string
     {
         $lead = $appointment->lead;
-        $company = (string) config('agent.company.name');
+        $profile = $this->profile->all();
+        $company = $profile['name'];
 
         $lines = [
             'BEGIN:VCALENDAR',
@@ -31,7 +34,7 @@ class IcsBuilder
             'SUMMARY:'.$this->escape($appointment->title),
             'DESCRIPTION:'.$this->escape($appointment->notes ?? ''),
             'LOCATION:'.$this->escape($appointment->location ?? $lead->displayLocation()),
-            'ORGANIZER;CN='.$this->escape($company).':mailto:'.(string) config('agent.company.email'),
+            'ORGANIZER;CN='.$this->escape($company).':mailto:'.$profile['email'],
             'STATUS:CONFIRMED',
         ];
 

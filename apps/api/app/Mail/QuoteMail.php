@@ -23,20 +23,19 @@ class QuoteMail extends BaseMail
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: sprintf('Uw offerte voor airconditioning — %s', $this->quote->number),
-        );
+        return $this->envelopeFor(sprintf('Uw offerte voor airconditioning — %s', $this->quote->number));
     }
 
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.quote',
+            view: 'mail.quote',
+            text: 'mail.text.quote',
             with: [
                 'lead' => $this->lead,
                 'quote' => $this->quote,
                 'items' => $this->quote->items,
-                'company' => config('agent.company'),
+                'company' => $this->company(),
             ],
         );
     }

@@ -1,0 +1,1 @@
+<h1 class="kx-title" style="margin:0 0 16px; font-family:'Outfit','Helvetica Neue',Helvetica,Arial,sans-serif; font-size:25px; line-height:1.25; font-weight:600; letter-spacing:-0.02em; color:#0a0a0a;">{{ $slot }}</h1>

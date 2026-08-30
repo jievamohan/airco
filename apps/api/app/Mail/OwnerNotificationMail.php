@@ -24,17 +24,21 @@ class OwnerNotificationMail extends BaseMail
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: '[KlimaatX] '.$this->headline);
+        $company = $this->company();
+
+        return $this->envelopeFor(sprintf('[%s] %s', $company['name'], $this->headline));
     }
 
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.owner-notification',
+            view: 'mail.owner-notification',
+            text: 'mail.text.owner-notification',
             with: [
                 'lead' => $this->lead,
                 'headline' => $this->headline,
                 'lines' => $this->lines,
+                'company' => $this->company(),
             ],
         );
     }

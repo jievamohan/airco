@@ -19,9 +19,13 @@ class SettingsSeeder extends Seeder
         // Bedrijf
         ['key' => 'agent.company.name', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Bedrijfsnaam'],
         ['key' => 'agent.company.email', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Algemeen e-mailadres'],
-        ['key' => 'agent.company.phone', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Telefoonnummer'],
+        ['key' => 'agent.company.phone', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Telefoonnummer', 'description' => 'Zoals u het genoteerd wilt zien op offertes en in mails.'],
+        ['key' => 'agent.company.website', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Website'],
+        ['key' => 'agent.company.address', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Straat en huisnummer', 'description' => 'Staat op het briefpapier van de offerte en onderaan elke mail.'],
         ['key' => 'agent.company.postcode', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Postcode vestiging', 'description' => 'Vertrekpunt voor de voorrijberekening.'],
         ['key' => 'agent.company.city', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Plaats vestiging'],
+        ['key' => 'agent.company.kvk', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'KvK-nummer'],
+        ['key' => 'agent.company.vat_number', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'Btw-nummer'],
         ['key' => 'agent.owner.email', 'group' => 'bedrijf', 'type' => 'string', 'label' => 'E-mailadres voor notificaties', 'description' => 'Hier komen alle meldingen over leads binnen.'],
 
         // Werking
