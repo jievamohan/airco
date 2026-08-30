@@ -351,14 +351,25 @@ read-only deploy key voor in de repo.
 ## Wat de deploy precies doet
 
 Onder een `flock` op `.deploy.lock`, zodat twee deploys elkaar niet in de weg
-lopen:
+lopen, en in twee helften:
+
+**Eerste helft** — op de versie die er al stond:
 
 1. Controleren dat php, composer, rsync, node ≥ 22 en pnpm er zijn, en dat
-   `apps/api/.env` bestaat — **vóór** de git-sync, zodat een half ingerichte
-   server de live site niet aanraakt
+   `apps/api/.env` een `APP_KEY` heeft — **vóór** de git-sync, zodat een half
+   ingerichte server de live site niet aanraakt
 2. Momentopname van de live UI → `apps/api/.deploy/ui.pre-pull/`
 3. Git-sync: met `KLIMAATX_DEPLOY_SHA` een `fetch` + `reset --hard`, anders
    `git pull --ff-only`
+
+Daarna geeft het script het stokje over (`exec`) aan de versie die het zojuist
+heeft opgehaald. Zonder die overdracht draait bash de rest uit het bestand zoals
+dat vóór de sync op schijf stond, en slaat elke wijziging aan de deploy zelf één
+keer over. Het slot zit op een bestandsdescriptor en gaat mee, dus de tweede
+helft draait onder hetzelfde slot.
+
+**Tweede helft** — op de zojuist opgehaalde versie:
+
 4. `composer install --no-dev --optimize-autoloader`
 5. `php artisan migrate --force` en `php artisan db:seed --force`
 6. `pnpm install --frozen-lockfile` + `nuxt generate` met `NUXT_PUBLIC_API_BASE=/api`
@@ -429,6 +440,7 @@ tail -f apps/api/storage/logs/laravel-$(date +%F).log
 | Kan niet inloggen op het dashboard | Het account bestaat nog niet: `php artisan db:seed --force` na het invullen van stap 5 |
 | Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
 | Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |
+| Een wijziging aan de deploy zelf lijkt niet te werken | Kijk in het log of er `verder met het deployscript uit deze commit` staat; zonder die regel draait er nog een versie van vóór de overdracht |
 | `composer: command not found` | Composer staat niet op PATH; installeer hem in `~/bin` (stap 1) — de deploy vindt hem daar zelf |
 | `Could not authenticate against github.com` bij elk pakket | De GitHub-token van composer wordt geweigerd, of ontbreekt en de anonieme limiet is op. `composer diagnose` zegt welke (stap 1, § GitHub-token voor composer) |
 | `Failed opening required 'vendor/autoload.php'` | `composer install` is nog niet gedraaid in `apps/api` |

@@ -280,7 +280,14 @@ health_check() {
   echo "deploy: / en /v2/ geven 200, /up antwoordt"
 }
 
-run_deploy() {
+# Eerste helft: controleren, momentopname maken en de code ophalen.
+#
+# Daarna geeft dit script het stokje over aan de versie die het zojuist heeft
+# opgehaald. Zonder die overdracht draait bash de rest uit het bestand zoals dat
+# vóór de sync op schijf stond, en slaat elke wijziging aan de deploy zelf één
+# keer over — precies hoe een toegevoegde seedstap stilletjes niet gebeurde
+# terwijl de runbook hem al beloofde.
+run_sync_stage() {
   echo "deploy: repo=$REPO_ROOT"
   echo "deploy: laravel=$LARAVEL_ROOT"
   echo "deploy: docroot=$PUBLIC_DIR"
@@ -300,6 +307,18 @@ run_deploy() {
     exit 1
   fi
   echo "deploy: HEAD na sync=$(git -C "$REPO_ROOT" rev-parse --short HEAD)"
+
+  # Het slot zit op bestandsdescriptor 9 en gaat mee over de exec heen, dus de
+  # tweede helft draait nog steeds onder hetzelfde slot.
+  echo "deploy: verder met het deployscript uit deze commit" >&2
+  export KLIMAATX_DEPLOY_STAGE=uitvoeren
+  exec bash "$SCRIPT_DIR/deploy-on-server.sh"
+}
+
+# Tweede helft: bouwen, publiceren en aanzetten. Draait op de code die de
+# eerste helft heeft opgehaald.
+run_deploy() {
+  echo "deploy: uitvoeren op $(git -C "$REPO_ROOT" rev-parse --short HEAD)"
 
   # Gecachete config van de vorige versie kan naar sleutels wijzen die deze
   # versie niet meer kent; leegmaken vóór migreren.
@@ -358,11 +377,17 @@ run_deploy() {
   echo "deploy: klaar op $(git -C "$REPO_ROOT" rev-parse --short HEAD)"
 }
 
-echo "deploy: slot pakken op $LOCK_FILE" >&2
-exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
-  echo "deploy: er loopt al een deploy ($LOCK_FILE) — gestopt" >&2
-  exit 1
+if [[ "${KLIMAATX_DEPLOY_STAGE:-synchroniseren}" == "synchroniseren" ]]; then
+  echo "deploy: slot pakken op $LOCK_FILE" >&2
+  exec 9>"$LOCK_FILE"
+  if ! flock -n 9; then
+    echo "deploy: er loopt al een deploy ($LOCK_FILE) — gestopt" >&2
+    exit 1
+  fi
+
+  run_sync_stage
 fi
 
+# De tweede helft erft het slot van de eerste; opnieuw pakken zou het even
+# loslaten en dat is precies het gaatje waar een tweede deploy in past.
 run_deploy
