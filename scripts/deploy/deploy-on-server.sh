@@ -155,7 +155,7 @@ require_toolchain() {
     exit 1
   fi
 
-  echo "deploy: php $(php -r 'echo PHP_VERSION;'), composer ${COMPOSER_CMD[*]}, node $(node -v), pnpm $(pnpm -v)"
+  echo "deploy: [${KLIMAATX_DEPLOY_STAGE:-synchroniseren}] php $(php -r 'echo PHP_VERSION;'), composer ${COMPOSER_CMD[*]}, node $(node -v), pnpm $(pnpm -v)"
 }
 
 require_env() {
@@ -209,6 +209,14 @@ sync_repo_to_deploy_ref() {
 }
 
 install_php_dependencies() {
+  # Vangnet: zonder resolve_composer is dit een lege array, en dan voert bash
+  # doodleuk `install --no-interaction …` uit. Dat faalt binnen een milliseconde
+  # met een melding die nergens naar wijst.
+  if [[ ${#COMPOSER_CMD[@]} -eq 0 ]]; then
+    echo "deploy: COMPOSER_CMD is leeg — resolve_composer heeft niet gedraaid." >&2
+    return 1
+  fi
+
   echo "deploy: composer install (zonder dev)" >&2
   (
     cd "$LARAVEL_ROOT"
@@ -319,6 +327,12 @@ run_sync_stage() {
 # eerste helft heeft opgehaald.
 run_deploy() {
   echo "deploy: uitvoeren op $(git -C "$REPO_ROOT" rev-parse --short HEAD)"
+
+  # Ook hier, en niet alleen in de eerste helft: dit is een nieuw proces met een
+  # lege COMPOSER_CMD, en het is bovendien de zojuist opgehaalde versie die zegt
+  # wat ze nodig heeft — de eerste helft controleerde nog met de oude regels.
+  require_toolchain
+  require_env
 
   # Gecachete config van de vorige versie kan naar sleutels wijzen die deze
   # versie niet meer kent; leegmaken vóór migreren.
