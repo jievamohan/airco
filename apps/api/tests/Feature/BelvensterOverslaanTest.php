@@ -74,6 +74,23 @@ class BelvensterOverslaanTest extends TestCase
     }
 
     #[Test]
+    public function het_conversiegesprek_kan_net_zo_goed_meteen(): void
+    {
+        // Het conversiegesprek stond ingepland te wachten en was vanuit het
+        // dashboard alleen opnieuw in te plannen — nooit af te trappen.
+        $lead = Lead::factory()->create(['status' => 'quoted']);
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson("/api/admin/leads/{$lead->uuid}/actions", ['action' => 'call_conversion_now'])
+            ->assertOk();
+
+        $call = Call::where('lead_id', $lead->id)->firstOrFail();
+        $this->assertSame(CallPurpose::Conversion->value, $call->purpose->value);
+        $this->assertTrue($call->ignores_calling_window);
+        $this->assertTrue($call->scheduled_for?->lessThanOrEqualTo(now()));
+    }
+
+    #[Test]
     public function de_tik_schuift_zon_gesprek_niet_alsnog_vooruit(): void
     {
         // Het venster wordt op twee plekken gecontroleerd; zonder de vlag zou
