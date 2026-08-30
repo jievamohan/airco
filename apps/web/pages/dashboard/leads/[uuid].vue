@@ -35,67 +35,223 @@
 
     <div class="grid grid--sidebar" style="margin-top: 20px">
       <div>
-        <section class="panel">
-          <h2 class="panel__title">Gegevens</h2>
-          <p class="panel__note">Aanpassingen werken direct door in de volgende offerteberekening.</p>
+        <form @submit.prevent="save">
+          <fieldset class="panel fieldgroup">
+            <legend class="fieldgroup__legend">Contact</legend>
+            <div class="fieldgroup__fields">
+              <label class="field full">
+                <span class="field__label">Naam</span>
+                <input v-model.trim="form.name" required />
+              </label>
 
-          <form class="form-grid" @submit.prevent="save">
-            <label><span>Naam</span><input v-model.trim="form.name" required /></label>
-            <label><span>E-mailadres</span><input v-model.trim="form.email" type="email" /></label>
-            <label><span>Telefoon</span><input v-model.trim="form.phone" /></label>
-            <label><span>Adres</span><input v-model.trim="form.address" /></label>
-            <label><span>Postcode</span><input v-model.trim="form.postcode" placeholder="1234 AB" /></label>
-            <label><span>Plaats</span><input v-model.trim="form.city" /></label>
+              <label class="field full">
+                <span class="field__label">Telefoon</span>
+                <span class="actionfield">
+                  <input v-model.trim="form.phone" type="tel" inputmode="tel" autocomplete="off" />
+                  <a v-if="form.phone" class="actionfield__action" :href="`tel:${form.phone}`">
+                    <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path
+                        d="M3.2 4.1c0-.6.5-1.1 1.1-1.1h1.4c.5 0 .9.3 1 .8l.5 1.9c.1.4 0 .8-.4 1l-.9.6c.8 1.6 2.1 2.9 3.7 3.7l.6-.9c.2-.3.6-.5 1-.4l1.9.5c.5.1.8.5.8 1v1.4c0 .6-.5 1.1-1.1 1.1C7.4 13.7 3.2 9.5 3.2 4.1z"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    Bellen
+                  </a>
+                </span>
+              </label>
 
-            <label><span>Ruimtemaat</span><input v-model="form.space_size" type="number" step="0.1" min="1" /></label>
-            <label>
-              <span>Eenheid</span>
-              <select v-model="form.space_unit">
-                <option value="m2">m²</option>
-                <option value="m3">m³</option>
-              </select>
-            </label>
-            <label><span>Aantal ruimtes</span><input v-model="form.rooms_count" type="number" min="1" max="20" /></label>
-            <label>
-              <span>Isolatie</span>
-              <select v-model="form.insulation">
-                <option :value="null">Onbekend</option>
-                <option value="good">Goed</option>
-                <option value="average">Gemiddeld</option>
-                <option value="poor">Matig</option>
-              </select>
-            </label>
-            <label><span>Bouwjaar</span><input v-model="form.building_year" type="number" min="1800" max="2100" /></label>
-            <label><span>Verdieping binnenunit</span><input v-model="form.floor_level" type="number" min="0" max="20" /></label>
-            <label><span>Leidinglengte (m)</span><input v-model="form.pipe_length_m" type="number" min="1" max="100" /></label>
-            <label><span>Plek buitenunit</span><input v-model.trim="form.outdoor_unit_placement" /></label>
-            <label><span>Wandtype</span><input v-model.trim="form.wall_type" /></label>
-            <label><span>Gewenste startdatum</span><input v-model="form.desired_start" type="date" /></label>
-            <label>
-              <span>Kwaliteitsklasse</span>
-              <select v-model="form.tier">
-                <option :value="null">Standaard</option>
-                <option value="budget">Voordelig</option>
-                <option value="mid">Middenklasse</option>
-                <option value="premium">Premium</option>
-              </select>
-            </label>
-
-            <label><span>Condenspomp nodig</span><input v-model="form.needs_condensate_pump" type="checkbox" /></label>
-            <label><span>Extra elektragroep nodig</span><input v-model="form.needs_extra_group" type="checkbox" /></label>
-            <label><span>Niet benaderen</span><input v-model="form.do_not_contact" type="checkbox" /></label>
-
-            <label class="full"><span>Opmerkingen</span><textarea v-model.trim="form.notes" rows="4" /></label>
-
-            <div class="full actions">
-              <button type="submit" class="btn" :disabled="busy">Opslaan</button>
-              <span class="small muted" style="align-self: center">
-                Advies nu: {{ lead.recommended_system === 'multi_split' ? 'multisplit' : 'single split' }},
-                {{ lead.estimated_kw ? `${fmt.number(lead.estimated_kw, 1)} kW` : 'nog niet berekend' }}
-              </span>
+              <label class="field full">
+                <span class="field__label">E-mailadres</span>
+                <span class="actionfield">
+                  <input v-model.trim="form.email" type="email" inputmode="email" autocomplete="off" />
+                  <a v-if="form.email" class="actionfield__action" :href="`mailto:${form.email}`">
+                    <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="2.2" y="3.6" width="11.6" height="8.8" rx="1.4" />
+                      <path d="M2.6 4.4L8 8.6l5.4-4.2" stroke-linejoin="round" />
+                    </svg>
+                    Mailen
+                  </a>
+                </span>
+              </label>
             </div>
-          </form>
-        </section>
+          </fieldset>
+
+          <fieldset class="panel fieldgroup">
+            <legend class="fieldgroup__legend">Adres</legend>
+            <div class="fieldgroup__fields">
+              <label class="field full">
+                <span class="field__label">Straat en huisnummer</span>
+                <input v-model.trim="form.address" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span class="field__label">Postcode</span>
+                <input v-model.trim="form.postcode" placeholder="1234 AB" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span class="field__label">Plaats</span>
+                <input v-model.trim="form.city" autocomplete="off" />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="panel fieldgroup">
+            <legend class="fieldgroup__legend">De klus</legend>
+            <p class="fieldgroup__note">Deze velden bepalen het advies hieronder.</p>
+            <div class="fieldgroup__fields">
+              <!-- Ruimtemaat en eenheid waren twee velden voor één vraag. -->
+              <label class="field full">
+                <span class="field__label">Te koelen ruimte</span>
+                <span class="unitfield">
+                  <input v-model="form.space_size" type="number" step="0.1" min="1" inputmode="decimal" />
+                  <span class="seg">
+                    <label v-for="unit in spaceUnits" :key="unit.value" class="seg__option">
+                      <input v-model="form.space_unit" type="radio" name="space_unit" :value="unit.value" />
+                      <span>{{ unit.label }}</span>
+                    </label>
+                  </span>
+                </span>
+              </label>
+
+              <!-- In de praktijk 1 tot 4: dat vraagt geen toetsenbord. -->
+              <div class="field">
+                <span class="field__label" id="rooms-label">Aantal ruimtes</span>
+                <span class="stepper">
+                  <button type="button" :disabled="roomsCount <= 1" aria-label="Eén ruimte minder" @click="stepRooms(-1)">
+                    −
+                  </button>
+                  <input v-model.number="form.rooms_count" type="number" min="1" max="20" inputmode="numeric" aria-labelledby="rooms-label" />
+                  <button type="button" :disabled="roomsCount >= 20" aria-label="Eén ruimte meer" @click="stepRooms(1)">
+                    +
+                  </button>
+                </span>
+              </div>
+
+              <div class="field full">
+                <span class="field__label" id="insulation-label">Isolatie</span>
+                <span class="seg" role="radiogroup" aria-labelledby="insulation-label">
+                  <label v-for="option in insulations" :key="String(option.value)" class="seg__option">
+                    <input v-model="form.insulation" type="radio" name="insulation" :value="option.value" />
+                    <span>{{ option.label }}</span>
+                  </label>
+                </span>
+              </div>
+
+              <label class="field">
+                <span class="field__label">Bouwjaar</span>
+                <input v-model="form.building_year" type="number" min="1800" max="2100" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span class="field__label">Verdieping binnenunit</span>
+                <input v-model="form.floor_level" type="number" min="0" max="20" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span class="field__label">Leidinglengte (m)</span>
+                <input v-model="form.pipe_length_m" type="number" min="1" max="100" inputmode="decimal" />
+              </label>
+              <label class="field">
+                <span class="field__label">Wandtype</span>
+                <input v-model.trim="form.wall_type" />
+              </label>
+              <label class="field full">
+                <span class="field__label">Plek buitenunit</span>
+                <input v-model.trim="form.outdoor_unit_placement" />
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- De uitkomst van de velden hierboven, dus hij staat er direct onder. -->
+          <div class="advice">
+            <span class="advice__mark" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M8 1.8l4.6 2.6v5.2L8 12.2 3.4 9.6V4.4z" stroke-linejoin="round" />
+                <path d="M8 6.6v3.1M6.4 7.6h3.2" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="advice__text">
+              <span class="advice__value">
+                {{ lead.recommended_system === 'multi_split' ? 'Multisplit' : 'Single split' }}
+                <template v-if="lead.estimated_kw"> · {{ fmt.number(lead.estimated_kw, 1) }} kW</template>
+              </span>
+              <span class="advice__note">
+                {{ adviceStale ? 'Wordt opnieuw berekend zodra je opslaat' : 'Berekend uit de velden hierboven' }}
+              </span>
+            </span>
+          </div>
+
+          <fieldset class="panel fieldgroup">
+            <legend class="fieldgroup__legend">Wat de offerte verandert</legend>
+            <div class="fieldgroup__fields">
+              <div class="field full">
+                <span class="field__label" id="tier-label">Kwaliteitsklasse</span>
+                <span class="seg" role="radiogroup" aria-labelledby="tier-label">
+                  <label v-for="option in tiers" :key="String(option.value)" class="seg__option">
+                    <input v-model="form.tier" type="radio" name="tier" :value="option.value" />
+                    <span>{{ option.label }}</span>
+                  </label>
+                </span>
+              </div>
+
+              <label class="switchrow full">
+                <input v-model="form.needs_condensate_pump" type="checkbox" class="switchrow__input" />
+                <span class="switchrow__text">
+                  <span class="switchrow__label">Condenspomp nodig</span>
+                  <span class="switchrow__note">Telt als toeslag mee in de offerte</span>
+                </span>
+                <span class="switch" aria-hidden="true" />
+              </label>
+
+              <label class="switchrow full">
+                <input v-model="form.needs_extra_group" type="checkbox" class="switchrow__input" />
+                <span class="switchrow__text">
+                  <span class="switchrow__label">Extra elektragroep nodig</span>
+                  <span class="switchrow__note">Telt als toeslag mee in de offerte</span>
+                </span>
+                <span class="switch" aria-hidden="true" />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="panel fieldgroup">
+            <legend class="fieldgroup__legend">Planning</legend>
+            <div class="fieldgroup__fields">
+              <label class="field full">
+                <span class="field__label">Gewenste startdatum</span>
+                <input v-model="form.desired_start" type="date" />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="panel fieldgroup">
+            <legend class="fieldgroup__legend">Opmerkingen</legend>
+            <div class="fieldgroup__fields">
+              <label class="field full">
+                <span class="field__label">Wat je over deze lead moet weten</span>
+                <textarea v-model.trim="form.notes" rows="4" />
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Geen eigenschap van de klus, maar een rem op het hele proces. -->
+          <label class="switchrow switchrow--danger" style="margin-top: 16px">
+            <input v-model="form.do_not_contact" type="checkbox" class="switchrow__input" />
+            <span class="switchrow__lead">
+              <svg class="switchrow__icon" width="17" height="17" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M8 2.6l6 10.8H2z" stroke-linejoin="round" />
+                <path d="M8 6.6v3M8 11.6v.1" stroke-linecap="round" />
+              </svg>
+              <span class="switchrow__text">
+                <span class="switchrow__label">Niet benaderen</span>
+                <span class="switchrow__note">Zet alle bel- en mailstappen stop</span>
+              </span>
+            </span>
+            <span class="switch" aria-hidden="true" />
+          </label>
+
+          <div class="savebar">
+            <span class="savebar__state">{{ dirty ? 'Niet-opgeslagen wijzigingen' : 'Alles is opgeslagen' }}</span>
+            <button type="submit" class="btn" :disabled="busy || !dirty">Opslaan</button>
+          </div>
+        </form>
 
         <section class="panel">
           <h2 class="panel__title">Gesprekken</h2>
@@ -235,6 +391,32 @@ const actions = [
   { value: 'reopen', label: 'Lead heropenen' },
 ]
 
+const spaceUnits = [
+  { value: 'm2', label: 'm²' },
+  { value: 'm3', label: 'm³' },
+]
+
+const insulations = [
+  { value: null, label: 'Onbekend' },
+  { value: 'good', label: 'Goed' },
+  { value: 'average', label: 'Gemiddeld' },
+  { value: 'poor', label: 'Matig' },
+]
+
+// "Middenklasse" past niet op vier knoppen naast elkaar op een telefoon.
+const tiers = [
+  { value: null, label: 'Standaard' },
+  { value: 'budget', label: 'Voordelig' },
+  { value: 'mid', label: 'Midden' },
+  { value: 'premium', label: 'Premium' },
+]
+
+const roomsCount = computed(() => Number(form.rooms_count) || 1)
+
+function stepRooms(delta: number) {
+  form.rooms_count = Math.min(20, Math.max(1, roomsCount.value + delta))
+}
+
 const quoteStatus: Record<string, string> = {
   draft: 'Concept',
   sent: 'Verstuurd',
@@ -265,6 +447,34 @@ const editable = [
   'outdoor_unit_placement', 'pipe_length_m', 'needs_condensate_pump', 'needs_extra_group',
   'desired_start', 'notes', 'tier', 'do_not_contact',
 ]
+
+/**
+ * Gelijk genoeg? De API stuurt getallen soms als "42.00" en booleans als
+ * `true`, terwijl een invoerveld strings teruggeeft; letterlijk vergelijken
+ * zou het formulier altijd gewijzigd noemen.
+ */
+function same(a: unknown, b: unknown) {
+  if (typeof a === 'boolean' || typeof b === 'boolean') return Boolean(a) === Boolean(b)
+
+  const left = String(a ?? '')
+  const right = String(b ?? '')
+
+  if (left !== '' && right !== '' && !Number.isNaN(Number(left)) && !Number.isNaN(Number(right))) {
+    return Number(left) === Number(right)
+  }
+
+  return left === right
+}
+
+const dirty = computed(() => Boolean(lead.value) && editable.some((key) => !same(form[key], lead.value![key])))
+
+// De velden waar de server het advies uit rekent. Verandert er één, dan klopt
+// het getoonde advies niet meer tot er is opgeslagen.
+const adviceFields = ['space_size', 'space_unit', 'rooms_count', 'insulation', 'building_year', 'floor_level']
+
+const adviceStale = computed(
+  () => Boolean(lead.value) && adviceFields.some((key) => !same(form[key], lead.value![key])),
+)
 
 function fillForm(data: LeadDetail) {
   for (const key of editable) form[key] = data[key] ?? (typeof data[key] === 'boolean' ? false : null)

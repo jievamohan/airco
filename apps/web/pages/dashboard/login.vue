@@ -39,10 +39,7 @@ import type { ApiError } from '~/composables/useApi'
 
 definePageMeta({ layout: false })
 
-useHead({
-  title: 'Inloggen — KlimaatX CRM',
-  meta: [{ name: 'robots', content: 'noindex, nofollow' }],
-})
+useDashboardHead('Inloggen — KlimaatX CRM')
 
 const api = useApi()
 const email = ref('')

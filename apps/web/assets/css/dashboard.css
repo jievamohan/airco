@@ -265,7 +265,10 @@ table.data .num { text-align: right; white-space: nowrap; }
 .filters select,
 .form-grid input,
 .form-grid select,
-.form-grid textarea {
+.form-grid textarea,
+.fieldgroup input,
+.fieldgroup select,
+.fieldgroup textarea {
   font: inherit;
   padding: 8px 10px;
   border: 1px solid var(--dash-line);
@@ -275,11 +278,19 @@ table.data .num { text-align: right; white-space: nowrap; }
   min-width: 0;
 }
 
+.fieldgroup input,
+.fieldgroup select {
+  min-height: 38px;
+}
+
 .filters input:focus,
 .filters select:focus,
 .form-grid input:focus,
 .form-grid select:focus,
-.form-grid textarea:focus {
+.form-grid textarea:focus,
+.fieldgroup input:focus,
+.fieldgroup select:focus,
+.fieldgroup textarea:focus {
   outline: 2px solid var(--dash-ink);
   outline-offset: 1px;
 }
@@ -332,6 +343,369 @@ table.data .num { text-align: right; white-space: nowrap; }
   width: 16px;
   height: 16px;
   justify-self: start;
+}
+
+/* ------------------------------------------------------- velden in groepen
+
+   Het leadformulier heeft eenentwintig velden. Onder elkaar in één grid zegt
+   dat niets over wat bij elkaar hoort, dus ze staan in groepen, en elk veld
+   krijgt de bediening die bij zijn inhoud past: een eenheid hoort ín het veld
+   waar hij bij hoort, vier vaste opties passen naast elkaar in plaats van
+   achter een uitklaplijst, en een aantal dat bijna altijd 1 tot 4 is verdient
+   geen toetsenbord.
+--------------------------------------------------------------------------- */
+
+/* <fieldset> zodat een schermlezer de groep aankondigt; de eigen stijlen van
+   fieldset en legend zetten we uit. */
+.fieldgroup {
+  min-width: 0;
+  margin: 0;
+}
+
+.fieldgroup + .fieldgroup,
+.fieldgroup + .advice,
+.advice + .fieldgroup {
+  margin-top: 16px;
+}
+
+.fieldgroup__legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dash-ink);
+}
+
+.fieldgroup__note {
+  margin: 0 0 14px;
+  color: var(--dash-muted);
+  font-size: 13px;
+}
+
+.fieldgroup__fields {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.fieldgroup__fields .full { grid-column: 1 / -1; }
+
+/* ------------------------------------------------------------ segmentbalk */
+
+/* Vier opties die je in één blik ziet, in plaats van een lijst die opengaat. */
+.seg {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  /* Meerekken tot over de volle breedte van een breed scherm leest niet. */
+  max-width: 460px;
+  background: #f4f4f4;
+  border-radius: 10px;
+}
+
+.seg__option {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Het echte keuzerondje blijft bestaan (toetsenbord, schermlezer) maar neemt
+   geen ruimte in; de <span> ernaast is wat je ziet. */
+.seg__option input,
+.switchrow__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seg__option span {
+  display: flex;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 6px;
+  min-height: 38px;
+  border-radius: 8px;
+  color: var(--dash-muted);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.seg__option input:checked + span {
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  color: var(--dash-ink);
+  font-weight: 500;
+}
+
+.seg__option input:focus-visible + span {
+  outline: 2px solid var(--dash-ink);
+  outline-offset: 1px;
+}
+
+/* --------------------------------------------------- veld met een eenheid */
+
+/* Ruimtemaat en eenheid waren twee velden voor één vraag. */
+.unitfield {
+  display: flex;
+  align-items: center;
+  max-width: 320px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.unitfield input {
+  flex-grow: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.unitfield input:focus { outline-offset: -3px; }
+
+.unitfield .seg {
+  flex: none;
+  margin-right: 4px;
+}
+
+.unitfield .seg__option span {
+  min-width: 42px;
+  min-height: 30px;
+  border-radius: 5px;
+}
+
+/* ---------------------------------------------------------------- stepper */
+
+.stepper {
+  display: flex;
+  align-items: center;
+  width: 148px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.stepper button {
+  flex: none;
+  width: 46px;
+  align-self: stretch;
+  border: 0;
+  background: none;
+  color: var(--dash-ink);
+  font: inherit;
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepper button:disabled { color: var(--color-ink-soft); cursor: not-allowed; }
+
+.stepper input {
+  flex-grow: 1;
+  min-width: 0;
+  border: 0;
+  border-left: 1px solid var(--dash-line);
+  border-right: 1px solid var(--dash-line);
+  border-radius: 0;
+  background: none;
+  text-align: center;
+}
+
+/* Geen pijltjes: daar zitten de knoppen al voor. */
+.stepper input,
+.unitfield input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button,
+.unitfield input::-webkit-outer-spin-button,
+.unitfield input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* ------------------------------------------------- veld met een knop erin */
+
+/* Een telefoonnummer in een CRM staat er om gebeld te worden. */
+.actionfield {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.actionfield input {
+  flex-grow: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.actionfield input:focus { outline-offset: -3px; }
+
+.actionfield__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 13px;
+  border-left: 1px solid var(--dash-line);
+  background: #fafafa;
+  color: var(--dash-ink);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.actionfield__action:hover { background: #f2f2f2; }
+.actionfield__action svg { width: 14px; height: 14px; }
+
+/* ------------------------------------------------------------ schakelaars */
+
+.switchrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.switchrow + .switchrow { border-top: 1px solid #f2f2f2; }
+
+.switchrow__text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.switchrow__label { color: var(--dash-ink); font-size: 14px; }
+.switchrow__note { color: var(--dash-muted); font-size: 12px; }
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e0e0e0;
+  transition: background 0.15s ease;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s ease;
+}
+
+.switchrow__input:checked ~ .switch { background: var(--dash-ink); }
+.switchrow__input:checked ~ .switch::after { left: 19px; }
+
+.switchrow__input:focus-visible ~ .switch {
+  outline: 2px solid var(--dash-ink);
+  outline-offset: 2px;
+}
+
+/* Niet benaderen is geen eigenschap van de klus maar een rem op het proces. */
+.switchrow--danger {
+  padding: 13px 16px;
+  border: 1px solid var(--dash-line);
+  border-radius: var(--dash-radius);
+  background: var(--dash-panel);
+}
+
+.switchrow--danger .switchrow__text { gap: 1px; }
+.switchrow--danger .switchrow__label { font-weight: 500; }
+
+.switchrow--danger:has(.switchrow__input:checked) {
+  border-color: #f0d4d4;
+  background: #fdf1f1;
+}
+
+.switchrow--danger:has(.switchrow__input:checked) .switchrow__label,
+.switchrow--danger:has(.switchrow__input:checked) .switchrow__icon { color: var(--dash-bad); }
+
+.switchrow--danger .switchrow__input:checked ~ .switch { background: var(--dash-bad); }
+
+.switchrow__lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.switchrow__icon { flex: none; color: var(--dash-ink); }
+
+/* ----------------------------------------------------------------- advies */
+
+/* De uitkomst van de velden erboven, dus hij staat eronder en niet als
+   voetnoot bij de opslaanknop. */
+.advice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border: 1px solid var(--dash-line);
+  border-radius: var(--dash-radius);
+  background: var(--dash-panel);
+}
+
+.advice__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #eaf2fb;
+  color: #2c6ba8;
+}
+
+.advice__text { display: grid; gap: 2px; min-width: 0; }
+
+.advice__value {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.advice__note { color: var(--dash-muted); font-size: 12px; }
+
+/* ------------------------------------------------------------- opslaanbalk */
+
+.savebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.savebar__state {
+  flex-grow: 1;
+  color: var(--dash-muted);
+  font-size: 12.5px;
 }
 
 /* ---------------------------------------------------------------- tijdlijn */
@@ -485,6 +859,9 @@ dl.facts dd { margin: 0; }
   .form-grid input,
   .form-grid select,
   .form-grid textarea,
+  .fieldgroup input,
+  .fieldgroup select,
+  .fieldgroup textarea,
   .dash input[type='text'],
   .dash input[type='search'],
   .dash input[type='number'],
@@ -503,7 +880,7 @@ dl.facts dd { margin: 0; }
 
   .dash textarea { min-height: 88px; }
 
-  .dash input[type='checkbox'] {
+  .dash input[type='checkbox']:not(.switchrow__input) {
     width: 20px;
     height: 20px;
   }
@@ -547,6 +924,31 @@ dl.facts dd { margin: 0; }
   }
 
   .transcript { max-height: 240px; }
+
+  /*
+    Twee kolommen, en alles wat lang is spant ze allebei. Zo staan korte
+    velden die bij elkaar horen — postcode en plaats, bouwjaar en verdieping —
+    naast elkaar in plaats van onder elkaar.
+  */
+  .fieldgroup__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .seg,
+  .unitfield { max-width: none; }
+
+  .seg__option span { min-height: 44px; }
+  .unitfield .seg__option span { min-height: 34px; }
+
+  /* Bij eenentwintig velden staat de knop onderaan te ver weg. */
+  .savebar {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    margin: 16px -16px 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgb(255 255 255 / 0.94);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-top: 1px solid var(--dash-line);
+  }
 }
 
 /* ------------------------------------------------------------------ kaarten
@@ -774,8 +1176,8 @@ button.card:focus-visible { outline: 2px solid var(--dash-ink); outline-offset: 
 
 .field__static { font-size: 13px; }
 
-.field input,
-.field select { width: 100%; }
+.field > input,
+.field > select { width: 100%; }
 
 .toggle {
   display: inline-flex;
