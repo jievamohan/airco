@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Enums\CallOutcome;
 use App\Enums\CallPurpose;
 use App\Enums\LeadStatus;
+use App\Enums\QuoteKind;
 use App\Models\Lead;
 use App\Services\AppointmentScheduler;
 use App\Services\LeadIntake;
@@ -33,8 +34,8 @@ class DemoSeeder extends Seeder
         ['Sanne de Vries', 'sanne@example.nl', '0612345678', 'Dorpsstraat 12', '3811 AB', 'Amersfoort', 34, 1998, 8, 'won'],
         ['Peter Bakker', 'peter@example.nl', '0623456789', 'Zijlweg 88', '2013 DK', 'Haarlem', 96, 1975, 12, 'appointment'],
         ['Fatima El Amrani', 'fatima@example.nl', '0634567890', 'Kanaalstraat 4', '3531 CJ', 'Utrecht', 28, 2016, 6, 'quoted'],
-        ['Joost Hendriks', 'joost@example.nl', '0645678901', 'Marktplein 21', '1211 CX', 'Hilversum', 45, 1988, 9, 'quoted'],
-        ['Anouk Willemsen', 'anouk@example.nl', '0656789012', 'Beeklaan 7', '2562 AC', 'Den Haag', 22, 2005, 5, 'chase'],
+        ['Joost Hendriks', 'joost@example.nl', '0645678901', 'Marktplein 21', '1211 CX', 'Hilversum', 45, 1988, 9, 'survey'],
+        ['Anouk Willemsen', 'anouk@example.nl', '0656789012', 'Beeklaan 7', '2562 AC', 'Den Haag', 22, 2005, 5, 'indicated'],
         ['Ruben Smit', 'ruben@example.nl', '0667890123', 'Havenkade 33', '1013 BB', 'Amsterdam', 18, 2019, 5, 'chase'],
         ['Wouter Jansen', 'wouter@example.nl', '0678901234', 'Kerkpad 2', '6511 AB', 'Nijmegen', 60, 1965, 15, 'calling'],
         ['Lisa Mulder', 'lisa@example.nl', '0689012345', 'Parkweg 19', '9718 CV', 'Groningen', 26, 2010, 7, 'new'],
@@ -111,19 +112,20 @@ class DemoSeeder extends Seeder
                 ."Klant: Ja klopt, voor de woonkamer.\n"
                 ."Agent: Op welke verdieping komt de binnenunit?\n"
                 ."Klant: Begane grond. De buitenunit kan achter aan de gevel.\n"
-                .'Agent: Prima, dan stuur ik u binnen een paar minuten de offerte.',
-                'Klant wil een offerte voor de woonkamer. Buitenunit aan de achtergevel, begane grond.',
+                .'Agent: Prima, dan stuur ik u zo een vrijblijvende prijsindicatie.',
+                'Klant wil airco in de woonkamer. Buitenunit aan de achtergevel, begane grond.',
                 ['floor_level' => 0, 'outdoor_unit_placement' => 'achtergevel', 'insulation' => $jaar < 1990 ? 'poor' : 'average'],
             );
 
             Carbon::setTestNow(now()->addMinutes(4));
-            $quote = $workflow->buildQuote($lead->refresh());
-            $workflow->markQuoteSent($lead, $quote);
+            $workflow->markIndicationSent($lead->refresh(), $workflow->buildQuote($lead->refresh()));
 
-            if ($doel === 'quoted') {
+            if ($doel === 'indicated') {
                 continue;
             }
 
+            // Het conversiegesprek gaat over de indicatie en levert een opname
+            // op, geen installatiedatum: er ligt nog geen offerte.
             Carbon::setTestNow(now()->addHour());
             $conversie = $lead->calls()
                 ->where('purpose', CallPurpose::Conversion->value)
@@ -138,11 +140,11 @@ class DemoSeeder extends Seeder
             $workflow->completeCall(
                 $conversie->refresh(),
                 CallOutcome::AppointmentBooked,
-                "Agent: Heeft u de offerte kunnen bekijken?\n"
-                ."Klant: Ja, ziet er goed uit. Wanneer kunnen jullie?\n"
-                ."Agent: Volgende week donderdag in de ochtend.\n"
-                .'Klant: Doen we.',
-                'Klant gaat akkoord en kiest donderdagochtend.',
+                "Agent: Heeft u de prijsindicatie kunnen bekijken?\n"
+                ."Klant: Ja, dat bedrag valt mee. Wat nu?\n"
+                ."Agent: We komen eerst kort langs om te meten, daarna krijgt u de offerte.\n"
+                .'Klant: Prima, volgende week dinsdag.',
+                'Klant wil verder; opname ingepland voor dinsdag.',
                 ['outcome' => 'appointment_booked'],
             );
 
@@ -150,7 +152,52 @@ class DemoSeeder extends Seeder
             $scheduler->book(
                 $lead->refresh(),
                 $lead->latestQuote()->first(),
+                $scheduler->parseLocal(now()->addDays(5)->setTime(9, 0)->toDateTimeString()),
+                'survey',
+            );
+
+            if ($doel === 'survey') {
+                continue;
+            }
+
+            // Opname geweest: nu pas mag er een offerte uit.
+            Carbon::setTestNow(now()->addDays(5)->setTime(10, 0));
+            $workflow->markSurveyed($lead->refresh(), 'Leidingroute langs de bijkeuken, meterkast heeft ruimte voor een extra groep.');
+
+            Carbon::setTestNow(now()->addHours(2));
+            $workflow->markQuoteSent($lead->refresh(), $workflow->buildQuote($lead->refresh(), QuoteKind::Final));
+
+            if ($doel === 'quoted') {
+                continue;
+            }
+
+            Carbon::setTestNow(now()->addHour());
+            $afsluiting = $lead->calls()
+                ->where('purpose', CallPurpose::Close->value)
+                ->where('status', 'queued')
+                ->first();
+
+            if ($afsluiting === null) {
+                continue;
+            }
+
+            $workflow->dispatchCall($afsluiting);
+            $workflow->completeCall(
+                $afsluiting->refresh(),
+                CallOutcome::AppointmentBooked,
+                "Agent: Heeft u de offerte kunnen bekijken?\n"
+                ."Klant: Ja, ziet er goed uit. Wanneer kunnen jullie?\n"
+                ."Agent: Volgende week donderdag in de ochtend.\n"
+                .'Klant: Doen we.',
+                'Klant gaat akkoord met de offerte en kiest donderdagochtend.',
+                ['outcome' => 'appointment_booked'],
+            );
+
+            $scheduler->book(
+                $lead->refresh(),
+                $lead->quotes()->where('kind', QuoteKind::Final->value)->latest('id')->first(),
                 $scheduler->parseLocal(now()->addDays(9)->setTime(8, 0)->toDateTimeString()),
+                'installation',
             );
 
             if ($doel === 'won') {

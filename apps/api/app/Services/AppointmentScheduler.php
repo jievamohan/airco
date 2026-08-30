@@ -83,11 +83,19 @@ class AppointmentScheduler
 
     /**
      * Boekt een afspraak, koppelt hem aan de agenda en informeert klant en ondernemer.
+     *
+     * @param  string  $kind  `survey` voor de opname ter plaatse, `installation`
+     *                        voor de montage. De opname komt eerst: zonder dat
+     *                        bezoek is er geen offerte en dus niets om te
+     *                        installeren.
      */
-    public function book(Lead $lead, ?Quote $quote, ?Carbon $preferredStart = null): Appointment
+    public function book(Lead $lead, ?Quote $quote, ?Carbon $preferredStart = null, string $kind = 'installation'): Appointment
     {
+        $survey = $kind === 'survey';
         $timezone = $this->settings->string('agent.calendar.timezone', 'Europe/Amsterdam');
-        $minutes = $quote?->onsite_minutes ?: 240;
+        $minutes = $survey
+            ? max(15, $this->settings->int('agent.calendar.survey_minutes', 45))
+            : ($quote?->onsite_minutes ?: 240);
 
         $start = $this->resolveStart($preferredStart, $minutes, $timezone);
 
@@ -95,8 +103,8 @@ class AppointmentScheduler
             'quote_id' => $quote?->id,
             'provider' => $this->calendar->provider(),
             'ics_uid' => Str::uuid()->toString().'@klimaatx',
-            'kind' => 'installation',
-            'title' => sprintf('Airco-installatie — %s', $lead->name),
+            'kind' => $survey ? 'survey' : 'installation',
+            'title' => sprintf($survey ? 'Opname airco — %s' : 'Airco-installatie — %s', $lead->name),
             'location' => $lead->displayLocation(),
             'notes' => $this->buildNotes($lead, $quote),
             // Altijd in UTC opslaan; de kolom `timezone` bepaalt hoe het getoond wordt.
@@ -116,26 +124,36 @@ class AppointmentScheduler
 
         $this->timeline->record(
             $lead,
-            'appointment_booked',
-            'Afspraak ingepland',
+            $survey ? 'survey_booked' : 'appointment_booked',
+            $survey ? 'Opname ingepland' : 'Installatie ingepland',
             sprintf(
                 '%s, %s uur%s.',
                 $start->translatedFormat('l j F Y'),
                 $start->format('H:i'),
                 $result['created'] ? ' — toegevoegd aan de agenda' : ' — nog niet in een externe agenda',
             ),
-            ['appointment_id' => $appointment->id, 'provider' => $appointment->provider],
+            ['appointment_id' => $appointment->id, 'provider' => $appointment->provider, 'kind' => $appointment->kind],
         );
 
         if ($lead->email !== null) {
-            $this->mailer->send($lead, $lead->email, 'appointment_confirmation', new AppointmentMail($lead, $appointment, $this->ics->forAppointment($appointment)));
+            $this->mailer->send($lead, $lead->email, $survey ? 'survey_confirmation' : 'appointment_confirmation', new AppointmentMail($lead, $appointment, $this->ics->forAppointment($appointment)));
         }
 
-        $lead->forceFill(['status' => LeadStatus::AppointmentScheduled->value, 'won_at' => now(), 'next_action_at' => null])->save();
+        $status = $survey ? LeadStatus::SurveyScheduled : LeadStatus::AppointmentScheduled;
 
-        $this->timeline->record($lead, 'status_changed', 'Status: '.LeadStatus::AppointmentScheduled->label(), null, ['to' => LeadStatus::AppointmentScheduled->value]);
+        $lead->forceFill([
+            'status' => $status->value,
+            // Een opname is nog geen opdracht: pas de installatie telt als
+            // gewonnen, want daarvoor heeft de klant de offerte aanvaard.
+            'won_at' => $survey ? $lead->won_at : now(),
+            'next_action_at' => null,
+        ])->save();
 
-        if ($quote !== null && $quote->status !== 'accepted') {
+        $this->timeline->record($lead, 'status_changed', 'Status: '.$status->label(), null, ['to' => $status->value]);
+
+        // Een prijsindicatie kan niet aanvaard worden; alleen een offerte is
+        // een aanbod. De indicatie blijft dus gewoon op "verstuurd" staan.
+        if (! $survey && $quote !== null && $quote->isBinding() && $quote->status !== 'accepted') {
             $quote->forceFill(['status' => 'accepted', 'accepted_at' => now()])->save();
         }
 
@@ -183,7 +201,7 @@ class AppointmentScheduler
         ];
 
         if ($quote !== null) {
-            $lines[] = 'Offerte: '.$quote->number.' — € '.number_format($quote->total_cents / 100, 2, ',', '.').' incl. btw';
+            $lines[] = $quote->kind->label().': '.$quote->number.' — € '.number_format($quote->total_cents / 100, 2, ',', '.').' incl. btw';
             $lines[] = 'Systeem: '.($quote->system_type === 'multi_split' ? 'Multisplit' : 'Single split').', '.number_format((float) $quote->total_kw, 1, ',', '.').' kW';
         }
 

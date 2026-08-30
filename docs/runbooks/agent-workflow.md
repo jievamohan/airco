@@ -1,6 +1,9 @@
 # Runbook — lead-to-appointment agent
 
-Van binnengekomen aanvraag tot ingeplande installatie, zonder handmatige stap.
+Van binnengekomen aanvraag tot ingeplande installatie. De agent doet het
+leeuwendeel vanzelf; één stap is bewust van een mens: de opname ter plaatse, en
+het moment waarop de offerte de deur uit mag.
+
 Dit document beschrijft wat er draait, wat er ingesteld moet worden en wat je
 doet als er iets misgaat.
 
@@ -18,17 +21,38 @@ mailbox / websiteformulier
   kwalificatiegesprek            ElevenLabs voice agent, dynamische variabelen per lead
         │
         ▼  post-call webhook     transcript, samenvatting en verzamelde velden
-     SendQuoteJob                offerte opstellen, pdf renderen, mailen
+     SendQuoteJob                PRIJSINDICATIE opstellen, pdf renderen, mailen
+        │                        richtbedrag, uitdrukkelijk geen aanbod
+        ▼  +60 minuten
+   conversiegesprek              indicatie doornemen, bezwaren, opname afspreken
+        │
+        ▼  BookAppointmentJob    opname in de agenda + ICS naar de klant
+   opname ingepland
+        │
+        ▼  mens gaat langs       meten, kijken, vastleggen
+  "Opname afgerond"              handmatige stap in het dashboard
+        │
+        ▼  SendQuoteJob(final)   OFFERTE opstellen en mailen — dit bindt wel
+   offerte verstuurd
         │
         ▼  +60 minuten
-   conversiegesprek              offerte doornemen, bezwaren, datum prikken
+   afsluitgesprek                akkoord vragen, installatiedatum prikken
         │
         ▼  BookAppointmentJob    Google of Apple agenda + ICS naar de klant
-   afspraak ingepland            ondernemer krijgt bericht
+  installatie ingepland          ondernemer krijgt bericht
 ```
 
+**Waarom die knip.** Aan een offerte kan een klant rechten ontlenen: aanvaardt
+hij hem, dan ligt de prijs vast. Wat wij na een telefoongesprek weten — een
+ruimtemaat, een geschatte leidinglengte, "de buitenunit kan wel aan de gevel" —
+is te mager om dat op te baseren. Daarom gaat er eerst een prijsindicatie uit
+(nummers beginnen met `IND-`), en pas na de opname een offerte (`OFF-`). De
+workflow weigert een offerte zolang er geen opname is geweest; het dashboard
+zegt dat ook met zoveel woorden.
+
 Neemt de lead niet op, dan start de cadans uit `sequences`: bel- en mailstappen
-met oplopende wachttijden. Reageert de lead, dan stopt de cadans; is de rij op,
+met oplopende wachttijden. Ook de mail uit die cadans bevat hooguit een
+prijsindicatie. Reageert de lead, dan stopt de cadans; is de rij op,
 dan komt de lead op `unreachable` en krijgt de ondernemer bericht.
 
 Elke stap schrijft een regel in `lead_events`; dat is de tijdlijn in het dashboard.
@@ -96,7 +120,8 @@ dataverzameling over in het ElevenLabs-dashboard. In het kort:
 2. Zet in de agentprompt de dynamische variabelen die wij meesturen:
    `{{klant_voornaam}}`, `{{klant_adres}}`, `{{ruimte_omschrijving}}`,
    `{{geadviseerd_systeem}}`, `{{geadviseerd_vermogen}}`, `{{gespreksdoel}}`,
-   `{{ontbrekende_gegevens}}`, en bij het conversiegesprek `{{offerte_nummer}}`,
+   `{{ontbrekende_gegevens}}`, `{{opname_duur}}`, en zodra er een bedrag ligt
+   `{{indicatie_nummer}}`, `{{indicatie_bedrag}}`, `{{offerte_nummer}}`,
    `{{offerte_bedrag}}`, `{{montageduur}}` en `{{korting_bij_direct_akkoord}}`.
    De volledige lijst staat in `app/Services/Voice/CallVariables.php`.
 3. Configureer data collection zodat de agent deze velden terugstuurt:
@@ -149,7 +174,14 @@ via **Dashboard → Catalogus**. De seeder is idempotent: hij vult alleen aan wa
 ontbreekt en overschrijft nooit een aangepaste regel.
 
 Algemene calculatieparameters (btw, uurtarief, ploeggrootte, standaardklasse)
-staan onder **Instellingen → Prijsstelling**.
+staan onder **Instellingen → Prijsstelling**. De duur van de opname en de
+wachttijden tot het conversie- en afsluitgesprek staan onder
+**Instellingen → Werking**.
+
+Prijsindicatie en offerte worden met dezelfde calculatie gemaakt; het verschil
+zit in wat we erover beloven en in de gegevens die eronder liggen. Na de opname
+werk je de gegevens van de lead bij en reken je opnieuw door — dán klopt de
+offerte met wat er staat.
 
 ### Vanaf-prijs
 
@@ -186,7 +218,9 @@ en wat de prijs zou moeten zijn om de margedrempel te halen.
 | Er wordt niet gebeld | Draait de queue-worker en de scheduler? Staat het moment binnen een belvenster? Is `ELEVENLABS_ENABLED` aan en `AGENT_DRY_RUN` uit? |
 | Webhook geeft 401 | Secret in ElevenLabs en in `ELEVENLABS_WEBHOOK_SECRET` moeten gelijk zijn; controleer ook de klok van de server. |
 | Webhook geeft 404 | Het `conversation_id` hoort bij geen enkel gesprek in de database — meestal een testaanroep vanuit het ElevenLabs-dashboard. |
-| Offerte niet verstuurd | `email_messages` bij de lead: status `failed` wijst op de mailserver, `skipped` op proefmodus. |
+| Prijsindicatie niet verstuurd | `email_messages` bij de lead: status `failed` wijst op de mailserver, `skipped` op proefmodus. |
+| "Er is nog geen opname geweest" bij het versturen van de offerte | Dat is de bedoeling. Plan de opname in of markeer hem als afgerond (Dashboard → lead → Opname); daarna kan de offerte de deur uit. |
+| De agent plant een installatie terwijl er nog geen offerte ligt | Kan niet: zonder verstuurde offerte wordt elke afgesproken datum als opname geboekt. Staat er toch een installatie, kijk dan of er een `OFF-`-offerte bij de lead staat. |
 | Afspraak niet in de agenda | Het veld `sync_error` op de afspraak zegt waarom; de afspraak zelf is wel vastgelegd. |
 | "De API is niet bereikbaar" bij het inloggen | Kijk eerst of de api-container draait: `docker compose ps`. Is hij gestopt, dan staat de reden in `docker compose logs api`. Bij een toegangsfout op de database draait de db-container nog met het wachtwoord waarmee zijn volume is aangemaakt; MySQL negeert latere wijzigingen. Opnieuw beginnen met `docker compose down -v && docker compose up -d` — dat gooit wel de lokale database weg. |
 | "Failed to fetch" bij het inloggen op het dashboard | De browser komt niet bij de API. De melding noemt het API-adres en de origin. Controleer welke origin de API teruggeeft: `curl -i http://localhost:8010/api/admin/leads \| grep -i access-control`. Staat daar een ander domein, dan leest de container een verkeerde `.env`; verwijder `apps/api/.env` en start de api-container opnieuw, dan wordt hij opnieuw uit `.env.docker` opgebouwd. |

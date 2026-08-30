@@ -24,14 +24,19 @@ class QuoteMail extends BaseMail
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: sprintf('Uw offerte voor airconditioning — %s', $this->quote->number),
+            subject: sprintf(
+                $this->quote->isBinding()
+                    ? 'Uw offerte voor airconditioning — %s'
+                    : 'Uw vrijblijvende prijsindicatie voor airconditioning — %s',
+                $this->quote->number,
+            ),
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.quote',
+            markdown: $this->quote->isBinding() ? 'mail.quote' : 'mail.indication',
             with: [
                 'lead' => $this->lead,
                 'quote' => $this->quote,

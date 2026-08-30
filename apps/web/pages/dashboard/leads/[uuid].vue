@@ -20,11 +20,70 @@
         <span class="small muted">{{ verloopSamenvatting }}</span>
       </div>
 
-      <ol class="pijplijn">
-        <li v-for="stap in stappen" :key="stap.key" :class="['pijplijn__stap', `pijplijn__stap--${stap.state}`]">
-          <span class="pijplijn__balk" />
-          <span class="pijplijn__naam">{{ stap.kort ?? stap.label }}</span>
-          <span class="pijplijn__meta">{{ stap.meta }}</span>
+      <!-- Het aantal stappen staat niet vast: de flow groeide van zes naar
+           negen. Het grid telt daarom mee in plaats van een vast getal aan te
+           houden, anders valt de laatste stap op een tweede rij. -->
+      <ol class="pijplijn" :style="{ '--stappen': stappen.length }">
+        <li
+          v-for="(stap, index) in stappen"
+          :key="stap.key"
+          :class="[
+            'pijplijn__stap',
+            `pijplijn__stap--${stap.state}`,
+            { 'pijplijn__stap--rechts': index >= stappen.length - 2 },
+          ]"
+        >
+          <!--
+            Elke stap is zijn eigen aanknopingspunt: klik of rechtsklik erop en
+            je kunt hem alsnog aftrappen, ook als de begeleide kaart hieronder
+            over een ándere stap gaat. Een stap zonder acties (de aanvraag) is
+            bewust uitgeschakeld in plaats van stil te doen alsof hij aan te
+            klikken is.
+          -->
+          <button
+            :ref="(el) => zetKnop(stap.key, el)"
+            type="button"
+            class="pijplijn__knop"
+            :disabled="!stap.menu || busy"
+            :aria-label="`${stap.label}: ${stap.meta}`"
+            :aria-haspopup="stap.menu ? 'menu' : undefined"
+            :aria-expanded="stap.menu ? openMenu === stap.key : undefined"
+            @click="wisselMenu(stap.key)"
+            @contextmenu.prevent="openMenuOp(stap.key)"
+            @keydown.down.prevent="openMenuOp(stap.key)"
+          >
+            <span class="pijplijn__balk" />
+            <span class="pijplijn__naam">
+              {{ stap.kort ?? stap.label }}
+              <svg v-if="stap.menu" class="pijplijn__caret" viewBox="0 0 10 6" aria-hidden="true">
+                <path d="M1 1.3 5 4.9 9 1.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="pijplijn__meta">{{ stap.meta }}</span>
+          </button>
+
+          <div
+            v-if="stap.menu && openMenu === stap.key"
+            ref="menuEl"
+            class="stapmenu"
+            role="menu"
+            :aria-label="stap.label"
+            @keydown="menuToets($event, stap.key)"
+          >
+            <p class="stapmenu__kop">{{ stap.label }}</p>
+            <button
+              v-for="actie in stap.menu"
+              :key="actie.value"
+              type="button"
+              role="menuitem"
+              class="stapmenu__item"
+              :disabled="busy"
+              @click="trigger(actie.value)"
+            >
+              <span class="stapmenu__label">{{ actie.label }}</span>
+              <span class="stapmenu__hint">{{ actie.hint }}</span>
+            </button>
+          </div>
         </li>
       </ol>
 
@@ -319,19 +378,23 @@
         </section>
 
         <section class="panel">
-          <h2 class="panel__title">Offertes</h2>
-          <p v-if="!lead.quotes.length" class="empty">Er is nog geen offerte opgesteld.</p>
+          <h2 class="panel__title">Prijsindicaties en offertes</h2>
+          <p v-if="!lead.quotes.length" class="empty">Er is nog niets opgesteld.</p>
           <div v-for="quote in lead.quotes" v-else :key="quote.id" style="border-bottom: 1px solid var(--dash-line); padding: 12px 0">
             <p class="quote__head">
               <span>
                 <strong>{{ quote.number }}</strong>
-                <span class="badge" style="margin-left: 8px">{{ quoteStatus[quote.status] ?? quote.status }}</span>
+                <!-- Welk van de twee dit is, is het enige dat je hier echt moet
+                     weten: de een bindt, de ander niet. -->
+                <span class="badge" style="margin-left: 8px">{{ quote.kind_label ?? 'Offerte' }}</span>
+                <span class="badge" style="margin-left: 4px">{{ quoteStatus[quote.status] ?? quote.status }}</span>
               </span>
               <span class="quote__total">{{ fmt.euro(quote.total_cents) }} incl. btw</span>
             </p>
             <p class="small muted" style="margin: 4px 0 0">
               Montage ± {{ fmt.duration(quote.onsite_minutes) }} · geldig tot {{ fmt.date(quote.valid_until) }}
               <template v-if="quote.sent_at"> · verstuurd {{ fmt.dateTime(quote.sent_at) }}</template>
+              <template v-if="quote.binding === false"> · richtbedrag, geen aanbod</template>
             </p>
             <p class="small" style="margin: 4px 0 0" :class="quote.margin_warning ? 'is-bad' : 'muted'">
               Kostprijs {{ fmt.euro(quote.cost_cents) }} · marge {{ fmt.number(quote.margin_pct, 1) }}%
@@ -360,6 +423,7 @@
           <div v-for="appointment in lead.appointments" v-else :key="appointment.id" style="padding: 8px 0">
             <p style="margin: 0">
               <strong>{{ fmt.dateTime(appointment.starts_at, appointment.timezone) }}</strong>
+              <span class="badge" style="margin-left: 8px">{{ appointment.kind === 'survey' ? 'Opname' : 'Installatie' }}</span>
             </p>
             <p class="small muted" style="margin: 3px 0 0">
               tot {{ fmt.dateTime(appointment.ends_at, appointment.timezone) }} · {{ providerLabel(appointment.provider) }}
@@ -479,8 +543,10 @@ const error = ref('')
 // knop tussen de rest.
 const overslaanActies = [
   { value: 'enrich', label: 'Opnieuw doorrekenen' },
+  { value: 'send_indication', label: 'Prijsindicatie versturen' },
+  { value: 'mark_surveyed', label: 'Opname afgerond' },
   { value: 'send_quote', label: 'Offerte versturen' },
-  { value: 'book_appointment', label: 'Afspraak inplannen' },
+  { value: 'book_appointment', label: 'Installatie inplannen' },
 ]
 
 const leadActies = [
@@ -490,6 +556,47 @@ const leadActies = [
 ]
 
 type StapStaat = 'done' | 'failed' | 'busy' | 'pending'
+
+type Actie = { value: string; label: string; primair?: boolean }
+
+/** Regel in het stapmenu: het verschil tussen "nu" en "inplannen" zit hem in
+ *  het belvenster, en dat kun je niet uit twee losse labels opmaken. */
+type MenuActie = { value: string; label: string; hint: string }
+
+const BELVENSTER_NU = 'Gaat bij de eerstvolgende tik de deur uit, ook buiten het belvenster.'
+const BELVENSTER_LATER = 'Wacht netjes op het eerstvolgende belvenster.'
+
+const SIZING_MENU: MenuActie[] = [
+  { value: 'enrich', label: 'Nu doorrekenen', hint: 'Bepaalt vermogen en advies opnieuw uit de huidige velden.' },
+]
+
+const INDICATIE_MENU: MenuActie[] = [
+  { value: 'send_indication', label: 'Prijsindicatie versturen', hint: 'Vrijblijvend richtbedrag; de klant kan er geen rechten aan ontlenen.' },
+]
+
+const OPNAME_MENU: MenuActie[] = [
+  { value: 'book_survey', label: 'Opname inplannen', hint: 'Zet het bezoek op het eerstvolgende vrije moment in de agenda.' },
+  { value: 'mark_surveyed', label: 'Opname afgerond', hint: 'Pas hierna kan de offerte de deur uit.' },
+]
+
+const OFFERTE_MENU: MenuActie[] = [
+  { value: 'send_quote', label: 'Offerte versturen', hint: 'Bindend aanbod. Kan alleen als de opname is geweest.' },
+]
+
+const AFSPRAAK_MENU: MenuActie[] = [
+  { value: 'book_appointment', label: 'Installatie vastleggen', hint: 'Op het eerstvolgende vrije moment in de agenda.' },
+]
+
+function belMenu(purpose: 'qualification' | 'conversion' | 'close'): MenuActie[] {
+  const stam = purpose === 'qualification'
+    ? 'call_qualification'
+    : purpose === 'conversion' ? 'call_conversion' : 'call_close'
+
+  return [
+    { value: `${stam}_now`, label: 'Nu bellen', hint: BELVENSTER_NU },
+    { value: stam, label: 'Inplannen', hint: BELVENSTER_LATER },
+  ]
+}
 
 type Stap = {
   key: string
@@ -502,7 +609,10 @@ type Stap = {
   meta: string
   kop?: string
   uitleg?: string
-  acties?: { value: string; label: string; primair?: boolean }[]
+  acties?: Actie[]
+  /** Wat je vanuit het menu op de balk zelf kunt aftrappen, ongeacht de staat
+   *  van de stap. */
+  menu?: MenuActie[]
 }
 
 function gesprekken(purpose: string) {
@@ -518,14 +628,14 @@ function laatsteReden(...types: string[]): string {
   return gebeurtenis?.description ?? ''
 }
 
-function gesprekStap(key: string, label: string, kort: string, purpose: string, acties: Stap['acties']): Stap {
+function gesprekStap(key: string, label: string, kort: string, purpose: string, acties: Stap['acties'], menu: MenuActie[]): Stap {
   const lijst = gesprekken(purpose)
   const gelukt = lijst.find((c) => c.status === 'completed' && c.outcome !== 'failed')
   const wachtend = lijst.find((c) => c.status === 'queued')
   const mislukt = lijst.filter((c) => c.status === 'failed' || c.outcome === 'failed')
 
   if (gelukt) {
-    return { key, label, kort, state: 'done', meta: gelukt.outcome_label ?? 'Gesproken' }
+    return { key, label, kort, state: 'done', meta: gelukt.outcome_label ?? 'Gesproken', menu }
   }
 
   if (mislukt.length > 0 && !wachtend) {
@@ -538,6 +648,7 @@ function gesprekStap(key: string, label: string, kort: string, purpose: string, 
       kop: `${label} is ${mislukt.length === 1 ? 'mislukt' : `${mislukt.length} keer mislukt`}`,
       uitleg: laatsteReden('call_failed') || 'Er is geen reden vastgelegd.',
       acties,
+      menu,
     }
   }
 
@@ -553,10 +664,11 @@ function gesprekStap(key: string, label: string, kort: string, purpose: string, 
         ? `Gaat automatisch de deur uit om ${fmt.dateTime(wachtend.scheduled_for)}.`
         : 'Gaat bij de eerstvolgende tik de deur uit.',
       acties,
+      menu,
     }
   }
 
-  return { key, label, kort, state: 'pending', meta: '—' }
+  return { key, label, kort, state: 'pending', meta: '—', menu }
 }
 
 const stappen = computed<Stap[]>(() => {
@@ -564,8 +676,17 @@ const stappen = computed<Stap[]>(() => {
   if (!l) return []
 
   const offertes = (l.quotes ?? []) as any[]
-  const verstuurd = offertes.find((q) => q.sent_at)
+  const indicatie = offertes.find((q) => q.kind === 'indication' && q.sent_at)
+  const verstuurd = offertes.find((q) => q.kind === 'final' && q.sent_at)
   const afspraken = ((l.appointments ?? []) as any[]).filter((a) => a.status !== 'cancelled')
+  const opnames = afspraken.filter((a) => a.kind === 'survey')
+  const installaties = afspraken.filter((a) => a.kind !== 'survey')
+  // "Geweest" leest de status van de afspraak én die van de lead: een opname
+  // die handmatig is afgevinkt zonder dat er ooit een afspraak in stond, telt
+  // net zo goed.
+  const opnameGedaan =
+    opnames.some((a) => a.status === 'completed') ||
+    ['surveyed', 'quoted', 'appointment_scheduled', 'won'].includes(l.status)
 
   return [
     {
@@ -575,38 +696,168 @@ const stappen = computed<Stap[]>(() => {
       meta: l.created_at ? fmt.dateTime(l.created_at) : '',
     },
     l.estimated_kw
-      ? { key: 'sizing', label: 'Doorgerekend', state: 'done', meta: `${l.estimated_kw} kW` }
+      ? { key: 'sizing', label: 'Doorgerekend', kort: 'Advies', state: 'done', meta: `${l.estimated_kw} kW`, menu: SIZING_MENU }
       : {
           key: 'sizing',
           label: 'Doorgerekend',
+          kort: 'Advies',
           state: 'pending',
           meta: '—',
           kop: 'Nog niet doorgerekend',
           uitleg: 'Zonder ruimtemaat kan het advies niet bepaald worden.',
           acties: [{ value: 'enrich', label: 'Nu doorrekenen', primair: true }],
+          menu: SIZING_MENU,
         },
     gesprekStap('kwalificatie', 'Kwalificatiegesprek', 'Kwalificatie', 'qualification', [
       { value: 'call_qualification_now', label: 'Nu bellen', primair: true },
       { value: 'call_qualification', label: 'Opnieuw inplannen' },
       { value: 'stop_chase', label: 'Opvolging stoppen' },
-    ]),
+    ], belMenu('qualification')),
+    indicatie
+      ? {
+          key: 'indicatie',
+          label: 'Prijsindicatie',
+          kort: 'Indicatie',
+          state: 'done',
+          meta: indicatie.number ?? fmt.dateTime(indicatie.sent_at),
+          menu: INDICATIE_MENU,
+        }
+      : { key: 'indicatie', label: 'Prijsindicatie', kort: 'Indicatie', state: 'pending', meta: '—', menu: INDICATIE_MENU },
+    gesprekStap('conversie', 'Conversiegesprek', 'Conversie', 'conversion', [
+      { value: 'call_conversion_now', label: 'Nu bellen', primair: true },
+      { value: 'call_conversion', label: 'Opnieuw inplannen' },
+      { value: 'stop_chase', label: 'Opvolging stoppen' },
+    ], belMenu('conversion')),
+    opnameGedaan
+      ? {
+          key: 'opname',
+          label: 'Opname ter plaatse',
+          kort: 'Opname',
+          state: 'done',
+          meta: opnames[0] ? fmt.dateTime(opnames[0].starts_at) : 'Afgerond',
+          menu: OPNAME_MENU,
+        }
+      : opnames.length > 0
+        ? {
+            key: 'opname',
+            label: 'Opname ter plaatse',
+            kort: 'Opname',
+            state: 'busy',
+            meta: fmt.dateTime(opnames[0].starts_at),
+            kop: 'De opname staat ingepland',
+            uitleg: `Op ${fmt.dateTime(opnames[0].starts_at)}. Zodra iemand is langsgeweest, markeer je hem als afgerond; daarna kan de offerte de deur uit.`,
+            acties: [{ value: 'mark_surveyed', label: 'Opname afgerond', primair: true }],
+            menu: OPNAME_MENU,
+          }
+        : { key: 'opname', label: 'Opname ter plaatse', kort: 'Opname', state: 'pending', meta: '—', menu: OPNAME_MENU },
     verstuurd
       ? {
           key: 'offerte',
           label: 'Offerte',
           state: 'done',
           meta: verstuurd.number ?? fmt.dateTime(verstuurd.sent_at),
+          menu: OFFERTE_MENU,
         }
-      : { key: 'offerte', label: 'Offerte', state: 'pending', meta: '—' },
-    gesprekStap('conversie', 'Conversiegesprek', 'Conversie', 'conversion', [
-      { value: 'call_conversion', label: 'Opnieuw inplannen', primair: true },
+      : {
+          key: 'offerte',
+          label: 'Offerte',
+          state: 'pending',
+          meta: '—',
+          // Geen foutmelding maar de reden: de offerte is een aanbod, en dat
+          // doen we pas als we het gezien hebben.
+          ...(opnameGedaan
+            ? {
+                kop: 'De offerte kan de deur uit',
+                uitleg: 'De opname is geweest. Loop eerst de gegevens van de lead na, want daar rekent de offerte mee.',
+                acties: [{ value: 'send_quote', label: 'Offerte versturen', primair: true }],
+              }
+            : {}),
+          menu: OFFERTE_MENU,
+        },
+    gesprekStap('afsluiting', 'Afsluitgesprek', 'Afsluiting', 'close', [
+      { value: 'call_close_now', label: 'Nu bellen', primair: true },
+      { value: 'call_close', label: 'Opnieuw inplannen' },
       { value: 'stop_chase', label: 'Opvolging stoppen' },
-    ]),
-    afspraken.length > 0
-      ? { key: 'afspraak', label: 'Afspraak', state: 'done', meta: fmt.dateTime(afspraken[0].starts_at) }
-      : { key: 'afspraak', label: 'Afspraak', state: 'pending', meta: '—' },
+    ], belMenu('close')),
+    installaties.length > 0
+      ? {
+          key: 'afspraak',
+          label: 'Installatie',
+          state: 'done',
+          meta: fmt.dateTime(installaties[0].starts_at),
+          menu: AFSPRAAK_MENU,
+        }
+      : { key: 'afspraak', label: 'Installatie', state: 'pending', meta: '—', menu: AFSPRAAK_MENU },
   ]
 })
+
+/**
+ * Het menu op de balk. De begeleide kaart hieronder wijst één stap aan; dit is
+ * de weg naar de stappen die daar níét bij staan — een conversiegesprek dat
+ * netjes ingepland staat te wachten, bijvoorbeeld.
+ */
+const openMenu = ref<string | null>(null)
+const menuEl = ref<HTMLElement[]>([])
+const knoppen = new Map<string, HTMLButtonElement>()
+
+function zetKnop(key: string, el: unknown) {
+  if (el instanceof HTMLButtonElement) knoppen.set(key, el)
+  else knoppen.delete(key)
+}
+
+function sluitMenu(terugNaarKnop = false) {
+  const vorige = openMenu.value
+  openMenu.value = null
+
+  if (terugNaarKnop && vorige) knoppen.get(vorige)?.focus()
+}
+
+function menuItems(): HTMLButtonElement[] {
+  return [...(menuEl.value[0]?.querySelectorAll<HTMLButtonElement>('.stapmenu__item') ?? [])]
+}
+
+function openMenuOp(key: string) {
+  openMenu.value = key
+  // Openen met het toetsenbord hoort meteen in het menu uit te komen; met de
+  // muis stoort een gestolen focus niet, want de knop blijft eronder staan.
+  void nextTick(() => menuItems()[0]?.focus())
+}
+
+function wisselMenu(key: string) {
+  if (openMenu.value === key) sluitMenu()
+  else openMenuOp(key)
+}
+
+function menuToets(event: KeyboardEvent, key: string) {
+  if (event.key === 'Escape') {
+    event.stopPropagation()
+    sluitMenu(true)
+    return
+  }
+
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+
+  const items = menuItems()
+  const huidig = items.indexOf(document.activeElement as HTMLButtonElement)
+  const stap = event.key === 'ArrowDown' ? 1 : -1
+
+  event.preventDefault()
+  items[(huidig + stap + items.length) % items.length]?.focus()
+  void key
+}
+
+// Een menu dat open blijft staan terwijl je ergens anders klikt, staat straks
+// bij de verkeerde stap: de balk eronder ververst zichzelf elke tien seconden.
+function opBuitenklik(event: MouseEvent) {
+  if (openMenu.value === null) return
+  if ((event.target as HTMLElement | null)?.closest('.pijplijn__stap')) return
+
+  sluitMenu()
+}
+
+function opEscape(event: KeyboardEvent) {
+  if (event.key === 'Escape') sluitMenu(true)
+}
 
 /**
  * De eerste stap die iets van je wil: mislukt gaat vóór bezig, want daar
@@ -754,6 +1005,7 @@ async function save() {
 }
 
 async function trigger(action: string) {
+  sluitMenu()
   busy.value = true
   flash.value = ''
   error.value = ''
@@ -1006,11 +1258,15 @@ onMounted(async () => {
   if (!document.hidden) startVerversen()
 
   document.addEventListener('visibilitychange', opZichtbaarheid)
+  document.addEventListener('pointerdown', opBuitenklik)
+  document.addEventListener('keydown', opEscape)
 })
 
 onBeforeUnmount(() => {
   stopVerversen()
   document.removeEventListener('visibilitychange', opZichtbaarheid)
+  document.removeEventListener('pointerdown', opBuitenklik)
+  document.removeEventListener('keydown', opEscape)
 })
 </script>
 
@@ -1135,7 +1391,7 @@ onBeforeUnmount(() => {
 
 .pijplijn {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--stappen, 6), minmax(0, 1fr));
   gap: 4px;
   margin: 0;
   padding: 0;
@@ -1143,11 +1399,56 @@ onBeforeUnmount(() => {
 }
 
 .pijplijn__stap {
+  position: relative;
+  min-width: 0;
+}
+
+/* De stap zelf is de knop. Geen eigen achtergrond of padding: die zou de
+   balken uit elkaar duwen, en juist hun onderlinge afstand maakt er één
+   doorlopende pijplijn van. De affordance zit in het pijltje en de hover. */
+.pijplijn__knop {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+
+.pijplijn__knop:disabled { cursor: default; }
+
+.pijplijn__knop:focus-visible {
+  outline: 2px solid var(--dash-ink);
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+
+.pijplijn__caret {
+  width: 9px;
+  height: 6px;
+  margin-left: 3px;
+  opacity: 0.4;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.pijplijn__knop:hover .pijplijn__caret,
+.pijplijn__knop:focus-visible .pijplijn__caret { opacity: 1; }
+
+.pijplijn__knop[aria-expanded='true'] .pijplijn__caret {
+  opacity: 1;
+  transform: rotate(180deg);
+}
+
+.pijplijn__knop:hover:not(:disabled) .pijplijn__naam { color: var(--dash-ink); }
+
+.pijplijn__knop:hover:not(:disabled) .pijplijn__balk { filter: brightness(0.92); }
 
 .pijplijn__balk {
   height: 4px;
@@ -1157,6 +1458,7 @@ onBeforeUnmount(() => {
 
 .pijplijn__naam {
   font-size: 12.5px;
+  transition: color 120ms ease;
   color: var(--dash-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1182,6 +1484,79 @@ onBeforeUnmount(() => {
 .pijplijn__stap--failed .pijplijn__balk { background: var(--dash-bad); }
 .pijplijn__stap--failed .pijplijn__naam { color: var(--dash-bad); font-weight: 600; }
 .pijplijn__stap--failed .pijplijn__meta { color: var(--dash-bad); }
+
+/* ------------------------------------------------------------------ stapmenu
+   Elke balk kan zijn eigen stap alsnog aftrappen. Het menu hangt aan de stap
+   waar het over gaat, want een lijst met acties los van zijn stap is precies
+   de rij knoppen die de pijplijn kwam vervangen.
+   -------------------------------------------------------------------------- */
+
+.stapmenu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  min-width: 236px;
+  max-width: 288px;
+  padding: 6px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(20, 20, 20, 0.13);
+  animation: stapmenu-in 130ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* De laatste kolommen zouden hun menu buiten de kaart duwen. */
+.pijplijn__stap--rechts .stapmenu { left: auto; right: 0; }
+
+@keyframes stapmenu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stapmenu { animation: none; }
+}
+
+.stapmenu__kop {
+  margin: 2px 6px 6px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+}
+
+.stapmenu__item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  color: var(--dash-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.stapmenu__item:hover:not(:disabled),
+.stapmenu__item:focus-visible {
+  background: #f4f4f4;
+  outline: none;
+}
+
+.stapmenu__item:disabled { opacity: 0.5; cursor: default; }
+
+.stapmenu__label { font-size: 13px; font-weight: 500; }
+
+.stapmenu__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--dash-muted);
+}
 
 .aandacht {
   margin-top: 18px;
@@ -1214,7 +1589,7 @@ onBeforeUnmount(() => {
 .verloop__vul { flex: 1; }
 
 @media (max-width: 720px) {
-  /* Zes kolommen naast elkaar worden op een telefoon zes onleesbare kokers. */
+  /* Negen kolommen naast elkaar worden op een telefoon negen onleesbare kokers. */
   .pijplijn { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; }
 
   /* Laten afbreken in plaats van afkappen: op drie kolommen viel juist
@@ -1227,6 +1602,11 @@ onBeforeUnmount(() => {
     text-overflow: clip;
     overflow-wrap: anywhere;
   }
+
+  /* Op drie kolommen ligt de rechterrand ergens anders dan op zes. */
+  .pijplijn__stap .stapmenu { left: 0; right: auto; }
+  .pijplijn__stap:nth-child(3n) .stapmenu { left: auto; right: 0; }
+  .stapmenu { min-width: 0; width: max(200px, 100%); }
 
   .verloop__vul { display: none; }
 }

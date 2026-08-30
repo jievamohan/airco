@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\CallPurpose;
+use App\Enums\QuoteKind;
 use App\Mail\ChaseMail;
 use App\Models\LeadSequenceRun;
 use App\Models\SequenceStep;
@@ -124,13 +125,15 @@ class SequenceRunner
         $quote = $lead->latestQuote()->first();
 
         if ($step->action === 'quote_without_call' && $quote === null) {
-            // Nog geen offerte: op basis van de bekende gegevens alsnog een
-            // indicatie opstellen, zodat de mail iets concreets bevat.
-            $quote = $this->quotes->createForLead($lead);
+            // Nog niets verstuurd: op basis van de bekende gegevens alsnog een
+            // prijsindicatie opstellen, zodat de mail iets concreets bevat.
+            // Een offerte kan dit nooit zijn — we hebben de klant niet eens
+            // aan de lijn gehad, laat staan de situatie gezien.
+            $quote = $this->quotes->createForLead($lead, QuoteKind::Indication);
             $this->timeline->record(
                 $lead,
-                'quote_created',
-                'Indicatie opgesteld zonder gesprek',
+                'indication_created',
+                'Prijsindicatie opgesteld zonder gesprek',
                 sprintf('%s — € %s incl. btw.', $quote->number, number_format($quote->total_cents / 100, 2, ',', '.')),
                 ['quote_id' => $quote->id],
             );

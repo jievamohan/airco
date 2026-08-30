@@ -7,9 +7,11 @@ namespace Tests\Feature;
 use App\Enums\CallOutcome;
 use App\Enums\CallPurpose;
 use App\Enums\LeadStatus;
+use App\Enums\QuoteKind;
 use App\Jobs\ProcessNewLeadJob;
 use App\Models\Lead;
 use App\Models\LeadSequenceRun;
+use App\Services\AppointmentScheduler;
 use App\Services\LeadIntake;
 use App\Services\LeadWorkflow;
 use App\Services\Voice\FakeVoiceAgentClient;
@@ -139,17 +141,19 @@ class LeadWorkflowTest extends TestCase
     }
 
     #[Test]
-    public function na_het_versturen_van_de_offerte_staat_het_conversiegesprek_een_uur_later(): void
+    public function na_het_versturen_van_de_prijsindicatie_staat_het_conversiegesprek_een_uur_later(): void
     {
         $workflow = app(LeadWorkflow::class);
         $lead = Lead::factory()->create(['status' => 'qualified']);
 
-        $quote = $workflow->buildQuote($lead);
-        $workflow->markQuoteSent($lead, $quote);
+        $indicatie = $workflow->buildQuote($lead);
+        $workflow->markIndicationSent($lead, $indicatie);
 
         $lead->refresh();
-        $this->assertSame(LeadStatus::Quoted, $lead->status);
-        $this->assertSame('sent', $quote->refresh()->status);
+        $this->assertSame(LeadStatus::Indicated, $lead->status);
+        $this->assertSame(QuoteKind::Indication, $indicatie->refresh()->kind);
+        $this->assertSame('sent', $indicatie->status);
+        $this->assertStringStartsWith('IND-', $indicatie->number);
 
         $conversion = $lead->calls()->where('purpose', CallPurpose::Conversion->value)->first();
         $this->assertNotNull($conversion);
@@ -160,18 +164,67 @@ class LeadWorkflowTest extends TestCase
     }
 
     #[Test]
+    public function na_de_offerte_belt_de_agent_om_af_te_sluiten_en_niet_opnieuw_te_converteren(): void
+    {
+        $workflow = app(LeadWorkflow::class);
+        $lead = Lead::factory()->create(['status' => 'surveyed']);
+
+        $offerte = $workflow->buildQuote($lead, QuoteKind::Final);
+        $workflow->markQuoteSent($lead, $offerte);
+
+        $lead->refresh();
+        $this->assertSame(LeadStatus::Quoted, $lead->status);
+        $this->assertStringStartsWith('OFF-', $offerte->refresh()->number);
+
+        $this->assertSame(1, $lead->calls()->where('purpose', CallPurpose::Close->value)->count());
+        $this->assertSame(0, $lead->calls()->where('purpose', CallPurpose::Conversion->value)->count());
+    }
+
+    #[Test]
+    public function een_offerte_hoort_pas_te_bestaan_na_een_opname(): void
+    {
+        $workflow = app(LeadWorkflow::class);
+        $lead = Lead::factory()->create(['status' => 'indicated']);
+
+        $this->assertFalse($workflow->surveyDone($lead), 'Zonder bezoek is er niets gezien.');
+
+        app(AppointmentScheduler::class)->book($lead, null, null, 'survey');
+        $this->assertFalse($workflow->surveyDone($lead->refresh()), 'Ingepland is nog niet geweest.');
+
+        $workflow->markSurveyed($lead->refresh(), 'Meterkast heeft ruimte voor een extra groep.');
+
+        $lead->refresh();
+        $this->assertTrue($workflow->surveyDone($lead));
+        $this->assertSame(LeadStatus::Surveyed, $lead->status);
+        $this->assertStringContainsString('extra groep', (string) $lead->notes);
+        $this->assertSame('completed', (string) $lead->appointments()->firstOrFail()->status);
+    }
+
+    #[Test]
     public function een_herziene_offerte_trekt_een_geboekte_klant_niet_terug_de_funnel_in(): void
     {
         $workflow = app(LeadWorkflow::class);
         $lead = Lead::factory()->create(['status' => 'appointment_scheduled']);
 
-        $workflow->markQuoteSent($lead, $workflow->buildQuote($lead));
+        $workflow->markQuoteSent($lead, $workflow->buildQuote($lead, QuoteKind::Final));
 
         $lead->refresh();
         $this->assertSame(LeadStatus::AppointmentScheduled, $lead->status, 'De status hoort te blijven staan.');
-        $this->assertSame(0, $lead->calls()->where('purpose', CallPurpose::Conversion->value)->count(),
+        $this->assertSame(0, $lead->calls()->whereIn('purpose', [CallPurpose::Conversion->value, CallPurpose::Close->value])->count(),
             'Een geboekte klant hoort niet opnieuw nagebeld te worden.');
         $this->assertContains('quote_resent', $lead->events()->pluck('type')->all());
+    }
+
+    #[Test]
+    public function een_verstuurde_indicatie_zakt_niet_terug_naar_in_opvolging(): void
+    {
+        $workflow = app(LeadWorkflow::class);
+        $lead = Lead::factory()->create(['status' => 'qualified']);
+
+        $workflow->markIndicationSent($lead, $workflow->buildQuote($lead));
+        $workflow->startChase($lead->refresh());
+
+        $this->assertSame(LeadStatus::Indicated, $lead->refresh()->status);
     }
 
     #[Test]

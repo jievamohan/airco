@@ -23,7 +23,9 @@ class AppointmentMail extends BaseMail
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Bevestiging van uw installatieafspraak');
+        return new Envelope(subject: $this->appointment->kind === 'survey'
+            ? 'Bevestiging van de opname bij u thuis'
+            : 'Bevestiging van uw installatieafspraak');
     }
 
     public function content(): Content

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Enums\CallPurpose;
 use App\Enums\LeadStatus;
+use App\Enums\QuoteKind;
 use App\Http\Controllers\Controller;
 use App\Jobs\BookAppointmentJob;
 use App\Jobs\SendQuoteJob;
@@ -25,7 +26,8 @@ class LeadActionController extends Controller
 {
     /** @var list<string> */
     private const ACTIONS = [
-        'enrich', 'call_qualification', 'call_qualification_now', 'call_conversion', 'send_quote',
+        'enrich', 'call_qualification', 'call_qualification_now', 'call_conversion', 'call_conversion_now',
+        'call_close', 'call_close_now', 'send_indication', 'send_quote', 'book_survey', 'mark_surveyed',
         'book_appointment', 'start_chase', 'stop_chase', 'mark_lost', 'mark_won', 'reopen',
     ];
 
@@ -34,6 +36,7 @@ class LeadActionController extends Controller
         $data = $request->validate([
             'action' => ['required', 'string', 'in:'.implode(',', self::ACTIONS)],
             'reason' => ['nullable', 'string', 'max:200'],
+            'notes' => ['nullable', 'string', 'max:2000'],
             'starts_at' => ['nullable', 'date', 'after:now'],
         ]);
 
@@ -55,8 +58,14 @@ class LeadActionController extends Controller
             'call_qualification' => $this->call($workflow, $lead, CallPurpose::Qualification),
             'call_qualification_now' => $this->call($workflow, $lead, CallPurpose::Qualification, true),
             'call_conversion' => $this->call($workflow, $lead, CallPurpose::Conversion),
-            'send_quote' => $this->sendQuote($lead),
-            'book_appointment' => $this->bookAppointment($lead, $data['starts_at'] ?? null, $scheduler),
+            'call_conversion_now' => $this->call($workflow, $lead, CallPurpose::Conversion, true),
+            'call_close' => $this->call($workflow, $lead, CallPurpose::Close),
+            'call_close_now' => $this->call($workflow, $lead, CallPurpose::Close, true),
+            'send_indication' => $this->sendDocument($lead, QuoteKind::Indication, $workflow),
+            'send_quote' => $this->sendDocument($lead, QuoteKind::Final, $workflow),
+            'book_survey' => $this->bookAppointment($lead, $data['starts_at'] ?? null, $scheduler, 'survey'),
+            'mark_surveyed' => $this->markSurveyed($workflow, $lead, $data['notes'] ?? null),
+            'book_appointment' => $this->bookAppointment($lead, $data['starts_at'] ?? null, $scheduler, 'installation'),
             'start_chase' => $this->startChase($workflow, $lead),
             'stop_chase' => $this->stopChase($workflow, $lead, $data['reason'] ?? 'Handmatig gestopt.'),
             'mark_lost' => $this->markLost($workflow, $lead, $data['reason'] ?? 'Handmatig als verloren gemarkeerd.'),
@@ -89,26 +98,41 @@ class LeadActionController extends Controller
         return sprintf('%s ingepland voor %s.', $purpose->label(), $call->scheduled_for?->format('d-m-Y H:i') ?? 'direct');
     }
 
-    private function sendQuote(Lead $lead): string
+    private function sendDocument(Lead $lead, QuoteKind $kind, LeadWorkflow $workflow): string
     {
         if ($lead->email === null) {
-            return 'Er is geen e-mailadres bekend, dus de offerte kan niet verstuurd worden.';
+            return sprintf('Er is geen e-mailadres bekend, dus de %s kan niet verstuurd worden.', $kind->noun());
         }
 
-        SendQuoteJob::dispatch($lead->id);
+        // De grens die het hele traject draagt: een offerte is een aanbod
+        // waaraan de klant rechten ontleent, dus die gaat niet de deur uit op
+        // basis van een telefoongesprek alleen.
+        if ($kind->isBinding() && ! $workflow->surveyDone($lead)) {
+            return 'Er is nog geen opname geweest. Plan die eerst in, of markeer hem als afgerond; daarna kan de offerte de deur uit.';
+        }
 
-        return 'Er wordt een nieuwe offerteversie opgesteld en gemaild.';
+        SendQuoteJob::dispatch($lead->id, $kind);
+
+        return sprintf('Er wordt een nieuwe %s opgesteld en gemaild.', $kind->noun());
     }
 
-    private function bookAppointment(Lead $lead, ?string $startsAt, AppointmentScheduler $scheduler): string
+    private function markSurveyed(LeadWorkflow $workflow, Lead $lead, ?string $notes): string
     {
-        BookAppointmentJob::dispatch($lead->id, $startsAt);
+        $workflow->markSurveyed($lead, $notes);
 
+        return 'De opname staat als afgerond genoteerd; de offerte kan nu verstuurd worden.';
+    }
+
+    private function bookAppointment(Lead $lead, ?string $startsAt, AppointmentScheduler $scheduler, string $kind): string
+    {
+        BookAppointmentJob::dispatch($lead->id, $startsAt, $kind);
+
+        $wat = $kind === 'survey' ? 'De opname' : 'De installatie';
         $moment = $scheduler->parseLocal($startsAt);
 
         return $moment !== null
-            ? sprintf('Afspraak wordt vastgelegd op %s.', $moment->format('d-m-Y H:i'))
-            : 'Afspraak wordt op het eerstvolgende vrije moment vastgelegd.';
+            ? sprintf('%s wordt vastgelegd op %s.', $wat, $moment->format('d-m-Y H:i'))
+            : sprintf('%s wordt op het eerstvolgende vrije moment vastgelegd.', $wat);
     }
 
     private function startChase(LeadWorkflow $workflow, Lead $lead): string

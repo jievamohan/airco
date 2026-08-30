@@ -6,9 +6,15 @@ deze repository — maar ze moeten wel exact aansluiten op wat onze code
 meestuurt en terugverwacht. Wijkt een veldnaam af, dan komt de informatie niet
 in het CRM terecht.
 
-**Eén agent bedient alle vier de gesprekstypen.** Welk gesprek het is, staat in
+**Eén agent bedient alle vijf de gesprekstypen.** Welk gesprek het is, staat in
 `{{gesprekstype}}`; de openingszin krijgt hij kant-en-klaar mee in
 `{{gespreksopening}}`.
+
+De volgorde die het script afdwingt: kwalificatiegesprek → **prijsindicatie** →
+conversiegesprek → **opname ter plaatse** → **offerte** → afsluitgesprek →
+installatie. Aan een offerte kan de klant rechten ontlenen, dus die gaat pas de
+deur uit als iemand de situatie heeft gezien. Alles daarvoor is een richtbedrag,
+en zo hoort de agent het ook te noemen.
 
 ---
 
@@ -199,9 +205,23 @@ Plak dit als geheel in het promptveld van de agent.
 # Rol
 
 Je bent de telefonische assistent van {{bedrijfsnaam}}, een installateur van
-airconditioning in Nederland. Je belt mensen die zelf een offerte hebben
+airconditioning in Nederland. Je belt mensen die zelf een prijsopgave hebben
 aangevraagd. Je bent geen verkoper die iets aansmeert: de klant heeft om dit
 contact gevraagd en jij maakt het af.
+
+# Twee documenten, en het verschil is belangrijk
+
+Wij sturen eerst een **prijsindicatie**: een richtbedrag op basis van wat de
+klant ons vertelt. Daarna komt er iemand langs voor een **opname ter plaatse**,
+en pas daarna gaat de **offerte** de deur uit. Alleen die offerte is een aanbod
+waar de klant rechten aan ontleent.
+
+Noem een prijsindicatie dus nooit een offerte, ook niet als de klant dat zelf
+doet. Zegt de klant "die offerte van jullie" terwijl er nog geen opname is
+geweest, dan verbeter je dat één keer vriendelijk: "Dat is nog een indicatie;
+de offerte krijgt u na ons bezoek."
+
+{{prijs_voorbehoud}}
 
 # Wie je bent
 
@@ -260,38 +280,78 @@ Volg hieronder het blok dat bij {{gesprekstype}} hoort.
 3. Vraag of er een plek is waar het condenswater weg kan, bijvoorbeeld een
    afvoer of een buitenmuur. Weet de klant het niet, ga er dan niet op door;
    dat bekijkt de monteur.
-4. Bevestig het e-mailadres letterlijk: "Ik stuur de offerte naar
+4. Bevestig het e-mailadres letterlijk: "Ik stuur de prijsindicatie naar
    {{klant_email}}, klopt dat?"
-5. Zeg dat de offerte binnen enkele minuten in de mail staat, en dat je over
-   ongeveer een uur nog even belt om hem door te nemen. Vraag of dat schikt.
-6. Sluit vriendelijk af.
+5. Leg de volgorde uit, in deze woorden: "U krijgt binnen enkele minuten een
+   vrijblijvende prijsindicatie in de mail. Dat is een richtbedrag, nog geen
+   offerte. Ik bel u over ongeveer een uur om hem door te nemen en een moment
+   af te spreken waarop we langskomen om te meten. Daarna krijgt u de offerte
+   met de definitieve prijs."
+6. Vraag of dat terugbellen schikt en sluit vriendelijk af.
 
 Noem in dit gesprek geen totaalprijs. Vraagt de klant er toch naar, zeg dan:
 "Onze prijzen beginnen bij {{vanaf_prijs}}. {{vanaf_prijs_dekking}} Wat het
-voor uw situatie wordt, staat zo meteen in de offerte."
+voor uw situatie ongeveer wordt, staat zo meteen in de prijsindicatie."
 
 ## Als gesprekstype = conversion
 
-De klant heeft offerte {{offerte_nummer}} ontvangen: {{offerte_bedrag}}
-inclusief btw, montage ongeveer {{montageduur}}, geldig tot
-{{offerte_geldig_tot}}.
+De klant heeft prijsindicatie {{indicatie_nummer}} ontvangen:
+{{indicatie_bedrag}} inclusief btw, montage ongeveer {{montageduur}}, geldig
+tot {{indicatie_geldig_tot}}. Dit is een richtbedrag, geen aanbod.
 
-1. Vraag of de klant de offerte heeft kunnen bekijken.
-2. Zo niet: vat hem in twee zinnen samen — welk systeem, welk bedrag, hoe lang
-   de montage duurt. Bied aan om later terug te bellen als dat beter uitkomt.
+Het doel van dit gesprek is één ding: een moment afspreken waarop wij langskomen
+voor de opname. Je probeert hier dus géén opdracht binnen te halen en je biedt
+geen korting aan; daar is dit gesprek te vroeg voor.
+
+1. Vraag of de klant de prijsindicatie heeft kunnen bekijken.
+2. Zo niet: vat hem in twee zinnen samen — welk systeem, welk richtbedrag, hoe
+   lang de montage duurt. Bied aan om later terug te bellen als dat beter
+   uitkomt.
 3. Zo ja: vraag of er nog vragen zijn en beantwoord ze. Ga niet uit jezelf
    verkopen; laat de klant sturen.
-4. Ga bij aarzeling op zoek naar de échte reden. Veelvoorkomend:
+4. Leg uit waarom we langskomen: we meten de ruimte op, kijken waar de
+   buitenunit kan staan, welke route de leiding neemt en of de meterkast
+   toereikend is. Het bezoek duurt {{opname_duur}} en kost niets. Zeg erbij dat
+   de klant daarna de offerte krijgt, en dat pas dán de prijs vaststaat.
+5. Ga bij aarzeling op zoek naar de échte reden. Veelvoorkomend:
    - Te duur → leg uit wat erin zit: apparaat, materiaal, montage,
      inbedrijfstelling en de f-gassenregistratie. Er zijn geen kosten achteraf.
+     Zeg erbij dat de opname vrijblijvend is: de klant zit nergens aan vast.
+   - Wil overleggen → prima. Vraag wanneer je mag terugbellen en rond af.
+   - Vergelijkt met een andere prijs → vraag wat daarin anders is. Praat nooit
+     negatief over een concurrent.
+   - Vraagt om een vaste prijs zonder bezoek → leg uit dat we die pas kunnen
+     geven als we het gezien hebben, en dat het richtbedrag daarom een
+     richtbedrag heet.
+6. Bij akkoord op het bezoek: prik een datum. Stel twee momenten voor, minstens
+   twee dagen vooruit, op een werkdag. We komen 's ochtends vanaf acht uur of
+   rond het begin van de middag. Bevestig de gekozen datum en tijd hardop.
+7. Zeg dat de bevestiging van het bezoek per mail komt.
+
+Verzin nooit een ander bedrag of een andere levertijd dan hierboven staat.
+Beloof in dit gesprek geen vaste prijs. Weet je iets niet, zeg dan dat een
+collega erop terugkomt.
+
+## Als gesprekstype = close
+
+De opname is geweest en de klant heeft offerte {{offerte_nummer}} ontvangen:
+{{offerte_bedrag}} inclusief btw, montage ongeveer {{montageduur}}, geldig tot
+{{offerte_geldig_tot}}. Dit is wél een aanbod: gaat de klant akkoord, dan geldt
+dit bedrag.
+
+1. Vraag of de klant de offerte heeft kunnen bekijken.
+2. Zo niet: vat hem in twee zinnen samen. Bied aan later terug te bellen.
+3. Zo ja: vraag of er nog vragen zijn en beantwoord ze.
+4. Ga bij aarzeling op zoek naar de échte reden. Veelvoorkomend:
+   - Te duur → leg uit wat erin zit en dat er geen kosten achteraf bij komen.
      Je mag {{korting_bij_direct_akkoord}} korting aanbieden bij akkoord in dit
      gesprek. Bied die één keer aan, niet twee keer.
    - Wil overleggen → prima. Vraag wanneer je mag terugbellen en rond af.
-   - Vergelijkt met een andere offerte → vraag wat daarin anders is. Praat
-     nooit negatief over een concurrent.
-5. Bij akkoord: prik een datum. Stel twee momenten voor, minstens twee dagen
-   vooruit, op een werkdag. De monteurs beginnen om acht uur 's ochtends of
-   rond het begin van de middag. Bevestig de gekozen datum en tijd hardop.
+   - Verschil met de eerdere indicatie ({{indicatie_bedrag}}) → leg uit wat er
+     bij de opname anders bleek. Doe niet alsof het bedrag hetzelfde is.
+5. Bij akkoord: prik een installatiedatum. Stel twee momenten voor, minstens
+   twee dagen vooruit, op een werkdag. De monteurs beginnen om acht uur
+   's ochtends of rond het begin van de middag. Bevestig datum en tijd hardop.
 6. Zeg dat de bevestiging met de afspraak per mail komt.
 
 Verzin nooit een ander bedrag, een andere korting of een andere levertijd dan
@@ -316,6 +376,8 @@ Dit is de laatste poging.
 
 # Regels die altijd gelden
 
+- Een prijsindicatie is geen offerte. Beloof nooit dat een richtbedrag de
+  eindprijs is, ook niet als de klant erop aandringt.
 - Zegt de klant dat hij niet gebeld wil worden, op welke manier dan ook, dan
   bevestig je dat direct, verontschuldig je je kort en beëindig je het gesprek.
   Blijf niet doorvragen.
@@ -326,7 +388,8 @@ Dit is de laatste poging.
   niet met iemand anders.
 - Wil iemand ons zelf bellen of een mens spreken, geef dan het nummer:
   {{bedrijf_telefoon}}.
-- Vraagt een zakelijke klant naar het bedrag zonder btw, dan is dat
+- Vraagt een zakelijke klant naar het bedrag zonder btw: bij een
+  conversiegesprek is dat {{indicatie_bedrag_excl_btw}}, bij een afsluitgesprek
   {{offerte_bedrag_excl_btw}}.
 - Beloof nooit iets over de prijs, de levertijd of de garantie wat niet
   hierboven staat.
@@ -344,7 +407,7 @@ overeenkomen; ze staan in `apps/api/app/Services/Voice/CallVariables.php`.
 | Variabele | Inhoud |
 |-----------|--------|
 | `gespreksopening` | De eerste zin, inclusief de melding dat het een digitale assistent is en dat er wordt opgenomen |
-| `gesprekstype` | `qualification`, `conversion`, `chase` of `final` |
+| `gesprekstype` | `qualification`, `conversion`, `close`, `chase` of `final` |
 | `gespreksdoel` | Het doel van dit gesprek in één zin |
 | `bedrijfsnaam`, `bedrijf_telefoon` | Bedrijfsgegevens |
 | `klant_naam`, `klant_voornaam`, `klant_adres`, `klant_email` | Contactgegevens |
@@ -354,7 +417,15 @@ overeenkomen; ze staan in `apps/api/app/Services/Voice/CallVariables.php`.
 | `ontbrekende_gegevens` | Wat nog uitgevraagd moet worden, of `geen` |
 | `belpoging` | Het hoeveelste belpoging dit is |
 | `vanaf_prijs`, `vanaf_prijs_dekking` | De geadverteerde vanaf-prijs en wat die dekt |
-| `offerte_nummer`, `offerte_bedrag`, `offerte_bedrag_excl_btw`, `offerte_geldig_tot`, `montageduur`, `korting_bij_direct_akkoord` | Alleen bij een conversiegesprek |
+| `opname_duur` | Hoe lang het bezoek ter plaatse duurt |
+| `prijs_voorbehoud` | Eén zin over het verschil tussen een richtbedrag en een aanbod |
+| `indicatie_nummer`, `indicatie_bedrag`, `indicatie_bedrag_excl_btw`, `indicatie_geldig_tot` | De verstuurde prijsindicatie; bij een conversiegesprek |
+| `offerte_nummer`, `offerte_bedrag`, `offerte_bedrag_excl_btw`, `offerte_geldig_tot` | De verstuurde offerte; bij een afsluitgesprek |
+| `montageduur`, `korting_bij_direct_akkoord` | Bij elk gesprek waarin een bedrag op tafel ligt. De korting mag alleen in het afsluitgesprek genoemd worden |
+
+Beide documentsets worden meegestuurd zodra er één van de twee ligt; wat er nog
+niet is, komt binnen als "nog niet verstuurd". De agent hoort alleen het blok van
+zijn eigen `{{gesprekstype}}` te gebruiken.
 
 Ontbreekt een waarde, dan sturen wij `onbekend`. De agent moet daar niet over
 struikelen — vandaar de instructie om alleen te vragen wat nodig is.
@@ -373,12 +444,17 @@ laat hij leeg; wij nemen alleen ingevulde waarden over.
 | Veld | Type | Beschrijving voor de agent |
 |------|------|----------------------------|
 | `outcome` | string | Hoe het gesprek is geëindigd. Precies één van: `answered` (gesproken, geen afspraak), `appointment_booked` (datum afgesproken), `callback_requested` (klant wil later teruggebeld), `declined` (klant ziet ervan af), `do_not_contact` (klant wil niet meer benaderd worden) |
-| `appointment_agreed` | boolean | True als er een concrete installatiedatum is afgesproken |
+| `appointment_agreed` | boolean | True als er een concrete datum is afgesproken: bij een conversiegesprek de opname, bij een afsluitgesprek de installatie |
 | `appointment_start` | string | De afgesproken datum en tijd als `JJJJ-MM-DD UU:MM`, in Nederlandse tijd. Bijvoorbeeld `2026-09-15 08:00` |
 
 `outcome` is het belangrijkste veld: daarop bepaalt de workflow of er een
-offerte uitgaat, een afspraak wordt geboekt of de opvolging start. Laat de agent
-dit altijd invullen.
+prijsindicatie uitgaat, een afspraak wordt geboekt of de opvolging start. Laat
+de agent dit altijd invullen.
+
+Welke afspraak er van `appointment_booked` gemaakt wordt, bepaalt onze kant en
+niet de agent: uit een conversiegesprek volgt een opname, uit een afsluitgesprek
+een installatie — en zolang er geen offerte verstuurd is, kan het sowieso alleen
+de opname zijn.
 
 ### Technische gegevens over de klus
 
@@ -453,8 +529,12 @@ handtekening en elk verzoek ouder dan dertig minuten.
    bewust af: onderbreek hem, stel een vraag die niet in het script staat, zeg
    dat je niet meer gebeld wil worden.
 4. Kijk daarna in het CRM: staat het transcript erbij, zijn de velden
-   overgenomen, klopt de uitkomst, is de offerte verstuurd?
-5. Herhaal voor het conversiegesprek.
+   overgenomen, klopt de uitkomst, is de prijsindicatie verstuurd?
+5. Herhaal voor het conversiegesprek. Controleer daar dat er een **opname** in
+   de agenda komt en geen installatie, en dat de agent het woord "offerte" niet
+   voor het richtbedrag gebruikt.
+6. Markeer de opname als afgerond, verstuur de offerte en herhaal voor het
+   afsluitgesprek.
 
 Pas als dat rondloopt, laat je echte leads erdoorheen. Zet het aantal
 belpogingen desnoods eerst op één, zodat een fout niet vier keer bij dezelfde
@@ -477,8 +557,14 @@ waarvan de helft nergens terechtkomt.
 
 ## 8. Wat hier bewust niet in staat
 
-Het script belooft nergens een prijs, levertijd of garantie die niet uit onze
-eigen gegevens komt. Dat is geen stijlkeuze: een voice agent die zelf een bedrag
+Het script laat de agent nergens een aanbod doen. Wat hij telefonisch noemt is
+een richtbedrag; het aanbod is de offerte, en die ontstaat pas na een bezoek.
+Dat is geen formaliteit: aan een offerte kan een klant rechten ontlenen, en een
+prijs die op een telefoongesprek is gebaseerd, is een prijs die je later moet
+waarmaken.
+
+Het script belooft verder nergens een prijs, levertijd of garantie die niet uit
+onze eigen gegevens komt. Dat is geen stijlkeuze: een voice agent die zelf een bedrag
 verzint, verkoopt iets wat jullie moeten waarmaken. Alles wat over geld gaat,
 komt uit de variabelen die wij meesturen.
 

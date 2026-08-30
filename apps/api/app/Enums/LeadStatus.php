@@ -10,6 +10,9 @@ enum LeadStatus: string
     case Enriched = 'enriched';
     case Calling = 'calling';
     case Qualified = 'qualified';
+    case Indicated = 'indicated';
+    case SurveyScheduled = 'survey_scheduled';
+    case Surveyed = 'surveyed';
     case Quoted = 'quoted';
     case FollowUp = 'follow_up';
     case AppointmentScheduled = 'appointment_scheduled';
@@ -30,8 +33,10 @@ enum LeadStatus: string
             self::Enriched,
             self::Calling,
             self::Qualified,
+            self::Indicated,
+            self::SurveyScheduled,
+            self::Surveyed,
             self::Quoted,
-            self::FollowUp,
             self::AppointmentScheduled,
             self::Won,
         ];
@@ -52,6 +57,19 @@ enum LeadStatus: string
         return in_array($this, self::terminal(), true);
     }
 
+    /**
+     * Statussen waarin de lead het verkooptraject al in is: er ligt een bedrag
+     * bij de klant of er staat een bezoek gepland. De opvolgcadans mag zo'n
+     * lead niet terugzetten naar "in opvolging", want dan lijkt het alsof er
+     * nog niets verstuurd is.
+     *
+     * @return list<self>
+     */
+    public static function inSalesTraject(): array
+    {
+        return [self::Indicated, self::SurveyScheduled, self::Surveyed, self::Quoted];
+    }
+
     public function label(): string
     {
         return match ($this) {
@@ -59,9 +77,12 @@ enum LeadStatus: string
             self::Enriched => 'Verrijkt',
             self::Calling => 'Wordt gebeld',
             self::Qualified => 'Gekwalificeerd',
+            self::Indicated => 'Prijsindicatie verstuurd',
+            self::SurveyScheduled => 'Opname ingepland',
+            self::Surveyed => 'Opname gedaan',
             self::Quoted => 'Offerte verstuurd',
             self::FollowUp => 'In opvolging',
-            self::AppointmentScheduled => 'Afspraak ingepland',
+            self::AppointmentScheduled => 'Installatie ingepland',
             self::Won => 'Gewonnen',
             self::Lost => 'Verloren',
             self::Unreachable => 'Onbereikbaar',

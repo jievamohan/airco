@@ -21,8 +21,9 @@ Voor uw situatie komen we uit op **€ {{ number_format($quote->total_cents / 10
 ({{ $quote->system_type === 'multi_split' ? 'multisplit' : 'single split' }}, {{ number_format((float) $quote->total_kw, 1, ',', '.') }} kW).
 De montage duurt ongeveer {{ number_format($quote->onsite_minutes / 60, 1, ',', '.') }} uur.
 
-Dit is een indicatie. Bij de schouw kijken we naar de leidinglengte, de plek van
-de buitenunit en de elektra, en pas daarna staat de prijs vast.
+Dit is een indicatie, geen offerte: aan dit bedrag kunt u geen rechten ontlenen.
+Bij de opname ter plaatse kijken we naar de leidinglengte, de plek van de
+buitenunit en de elektra. Pas daarna sturen we de offerte, en die is bindend.
 @endif
 
 @else

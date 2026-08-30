@@ -48,7 +48,8 @@
             <span class="lead__top">
               <span class="card__title">{{ lead.name }}</span>
               <span class="lead__amount" :class="{ 'lead__amount--none': !lead.quote_total_cents }">
-                {{ lead.quote_total_cents ? fmt.euroRound(lead.quote_total_cents) : 'nog geen offerte' }}
+                {{ lead.quote_total_cents ? fmt.euroRound(lead.quote_total_cents) : 'nog geen bedrag' }}
+                <span v-if="lead.quote_total_cents && lead.quote_binding === false" class="lead__amount-soort">indicatie</span>
               </span>
             </span>
 
@@ -85,7 +86,7 @@
               <th>Status</th>
               <th>Bron</th>
               <th class="num">kW</th>
-              <th class="num">Offerte</th>
+              <th class="num">Bedrag</th>
               <th class="num">Belpogingen</th>
               <th>Volgende actie</th>
               <th>Binnengekomen</th>
@@ -98,7 +99,10 @@
               <td><span class="badge" :class="`badge--${lead.status}`">{{ lead.status_label }}</span></td>
               <td class="muted">{{ sourceLabels[lead.source] ?? lead.source }}</td>
               <td class="num">{{ lead.estimated_kw ? fmt.number(lead.estimated_kw, 1) : '—' }}</td>
-              <td class="num">{{ fmt.euro(lead.quote_total_cents) }}</td>
+              <td class="num">
+                {{ fmt.euro(lead.quote_total_cents) }}
+                <span v-if="lead.quote_total_cents && lead.quote_binding === false" class="muted small">indicatie</span>
+              </td>
               <td class="num">{{ lead.call_attempts }}</td>
               <td class="muted">{{ lead.next_action_at ? fmt.relative(lead.next_action_at) : '—' }}</td>
               <td class="muted">{{ fmt.dateTime(lead.created_at) }}</td>
@@ -136,6 +140,7 @@ type LeadRow = {
   source: string
   estimated_kw: number | null
   quote_total_cents: number | null
+  quote_binding: boolean | null
   call_attempts: number
   next_action_at: string | null
   created_at: string | null

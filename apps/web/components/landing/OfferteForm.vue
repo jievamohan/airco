@@ -13,7 +13,8 @@
         </svg>
         <p class="offerte__success-title">Bedankt, uw aanvraag is bij ons binnen.</p>
         <p class="offerte__success-note">
-          We bellen u kort om de laatste details door te nemen en sturen daarna direct een offerte.
+          We bellen u kort om de laatste details door te nemen en sturen daarna een vrijblijvende
+          prijsindicatie. Komen we langs om te meten, dan volgt de definitieve offerte.
         </p>
         <button type="button" class="btn-ghost" @click="reset">Nog een aanvraag doen</button>
       </div>
@@ -278,7 +279,8 @@ function validate(): boolean {
 
 /**
  * Verstuurt de aanvraag naar POST /api/leads. Daar begint de agent-workflow:
- * verrijken, bellen, offerte mailen en nabellen.
+ * verrijken, bellen, prijsindicatie mailen, nabellen en een opname inplannen.
+ * De offerte volgt pas na dat bezoek.
  */
 async function onSubmit() {
   if (!validate()) return

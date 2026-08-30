@@ -80,6 +80,9 @@ class LeadDetailResource extends JsonResource
                 'id' => $quote->id,
                 'number' => $quote->number,
                 'version' => $quote->version,
+                'kind' => $quote->kind->value,
+                'kind_label' => $quote->kind->label(),
+                'binding' => $quote->isBinding(),
                 'status' => $quote->status,
                 'total_cents' => $quote->total_cents,
                 'subtotal_cents' => $quote->subtotal_cents,
@@ -102,6 +105,7 @@ class LeadDetailResource extends JsonResource
             'appointments' => $this->whenLoaded('appointments', fn () => $this->appointments->map(static fn ($appointment): array => [
                 'id' => $appointment->id,
                 'title' => $appointment->title,
+                'kind' => $appointment->kind,
                 'provider' => $appointment->provider,
                 'starts_at' => $appointment->starts_at->toIso8601String(),
                 'ends_at' => $appointment->ends_at->toIso8601String(),

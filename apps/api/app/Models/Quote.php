@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\QuoteKind;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property int $lead_id
  * @property string $number
  * @property int $version
+ * @property QuoteKind $kind
  * @property string $status
  * @property string $public_token
  * @property string|null $system_type
@@ -49,6 +51,7 @@ class Quote extends Model
     protected function casts(): array
     {
         return [
+            'kind' => QuoteKind::class,
             'assumptions' => 'array',
             'valid_until' => 'date',
             'sent_at' => 'datetime',
@@ -60,6 +63,15 @@ class Quote extends Model
             'margin_pct' => 'float',
             'margin_warning' => 'bool',
         ];
+    }
+
+    /**
+     * Alleen een offerte is een aanbod waaraan de klant rechten ontleent; een
+     * prijsindicatie is een richtbedrag onder voorbehoud van de opname.
+     */
+    public function isBinding(): bool
+    {
+        return $this->kind->isBinding();
     }
 
     /** @return BelongsTo<Lead, $this> */

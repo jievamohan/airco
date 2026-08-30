@@ -1,14 +1,13 @@
 <x-mail::message>
-# Uw offerte voor airconditioning
+# Uw vrijblijvende prijsindicatie
 
 Beste {{ $lead->name }},
 
-Bedankt dat we bij u langs mochten komen. Hieronder vindt u de offerte, opgesteld
-op basis van wat we ter plaatse hebben gezien. De volledige specificatie zit als
-pdf bij deze mail.
+Bedankt voor het prettige gesprek. Hieronder ziet u wat een installatie voor uw
+situatie ongeveer kost. De volledige specificatie zit als pdf bij deze mail.
 
-**Offertenummer:** {{ $quote->number }}
-**Geldig tot:** {{ optional($quote->valid_until)->format('d-m-Y') }}
+**Kenmerk:** {{ $quote->number }}
+**Richtbedrag geldig tot:** {{ optional($quote->valid_until)->format('d-m-Y') }}
 **Systeem:** {{ $quote->system_type === 'multi_split' ? 'Multisplit' : 'Single split' }}, {{ number_format((float) $quote->total_kw, 1, ',', '.') }} kW
 **Montageduur op locatie:** ongeveer {{ number_format($quote->onsite_minutes / 60, 1, ',', '.') }} uur
 
@@ -20,8 +19,16 @@ pdf bij deze mail.
 @endforeach
 | **Subtotaal excl. btw** | | **€ {{ number_format($quote->subtotal_cents / 100, 2, ',', '.') }}** |
 | Btw {{ rtrim(rtrim(number_format((float) $quote->vat_rate, 1, ',', '.'), '0'), ',') }}% | | € {{ number_format($quote->vat_cents / 100, 2, ',', '.') }} |
-| **Totaal incl. btw** | | **€ {{ number_format($quote->total_cents / 100, 2, ',', '.') }}** |
+| **Richtbedrag incl. btw** | | **€ {{ number_format($quote->total_cents / 100, 2, ',', '.') }}** |
 </x-mail::table>
+
+**Dit is nog geen offerte.** Het is een indicatie op basis van wat u ons heeft
+verteld; aan dit bedrag kunt u geen rechten ontlenen. Wat een installatie
+werkelijk kost, hangt af van dingen die we ter plaatse moeten zien: de
+leidinglengte, de plek van de buitenunit, de doorvoeren en de elektragroep.
+
+Daarom komen we eerst langs voor een korte opname. Meteen daarna krijgt u de
+offerte met de definitieve prijs — en die is wél bindend.
 
 @if (! empty($quote->assumptions))
 **Waar we van uit zijn gegaan**
@@ -31,13 +38,8 @@ pdf bij deze mail.
 @endforeach
 @endif
 
-Dit bedrag is vastgesteld na de opname bij u thuis: gaat u akkoord, dan geldt het
-voor het werk zoals hierboven beschreven. Er komen geen kosten achteraf bij voor
-wat hierin staat.
-
-We bellen u binnenkort even na om de offerte door te nemen en, als u akkoord
-bent, meteen een installatiedatum te prikken. Liever zelf contact? Bel ons op
-{{ $company['phone'] }}.
+We bellen u binnenkort even om deze indicatie door te nemen en een moment voor
+de opname af te spreken. Liever zelf contact? Bel ons op {{ $company['phone'] }}.
 
 Met vriendelijke groet,
 {{ $company['name'] }}

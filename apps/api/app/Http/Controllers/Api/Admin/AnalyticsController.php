@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Enums\CallOutcome;
 use App\Enums\LeadStatus;
+use App\Enums\QuoteKind;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Call;
@@ -24,13 +25,22 @@ use Illuminate\Support\Carbon;
  */
 class AnalyticsController extends Controller
 {
-    /** Statussen die aantonen dat een stap gepasseerd is. */
+    /**
+     * Statussen die aantonen dat een stap gepasseerd is.
+     *
+     * Elke rij bevat zichzelf plus alles wat er verderop in het traject ligt.
+     * "In opvolging" telt niet als verderop: dat is een zijspoor waar een lead
+     * uit elke stap in kan belanden.
+     */
     private const REACHED = [
-        'new' => ['new', 'enriched', 'calling', 'qualified', 'quoted', 'follow_up', 'appointment_scheduled', 'won', 'lost', 'unreachable', 'do_not_contact'],
-        'enriched' => ['enriched', 'calling', 'qualified', 'quoted', 'follow_up', 'appointment_scheduled', 'won', 'lost', 'unreachable', 'do_not_contact'],
-        'calling' => ['calling', 'qualified', 'quoted', 'follow_up', 'appointment_scheduled', 'won', 'lost', 'unreachable', 'do_not_contact'],
-        'qualified' => ['qualified', 'quoted', 'follow_up', 'appointment_scheduled', 'won'],
-        'quoted' => ['quoted', 'follow_up', 'appointment_scheduled', 'won'],
+        'new' => ['new', 'enriched', 'calling', 'qualified', 'indicated', 'survey_scheduled', 'surveyed', 'quoted', 'follow_up', 'appointment_scheduled', 'won', 'lost', 'unreachable', 'do_not_contact'],
+        'enriched' => ['enriched', 'calling', 'qualified', 'indicated', 'survey_scheduled', 'surveyed', 'quoted', 'follow_up', 'appointment_scheduled', 'won', 'lost', 'unreachable', 'do_not_contact'],
+        'calling' => ['calling', 'qualified', 'indicated', 'survey_scheduled', 'surveyed', 'quoted', 'follow_up', 'appointment_scheduled', 'won', 'lost', 'unreachable', 'do_not_contact'],
+        'qualified' => ['qualified', 'indicated', 'survey_scheduled', 'surveyed', 'quoted', 'follow_up', 'appointment_scheduled', 'won'],
+        'indicated' => ['indicated', 'survey_scheduled', 'surveyed', 'quoted', 'appointment_scheduled', 'won'],
+        'survey_scheduled' => ['survey_scheduled', 'surveyed', 'quoted', 'appointment_scheduled', 'won'],
+        'surveyed' => ['surveyed', 'quoted', 'appointment_scheduled', 'won'],
+        'quoted' => ['quoted', 'appointment_scheduled', 'won'],
         'follow_up' => ['follow_up', 'appointment_scheduled', 'won'],
         'appointment_scheduled' => ['appointment_scheduled', 'won'],
         'won' => ['won'],
@@ -75,9 +85,18 @@ class AnalyticsController extends Controller
             array_filter(CallOutcome::cases(), static fn (CallOutcome $outcome): bool => $outcome->reachedLead()),
         ))->count();
 
-        $quotesSent = Quote::whereBetween('created_at', [$from, $to])->whereNotNull('sent_at')->count();
-        $quotesAccepted = Quote::whereBetween('created_at', [$from, $to])->where('status', 'accepted')->count();
-        $quoteValue = (int) Quote::whereBetween('created_at', [$from, $to])->where('status', 'accepted')->sum('total_cents');
+        // Alleen de bindende offertes tellen als "offerte": een prijsindicatie
+        // kan niet aanvaard worden, en zou het acceptatiepercentage anders
+        // verdunnen met documenten die daar niet op wachten.
+        $indicationsSent = Quote::whereBetween('created_at', [$from, $to])
+            ->where('kind', QuoteKind::Indication->value)
+            ->whereNotNull('sent_at')
+            ->count();
+
+        $quotes = Quote::whereBetween('created_at', [$from, $to])->where('kind', QuoteKind::Final->value);
+        $quotesSent = (clone $quotes)->whereNotNull('sent_at')->count();
+        $quotesAccepted = (clone $quotes)->where('status', 'accepted')->count();
+        $quoteValue = (int) (clone $quotes)->where('status', 'accepted')->sum('total_cents');
 
         return response()->json([
             'period' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
@@ -86,6 +105,7 @@ class AnalyticsController extends Controller
                 'calls' => $callTotal,
                 'calls_answered' => $answered,
                 'answer_rate' => $callTotal > 0 ? round($answered / $callTotal * 100, 1) : 0.0,
+                'indications_sent' => $indicationsSent,
                 'quotes_sent' => $quotesSent,
                 'quotes_accepted' => $quotesAccepted,
                 'quote_acceptance_rate' => $quotesSent > 0 ? round($quotesAccepted / $quotesSent * 100, 1) : 0.0,

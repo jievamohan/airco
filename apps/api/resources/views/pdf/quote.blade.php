@@ -30,8 +30,11 @@
 <table class="head">
     <tr>
         <td>
-            <h1>Offerte</h1>
+            <h1>{{ $quote->kind->label() }}</h1>
             <div class="muted">{{ $quote->number }}</div>
+            @unless ($quote->isBinding())
+                <div class="muted">Vrijblijvend richtbedrag, onder voorbehoud van de opname ter plaatse</div>
+            @endunless
         </td>
         <td class="right">
             <strong>{{ $company['name'] }}</strong><br>
@@ -55,7 +58,7 @@
         <td class="right">
             <div class="muted">Datum</div>
             {{ $quote->created_at->format('d-m-Y') }}<br>
-            <div class="muted" style="margin-top:6px">Geldig tot</div>
+            <div class="muted" style="margin-top:6px">{{ $quote->isBinding() ? 'Geldig tot' : 'Richtbedrag geldig tot' }}</div>
             {{ optional($quote->valid_until)->format('d-m-Y') }}
         </td>
     </tr>
@@ -117,11 +120,38 @@
     </div>
 @endif
 
-<div class="footer">
-    Deze offerte is opgesteld op basis van de door u verstrekte gegevens. Wijkt de
-    situatie op locatie af — bijvoorbeeld in leidinglengte, bereikbaarheid van de
-    gevel of de beschikbare elektragroep — dan stemmen we een aangepaste prijs met
-    u af voordat het werk begint.
-</div>
+@if ($quote->isBinding())
+    <div class="block">
+        <h2>Wat u hieraan heeft</h2>
+        <ul>
+            <li>Dit is een aanbod: gaat u akkoord, dan geldt dit bedrag voor het beschreven werk.</li>
+            <li>De prijs is vastgesteld na de opname ter plaatse; er komen geen kosten achteraf bij voor wat hierin staat.</li>
+            <li>Meerwerk waar u zelf om vraagt, stemmen we vooraf met u af.</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        Deze offerte is opgesteld na een opname ter plaatse en geldt tot de hierboven
+        genoemde datum. Wilt u iets wijzigen aan de opstelling of de uitvoering, dan
+        maken we een aangepaste offerte voordat het werk begint.
+    </div>
+@else
+    <div class="block">
+        <h2>Wat dit wel en niet is</h2>
+        <ul>
+            <li>Dit is een <strong>prijsindicatie</strong> op basis van de gegevens die u ons heeft gegeven, geen offerte.</li>
+            <li>Aan dit bedrag kunnen geen rechten worden ontleend.</li>
+            <li>We komen eerst langs voor een opname: leidinglengte, plek van de buitenunit, doorvoeren en de elektragroep.</li>
+            <li>Direct daarna krijgt u de offerte met de definitieve prijs. Die is bindend, deze indicatie niet.</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        Deze prijsindicatie is opgesteld op basis van de door u verstrekte gegevens en
+        is vrijblijvend. Wijkt de situatie op locatie af — in leidinglengte,
+        bereikbaarheid van de gevel of de beschikbare elektragroep — dan ziet u dat
+        terug in de offerte die na de opname volgt.
+    </div>
+@endif
 </body>
 </html>

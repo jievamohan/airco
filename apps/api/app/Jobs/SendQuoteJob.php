@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Enums\QuoteKind;
 use App\Mail\QuoteMail;
 use App\Models\Lead;
 use App\Services\LeadWorkflow;
@@ -16,8 +17,13 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Stap 4: offerte opstellen, als pdf renderen en direct mailen. Daarna plant
- * de workflow zelf het conversiegesprek op T+1 uur in.
+ * Stap 4: het prijsdocument opstellen, als pdf renderen en mailen.
+ *
+ * Standaard is dat de vrijblijvende prijsindicatie; daarna plant de workflow
+ * zelf het conversiegesprek in om een opname af te spreken. De bindende
+ * offerte volgt pas als die opname is geweest — deze job weigert hem eerder,
+ * want een aanbod op basis van een telefoongesprek is een aanbod dat we
+ * moeten waarmaken.
  */
 class SendQuoteJob implements ShouldQueue
 {
@@ -25,7 +31,10 @@ class SendQuoteJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public readonly int $leadId) {}
+    public function __construct(
+        public readonly int $leadId,
+        public readonly QuoteKind $kind = QuoteKind::Indication,
+    ) {}
 
     public function handle(
         LeadWorkflow $workflow,
@@ -39,7 +48,13 @@ class SendQuoteJob implements ShouldQueue
             return;
         }
 
-        $quote = $workflow->buildQuote($lead);
+        if ($this->kind->isBinding() && ! $workflow->surveyDone($lead)) {
+            Log::warning('Offerte geweigerd: er is nog geen opname geweest', ['lead_id' => $lead->id]);
+
+            return;
+        }
+
+        $quote = $workflow->buildQuote($lead, $this->kind);
 
         $pdf = null;
 
@@ -47,13 +62,19 @@ class SendQuoteJob implements ShouldQueue
             try {
                 $pdf = $renderer->render($quote);
             } catch (Throwable $e) {
-                // Zonder pdf gaat de offerte alsnog als mail de deur uit.
-                Log::warning('Offerte-pdf kon niet gerenderd worden', ['quote_id' => $quote->id, 'exception' => $e->getMessage()]);
+                // Zonder pdf gaat het document alsnog als mail de deur uit.
+                Log::warning('Pdf kon niet gerenderd worden', ['quote_id' => $quote->id, 'exception' => $e->getMessage()]);
             }
         }
 
-        $mailer->send($lead, $lead->email, 'quote', new QuoteMail($lead, $quote, $pdf));
+        $mailer->send($lead, $lead->email, $this->kind->isBinding() ? 'quote' : 'indication', new QuoteMail($lead, $quote, $pdf));
 
-        $workflow->markQuoteSent($lead, $quote);
+        if ($this->kind->isBinding()) {
+            $workflow->markQuoteSent($lead, $quote);
+
+            return;
+        }
+
+        $workflow->markIndicationSent($lead, $quote);
     }
 }

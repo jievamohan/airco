@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\CallOutcome;
 use App\Enums\CallPurpose;
+use App\Enums\QuoteKind;
 use App\Http\Controllers\Controller;
 use App\Jobs\BookAppointmentJob;
 use App\Jobs\SendQuoteJob;
@@ -163,14 +164,33 @@ class ElevenLabsWebhookController extends Controller
 
         if ($outcome === CallOutcome::AppointmentBooked) {
             $preferred = isset($collected['appointment_start']) ? (string) $collected['appointment_start'] : null;
-            BookAppointmentJob::dispatch($call->lead_id, $preferred);
+            BookAppointmentJob::dispatch($call->lead_id, $preferred, $this->appointmentKind($call));
 
             return;
         }
 
         if ($call->purpose === CallPurpose::Qualification && $outcome === CallOutcome::Answered) {
-            SendQuoteJob::dispatch($call->lead_id);
+            // Na het telefoongesprek gaat er een prijsindicatie uit, geen
+            // offerte: wat we weten komt uit een gesprek, niet van locatie.
+            SendQuoteJob::dispatch($call->lead_id, QuoteKind::Indication);
         }
+    }
+
+    /**
+     * Wat er is afgesproken hangt af van het gesprek: het conversiegesprek
+     * plant de opname, het afsluitgesprek de montage. Ligt er nog geen
+     * verstuurde offerte, dan kan het niet anders dan de opname zijn — ook
+     * niet als de agent in een ander gesprek een datum heeft geprikt.
+     */
+    private function appointmentKind(Call $call): string
+    {
+        $offerteVerstuurd = $call->lead
+            ->quotes()
+            ->where('kind', QuoteKind::Final->value)
+            ->whereNotNull('sent_at')
+            ->exists();
+
+        return $call->purpose === CallPurpose::Close && $offerteVerstuurd ? 'installation' : 'survey';
     }
 
     /**
