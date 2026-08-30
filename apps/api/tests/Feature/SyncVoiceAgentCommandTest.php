@@ -89,6 +89,40 @@ class SyncVoiceAgentCommandTest extends TestCase
     }
 
     #[Test]
+    public function een_nederlandse_agent_krijgt_een_v2_5_model_mee(): void
+    {
+        // ElevenLabs weigert een niet-Engelse agent zonder turbo of flash v2.5:
+        // "Non-english Agents must use turbo or flash v2_5."
+        Http::fake(['*' => Http::response(['agent_id' => 'agent_abc'], 200)]);
+        putenv('ELEVENLABS_API_KEY=sleutel');
+
+        $this->artisan('voice:agent-sync', ['--voice' => 'stem123'])->assertExitCode(0);
+
+        Http::assertSent(function ($request): bool {
+            $tts = $request->data()['conversation_config']['tts'];
+
+            $this->assertSame('nl', $request->data()['conversation_config']['agent']['language']);
+            $this->assertContains($tts['model_id'], ['eleven_flash_v2_5', 'eleven_turbo_v2_5']);
+
+            return true;
+        });
+    }
+
+    #[Test]
+    public function een_model_dat_geen_nederlands_kan_wordt_geweigerd(): void
+    {
+        Http::fake();
+        putenv('ELEVENLABS_API_KEY=sleutel');
+
+        $this->artisan('voice:agent-sync', ['--voice' => 'stem123', '--model' => 'eleven_multilingual_v2'])
+            ->expectsOutputToContain('eleven_multilingual_v2')
+            ->assertExitCode(1);
+
+        // Beter hier stoppen dan ElevenLabs een 400 laten teruggeven.
+        Http::assertNothingSent();
+    }
+
+    #[Test]
     public function elk_veld_uit_het_runbook_gaat_mee_met_een_geldig_type(): void
     {
         Http::fake(['*' => Http::response(['agent_id' => 'agent_abc'], 200)]);

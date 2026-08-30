@@ -18,12 +18,38 @@ use RuntimeException;
 class AgentDefinition
 {
     /**
+     * ElevenLabs weigert een niet-Engelse agent zonder turbo- of flash-v2.5-model:
+     *
+     *   Non-english Agents must use turbo or flash v2_5.
+     *
+     * Onze agent spreekt Nederlands, dus die keuze is geen voorkeur maar een
+     * eis. Flash heeft van de twee de laagste vertraging, en aan de telefoon
+     * hoor je elke wachttijd.
+     */
+    public const STANDAARD_MODEL = 'eleven_flash_v2_5';
+
+    /** @var list<string> */
+    public const TOEGESTANE_MODELLEN = ['eleven_flash_v2_5', 'eleven_turbo_v2_5'];
+
+    /**
      * @return array<string, mixed>
      */
-    public function payload(string $voiceId, string $naam = 'KlimaatX', int $duurSeconden = 480): array
-    {
+    public function payload(
+        string $voiceId,
+        string $naam = 'KlimaatX',
+        int $duurSeconden = 480,
+        string $model = self::STANDAARD_MODEL,
+    ): array {
         if (trim($voiceId) === '') {
             throw new RuntimeException('Geen voice_id opgegeven: kies eerst een Nederlandse stem bij ElevenLabs.');
+        }
+
+        if (! in_array($model, self::TOEGESTANE_MODELLEN, true)) {
+            throw new RuntimeException(sprintf(
+                'Model %s kan niet: een Nederlandstalige agent moet %s gebruiken.',
+                $model,
+                implode(' of ', self::TOEGESTANE_MODELLEN),
+            ));
         }
 
         $document = $this->document();
@@ -37,7 +63,10 @@ class AgentDefinition
                     'language' => 'nl',
                     'prompt' => ['prompt' => $this->prompt($document)],
                 ],
-                'tts' => ['voice_id' => trim($voiceId)],
+                'tts' => [
+                    'voice_id' => trim($voiceId),
+                    'model_id' => $model,
+                ],
                 'conversation' => ['max_duration_seconds' => $duurSeconden],
             ],
             'platform_settings' => ['data_collection' => $this->velden($document)],
