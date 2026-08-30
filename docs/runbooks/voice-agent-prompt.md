@@ -140,6 +140,7 @@ Vul de vijf velden in en zet proefmodus uit; dat staat uitgeschreven in §6.
 | First message | `{{gespreksopening}}` |
 | Max call duration | 8 minuten |
 | Interruptions | Aan. Mensen praten door de agent heen; zonder dit klinkt hij bot |
+| TTS-model | `eleven_flash_v2_5`. Geen voorkeur maar een eis: ElevenLabs weigert een niet-Engelse agent met *"Non-english Agents must use turbo or flash v2_5"*. Van de twee toegestane modellen heeft flash de laagste vertraging, en aan de telefoon hoor je elke wachttijd |
 
 Vul daarna het systeemprompt uit §2 en de dataverzameling uit §4 in.
 

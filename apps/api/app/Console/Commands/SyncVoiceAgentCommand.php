@@ -29,6 +29,7 @@ class SyncVoiceAgentCommand extends Command
         {--naam=KlimaatX : Naam van de agent bij ElevenLabs}
         {--agent= : Bestaande agent bijwerken in plaats van een nieuwe aanmaken}
         {--duur=480 : Maximale gespreksduur in seconden}
+        {--model= : TTS-model; leeg laten geeft flash v2.5}
         {--dry-run : Toon wat er verstuurd zou worden en stuur niets}';
 
     protected $description = 'Maakt of werkt de ElevenLabs-agent bij vanuit het runbook';
@@ -40,6 +41,7 @@ class SyncVoiceAgentCommand extends Command
                 (string) ($this->option('voice') ?? ''),
                 (string) $this->option('naam'),
                 (int) $this->option('duur'),
+                (string) ($this->option('model') ?: AgentDefinition::STANDAARD_MODEL),
             );
         } catch (RuntimeException $e) {
             $this->error($e->getMessage());
