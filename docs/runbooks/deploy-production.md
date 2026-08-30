@@ -243,16 +243,33 @@ grens zou een seed een dashboardaccount neerzetten waar iedereen op binnenloopt.
 Struikelt de deploy op "basisgegevens seeden mislukt", dan is dit bijna altijd
 de reden.
 
-Na de eerste deploy log je in op `https://airco.sinoxi.nl/dashboard/login`,
-wijzig je het wachtwoord, en maak je de regel in `.env` weer leeg:
+Na de eerste deploy log je in op `https://airco.sinoxi.nl/dashboard/login`.
+Maak daarna de regel in `.env` weer leeg — het account bestaat dan, dus de
+seeder leest die waarde nooit meer, en wat er blijft staan is alleen een
+wachtwoord in platte tekst op de server:
 
 ```bash
-OWNER_INITIAL_PASSWORD=
+sed -i 's/^OWNER_INITIAL_PASSWORD=.*/OWNER_INITIAL_PASSWORD=/' .env
 php artisan config:cache
 ```
 
 Bestaat het account eenmaal, dan laat de seeder het met rust — een volgende
-deploy zet je gewijzigde wachtwoord dus niet terug.
+deploy raakt het wachtwoord dus niet aan.
+
+> **Het dashboard kan het wachtwoord niet wijzigen.** Er is alleen een
+> inlogroute; noch de API noch de instellingenpagina heeft een
+> wachtwoordwijziging. Wat je in `OWNER_INITIAL_PASSWORD` zette blijft dus het
+> echte wachtwoord totdat je het met de hand vervangt:
+>
+> ```bash
+> php artisan tinker
+> >>> $u = \App\Models\User::where('email', '…')->firstOrFail();
+> >>> $u->update(['password' => \Hash::make('…')]);
+> ```
+>
+> Tinker bewaart die regel in zijn geschiedenis (`~/.config/psysh/`). Zolang die
+> functie er niet is, kies je bij het inrichten dus meteen een wachtwoord dat
+> mag blijven staan.
 
 Een tweede gebruiker maak je er met de hand bij:
 
