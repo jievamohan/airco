@@ -169,7 +169,7 @@ class ElevenLabsWebhookController extends Controller
             return;
         }
 
-        if ($call->purpose === CallPurpose::Qualification && $outcome === CallOutcome::Answered) {
+        if ($call->purpose === CallPurpose::Qualification && $outcome->earnsIndication()) {
             // Na het telefoongesprek gaat er een prijsindicatie uit, geen
             // offerte: wat we weten komt uit een gesprek, niet van locatie.
             SendQuoteJob::dispatch($call->lead_id, QuoteKind::Indication);

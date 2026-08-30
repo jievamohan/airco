@@ -140,6 +140,72 @@ class ElevenLabsWebhookTest extends TestCase
     }
 
     #[Test]
+    public function een_terugbelverzoek_stuurt_de_prijsindicatie_ook(): void
+    {
+        // Het script van de agent belooft de indicatie én kondigt aan dat hij
+        // terugbelt. ElevenLabs geeft zo'n gesprek terug als terugbelverzoek,
+        // en daarop wachtte de code niet — waardoor precies de geslaagde
+        // gesprekken stilvielen. Op productie stond de lead na een gesprek van
+        // ruim twee minuten op "Gekwalificeerd" zonder dat er iets volgde.
+        Queue::fake();
+
+        $lead = Lead::factory()->create(['status' => 'calling']);
+        $call = $this->callFor($lead);
+
+        $payload = [
+            'type' => 'post_call_transcription',
+            'data' => [
+                'conversation_id' => 'conv-test-1',
+                'status' => 'done',
+                'metadata' => ['call_duration_secs' => 175],
+                'analysis' => [
+                    'call_successful' => 'success',
+                    'data_collection_results' => [
+                        'outcome' => ['value' => 'callback_requested'],
+                        'rooms_count' => ['value' => 1],
+                        'floor_level' => ['value' => 1],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->withHeaders($this->signedHeaders($payload))
+            ->postJson('/api/webhooks/elevenlabs/post-call', $payload)
+            ->assertOk();
+
+        $this->assertSame(CallOutcome::CallbackRequested, $call->refresh()->outcome);
+        Queue::assertPushed(SendQuoteJob::class, static fn (SendQuoteJob $job): bool => $job->kind === QuoteKind::Indication);
+    }
+
+    #[Test]
+    public function een_afgewezen_gesprek_stuurt_geen_prijsindicatie(): void
+    {
+        // Bereikt is niet hetzelfde als geïnteresseerd.
+        Queue::fake();
+
+        $lead = Lead::factory()->create(['status' => 'calling']);
+        $this->callFor($lead);
+
+        $payload = [
+            'type' => 'post_call_transcription',
+            'data' => [
+                'conversation_id' => 'conv-test-1',
+                'status' => 'done',
+                'metadata' => ['call_duration_secs' => 40],
+                'analysis' => [
+                    'data_collection_results' => ['outcome' => ['value' => 'declined']],
+                ],
+            ],
+        ];
+
+        $this->withHeaders($this->signedHeaders($payload))
+            ->postJson('/api/webhooks/elevenlabs/post-call', $payload)
+            ->assertOk();
+
+        Queue::assertNotPushed(SendQuoteJob::class);
+    }
+
+    #[Test]
     public function een_kort_gesprek_telt_als_niet_opgenomen(): void
     {
         $lead = Lead::factory()->create(['status' => 'calling']);
