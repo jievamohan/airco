@@ -118,6 +118,10 @@ class LeadDetailResource extends JsonResource
                 'subject' => $email->subject,
                 'status' => $email->status,
                 'sent_at' => $email->sent_at?->toIso8601String(),
+                // Een mislukte mail heeft geen sent_at, en dat is juist de
+                // regel waarvan je wilt weten wanneer het gebeurde. Het moment
+                // van de poging staat wel vast.
+                'attempted_at' => $email->created_at?->toIso8601String(),
             ])->all()),
         ];
     }
