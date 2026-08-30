@@ -2,7 +2,7 @@
   <div class="dash">
     <header class="dash__bar">
       <NuxtLink to="/dashboard" class="dash__brand">KlimaatX CRM</NuxtLink>
-      <nav class="dash__nav">
+      <nav ref="navEl" class="dash__nav">
         <NuxtLink v-for="item in nav" :key="item.to" :to="item.to" :class="{ 'is-active': isActive(item.to) }">
           {{ item.label }}
         </NuxtLink>
@@ -36,6 +36,20 @@ const nav = [
 function isActive(to: string) {
   return to === '/dashboard' ? route.path === '/dashboard' : route.path.startsWith(to)
 }
+
+/*
+ * Op een telefoon staat de tabbalk op een eigen regel en past hij niet in één
+ * keer; zonder dit kan het tabblad waar je op staat buiten beeld liggen.
+ */
+const navEl = ref<HTMLElement | null>(null)
+
+function revealActiveTab() {
+  const active = navEl.value?.querySelector('.is-active')
+  active?.scrollIntoView({ block: 'nearest', inline: 'center' })
+}
+
+onMounted(revealActiveTab)
+watch(() => route.path, () => nextTick(revealActiveTab))
 
 async function logout() {
   try {

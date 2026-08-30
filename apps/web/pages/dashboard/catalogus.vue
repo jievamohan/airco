@@ -40,7 +40,7 @@
         <dt>Advies bij {{ fmt.number(check.minimum_margin_pct, 0) }}% marge</dt>
         <dd>{{ fmt.euro(check.advised_entry_price_cents) }} incl. btw</dd>
         <dt>Instappakket</dt>
-        <dd>
+        <dd class="facts__block">
           {{ check.entry_package_enabled ? 'Aan' : 'Uit' }} —
           <span class="muted">
             {{ check.entry_package_enabled
@@ -91,8 +91,54 @@
       </select>
     </div>
 
-    <section class="panel">
-      <div class="table-wrap">
+    <section class="panel panel--bare">
+      <!--
+        Een kaart per artikel: eerst wat het is, dan de drie getallen die je
+        zelf invult, en daaronder wat daar uitkomt. De verkoopprijs is het
+        antwoord op de vraag die je stelt met inkoop en marge, dus die staat
+        eronder en niet ertussen.
+      -->
+      <div v-if="compact" class="cards">
+        <div v-for="item in items" :key="item.id" class="card">
+          <span class="card__head">
+            <span class="card__title">{{ item.name }}</span>
+            <span v-if="item.tier" class="badge">{{ tierLabels[item.tier] }}</span>
+          </span>
+          <span class="card__sub">{{ item.sku }} · per {{ item.unit }}</span>
+
+          <div class="card__fields">
+            <label class="field">
+              <span class="field__label">Inkoop €</span>
+              <input v-model.number="item.cost_euro" type="number" step="0.01" min="0" class="cell" />
+            </label>
+            <label class="field">
+              <span class="field__label">Marge %</span>
+              <input v-model.number="item.margin_pct" type="number" step="0.1" min="0" class="cell" />
+            </label>
+            <label class="field">
+              <span class="field__label">Normtijd</span>
+              <input v-model.number="item.labour_minutes" type="number" step="5" min="0" class="cell" />
+            </label>
+          </div>
+
+          <span class="card__figures">
+            <span class="card__amount">{{ fmt.euro(Math.round(item.cost_euro * 100 * (1 + item.margin_pct / 100))) }}</span>
+            <span class="card__aside">verkoop excl. btw</span>
+          </span>
+
+          <div class="card__actions">
+            <label class="toggle">
+              <input v-model="item.active" type="checkbox" />
+              <span>Actief</span>
+            </label>
+            <button type="button" class="btn btn--ghost btn--small" :disabled="busy === item.id" @click="save(item)">
+              Opslaan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="table-wrap">
         <table class="data">
           <thead>
             <tr>
@@ -127,6 +173,7 @@
           </tbody>
         </table>
       </div>
+
       <p v-if="!items.length && !error" class="empty">Geen artikelen gevonden.</p>
     </section>
   </div>
@@ -178,6 +225,7 @@ type EntryPriceCheck = {
 
 const api = useApi()
 const fmt = useDashboardFormat()
+const compact = useIsCompact()
 
 const items = ref<Item[]>([])
 const pricing = ref<Pricing | null>(null)
@@ -243,4 +291,11 @@ onMounted(load)
 }
 
 .cell--narrow { width: 80px; }
+
+@media (max-width: 720px) {
+  /* Onder de 16px zoomt Safari op iOS in zodra het veld focus krijgt. */
+  .cell { font-size: 16px; }
+}
+
+.field .cell { width: 100%; }
 </style>

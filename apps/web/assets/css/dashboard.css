@@ -16,6 +16,7 @@
   --dash-radius: 10px;
 
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--dash-bg);
   color: var(--dash-ink);
   font-size: 14px;
@@ -30,6 +31,7 @@
   top: 0;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 24px;
   padding: 0 24px;
@@ -50,7 +52,11 @@
   gap: 4px;
   flex: 1;
   overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+
+.dash__nav::-webkit-scrollbar { display: none; }
 
 .dash__nav a {
   padding: 7px 12px;
@@ -195,7 +201,10 @@
 
 /* ------------------------------------------------------------------- table */
 
-.table-wrap { overflow-x: auto; }
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 table.data {
   width: 100%;
@@ -396,3 +405,397 @@ table.data .num { text-align: right; white-space: nowrap; }
 dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
 dl.facts dt { color: var(--dash-muted); }
 dl.facts dd { margin: 0; }
+
+/* ------------------------------------------------------------------ mobiel */
+
+/*
+  Onder de 900px valt de tweekolomsindeling al terug naar één kolom. Hieronder
+  gaat het om de telefoon zelf: de balk in twee regels, minder marge, tikbare
+  knoppen en invoervelden van 16px — kleiner en iOS zoomt bij focus in.
+*/
+
+@media (max-width: 720px) {
+  .dash__bar {
+    height: auto;
+    gap: 8px 12px;
+    padding: 10px 16px 0;
+  }
+
+  /* Duwt "Uitloggen" naar rechts nu de nav op een eigen regel staat. */
+  .dash__brand { flex: 1; }
+
+  .dash__nav {
+    order: 3;
+    flex: 0 0 100%;
+    /* Bloedt naar de schermrand, zodat het laatste tabblad niet lijkt te eindigen. */
+    margin: 0 -16px;
+    padding: 4px 16px 8px;
+    /* Vervaagt aan beide randen: zo is te zien dat er meer tabbladen zijn. */
+    mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 20px), transparent);
+  }
+
+  .dash__main { padding: 20px 16px 64px; }
+
+  .dash__head {
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .dash__title { font-size: 22px; }
+
+  .panel { padding: 16px; }
+  .panel + .panel { margin-top: 16px; }
+
+  /*
+    Een paneel dat alleen een gestapelde tabel bevat: de rijen zijn daar zelf
+    al kaartjes, dus een kader eromheen wordt een kader om kaders.
+  */
+  .panel--bare {
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .panel--bare > .table-wrap { margin: 0; padding: 0; }
+
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+
+  .kpi { padding: 12px 14px; }
+
+  /* Anders loopt "€ 98.845,00" uit het kaartje. */
+  .kpi__value { font-size: 20px; }
+
+  .funnel__meta { flex-wrap: wrap; gap: 2px 12px; }
+
+  /* Eén veld per regel leest prettiger dan drie halve velden naast elkaar. */
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .filters .btn { width: 100%; }
+
+  /* Van/tot horen bij elkaar en passen samen op één regel. */
+  .filters--dates { grid-template-columns: 1fr 1fr; }
+
+  .filters input,
+  .filters select,
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea,
+  .dash input[type='text'],
+  .dash input[type='search'],
+  .dash input[type='number'],
+  .dash input[type='date'],
+  .dash input[type='email'],
+  .dash input[type='password'],
+  .dash select,
+  .dash textarea {
+    font-size: 16px;
+  }
+
+  .dash input:not([type='checkbox']):not([type='radio']),
+  .dash select {
+    min-height: 44px;
+  }
+
+  .dash textarea { min-height: 88px; }
+
+  .dash input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .btn { min-height: 40px; }
+  .btn--small { min-height: 36px; }
+
+  /* De tabel mag tot aan de rand van het paneel schuiven. */
+  .panel > .table-wrap {
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+
+  /*
+    Label links, bedrag rechts, met een lijntje ertussen: een afrekenlijstje.
+    Onder elkaar zetten zou hier twee keer zo veel schermruimte kosten.
+  */
+  dl.facts {
+    grid-template-columns: 1fr auto;
+    gap: 0 14px;
+  }
+
+  dl.facts dt,
+  dl.facts dd {
+    padding: 7px 0;
+    border-top: 1px solid #f2f2f2;
+    font-size: 12.5px;
+  }
+
+  dl.facts dt:first-of-type,
+  dl.facts dd:first-of-type { border-top: 0; }
+
+  dl.facts dd { text-align: right; }
+
+  /* Een toelichting in plaats van een bedrag: die mag de volle breedte. */
+  dl.facts dd.facts__block {
+    grid-column: 1 / -1;
+    padding-top: 0;
+    border-top: 0;
+    text-align: left;
+  }
+
+  .transcript { max-height: 240px; }
+}
+
+/* ------------------------------------------------------------------ kaarten
+   Een tabel met negen kolommen past niet op een telefoon, en een tabelrij die
+   je uitvouwt tot label-waarde-paren evenmin: dan lees je negen keer een kop
+   die je al kent. Op smalle schermen tonen de pagina's daarom kaarten
+   (`useIsCompact`), met dezelfde volgorde als waarin je erover nadenkt: wie is
+   het, hoe warm is het, wat is het waard, wanneer moet ik wat.
+--------------------------------------------------------------------------- */
+
+.cards {
+  display: grid;
+  gap: 10px;
+}
+
+.card {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--dash-line);
+  border-radius: var(--dash-radius);
+  background: var(--dash-panel);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+button.card { cursor: pointer; }
+button.card:active { background: #fafafa; }
+button.card:focus-visible { outline: 2px solid var(--dash-ink); outline-offset: 2px; }
+
+.card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card__title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+/* Plaats, bron, artikelnummer: context die je alleen leest als je twijfelt. */
+.card__sub {
+  margin-top: -4px;
+  color: var(--dash-muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* Het bedrag is waar het oog als eerste landt; de rest is bijzaak. */
+.card__figures {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card__amount {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.card__amount--muted { color: var(--dash-muted); font-weight: 500; }
+
+.card__aside { color: var(--dash-muted); font-size: 12.5px; }
+
+.card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  padding-top: 9px;
+  border-top: 1px solid #f2f2f2;
+  color: var(--dash-muted);
+  font-size: 12px;
+}
+
+/* -------------------------------------------------------------- leadkaart */
+
+/*
+  De status is de rand van de kaart, niet een pil erin: een lijst naar beneden
+  scannen leest dan als een kleurkolom. Drie regels, in de volgorde waarin je
+  erover nadenkt — wie en hoeveel, hoe warm en waar, wanneer moet ik wat.
+*/
+
+.lead {
+  --lead-accent: #d4d4d4;
+
+  display: flex;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.lead__stripe {
+  flex: none;
+  width: 3px;
+  background: var(--lead-accent);
+}
+
+.lead__body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-grow: 1;
+  min-width: 0;
+  padding: 13px 14px;
+}
+
+.lead__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lead__amount {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Geen bedrag maar een mededeling: die hoeft niet even hard te schreeuwen. */
+.lead__amount--none {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dash-muted);
+}
+
+.lead__meta {
+  color: var(--dash-muted);
+  font-size: 12.5px;
+}
+
+.lead__status {
+  color: var(--lead-accent);
+  font-weight: 500;
+}
+
+.lead__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 3px;
+}
+
+.lead__tail {
+  color: var(--color-ink-soft);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/* Dezelfde indeling in statussen als de badges op een breed scherm. */
+.lead--won, .lead--appointment_scheduled { --lead-accent: var(--dash-ok); }
+.lead--quoted, .lead--qualified { --lead-accent: #2c6ba8; }
+.lead--calling, .lead--follow_up { --lead-accent: var(--dash-warn); }
+.lead--lost, .lead--unreachable, .lead--do_not_contact { --lead-accent: var(--dash-bad); }
+
+/* ------------------------------------------------------------------- chips */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  background: #f0f0f0;
+  color: #4a4a4a;
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.chip svg { width: 11px; height: 11px; flex: none; }
+
+.chip--due { background: #fbeaea; color: var(--dash-bad); }
+.chip--soon { background: #fdf3e0; color: var(--dash-warn); }
+
+/* Een rond nummertje: de volgorde van een stap lees je zo in één blik. */
+.pip {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--dash-ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  vertical-align: -4px;
+}
+
+/* --------------------------------------------------- velden op een kaartje */
+
+.card__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 10px;
+}
+
+.field {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field__label {
+  color: var(--dash-muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.field__static { font-size: 13px; }
+
+.field input,
+.field select { width: 100%; }
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dash-muted);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.card__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f2f2f2;
+}
+
+/* De knop staat rechts, of er nu iets links van staat of niet. */
+.card__actions .btn {
+  min-width: 110px;
+  margin-left: auto;
+}
