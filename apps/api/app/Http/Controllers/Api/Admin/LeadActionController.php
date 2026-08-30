@@ -25,7 +25,7 @@ class LeadActionController extends Controller
 {
     /** @var list<string> */
     private const ACTIONS = [
-        'enrich', 'call_qualification', 'call_qualification_now', 'call_conversion', 'send_quote',
+        'enrich', 'call_qualification', 'call_qualification_now', 'call_conversion', 'call_conversion_now', 'send_quote',
         'book_appointment', 'start_chase', 'stop_chase', 'mark_lost', 'mark_won', 'reopen',
     ];
 
@@ -55,6 +55,7 @@ class LeadActionController extends Controller
             'call_qualification' => $this->call($workflow, $lead, CallPurpose::Qualification),
             'call_qualification_now' => $this->call($workflow, $lead, CallPurpose::Qualification, true),
             'call_conversion' => $this->call($workflow, $lead, CallPurpose::Conversion),
+            'call_conversion_now' => $this->call($workflow, $lead, CallPurpose::Conversion, true),
             'send_quote' => $this->sendQuote($lead),
             'book_appointment' => $this->bookAppointment($lead, $data['starts_at'] ?? null, $scheduler),
             'start_chase' => $this->startChase($workflow, $lead),
