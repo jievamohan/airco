@@ -381,6 +381,9 @@ const error = ref('')
 const actions = [
   { value: 'enrich', label: 'Opnieuw doorrekenen' },
   { value: 'call_qualification', label: 'Kwalificatiegesprek inplannen' },
+  // Aparte actie, niet een vinkje bij de vorige: buiten het belvenster bellen
+  // hoort een bewuste keuze te zijn en geen instelling die aan blijft staan.
+  { value: 'call_qualification_now', label: 'Nu bellen (buiten belvenster)' },
   { value: 'send_quote', label: 'Offerte opnieuw versturen' },
   { value: 'call_conversion', label: 'Conversiegesprek inplannen' },
   { value: 'book_appointment', label: 'Afspraak inplannen' },

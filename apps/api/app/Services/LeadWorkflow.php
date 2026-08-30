@@ -78,7 +78,14 @@ class LeadWorkflow
     /**
      * Legt een belpoging vast en plant hem binnen het belvenster in.
      */
-    public function scheduleCall(Lead $lead, CallPurpose $purpose, ?Carbon $notBefore = null): ?Call
+    /**
+     * @param  bool  $negeerBelvenster  Alleen voor een handmatige actie: het
+     *                                  belvenster beschermt tegen een agent die
+     *                                  uit zichzelf op zondagavond belt, niet
+     *                                  tegen een mens die bewust op een knop
+     *                                  drukt en weet wie er aan de lijn komt.
+     */
+    public function scheduleCall(Lead $lead, CallPurpose $purpose, ?Carbon $notBefore = null, bool $negeerBelvenster = false): ?Call
     {
         if (! $lead->isContactable()) {
             return null;
@@ -101,7 +108,8 @@ class LeadWorkflow
             return null;
         }
 
-        $scheduledFor = $this->callingWindow->nextOpening($notBefore ?? now());
+        $vanaf = $notBefore ?? now();
+        $scheduledFor = $negeerBelvenster ? $vanaf : $this->callingWindow->nextOpening($vanaf);
 
         $call = $lead->calls()->create([
             'provider' => 'elevenlabs',
@@ -110,6 +118,7 @@ class LeadWorkflow
             'status' => 'queued',
             'to_number' => $number,
             'scheduled_for' => $scheduledFor,
+            'ignores_calling_window' => $negeerBelvenster,
         ]);
 
         $this->timeline->record(
