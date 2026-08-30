@@ -35,6 +35,11 @@ class LeadListResource extends JsonResource
             'call_attempts' => $this->call_attempts,
             'next_action_at' => $this->next_action_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
+            // Heeft deze klant zich na de eerste aanvraag nog eens gemeld? Dat
+            // is een koopsignaal, en het stond nergens.
+            'last_request_at' => $this->last_request_at?->toIso8601String(),
+            'requests_count' => $this->requests_count,
+            'repeat_request' => $this->requests_count > 1,
         ];
     }
 }
