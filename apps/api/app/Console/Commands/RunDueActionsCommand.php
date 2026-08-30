@@ -32,7 +32,9 @@ class RunDueActionsCommand extends Command
         $deferred = 0;
 
         foreach ($dueCalls as $call) {
-            if (! $window->isOpenAt(now())) {
+            // Een gesprek dat iemand bewust buiten het venster heeft klaargezet
+            // mag hier niet alsnog vooruitgeschoven worden.
+            if (! $call->ignores_calling_window && ! $window->isOpenAt(now())) {
                 $call->forceFill(['scheduled_for' => $window->nextOpening(now())])->save();
                 $deferred++;
 

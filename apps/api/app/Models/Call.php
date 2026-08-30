@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property CallOutcome|null $outcome
  * @property string|null $to_number
  * @property Carbon|null $scheduled_for
+ * @property bool $ignores_calling_window
  * @property Carbon|null $started_at
  * @property Carbon|null $ended_at
  * @property int|null $duration_seconds
@@ -41,6 +42,7 @@ class Call extends Model
     protected function casts(): array
     {
         return [
+            'ignores_calling_window' => 'bool',
             'purpose' => CallPurpose::class,
             'outcome' => CallOutcome::class,
             'collected' => 'array',

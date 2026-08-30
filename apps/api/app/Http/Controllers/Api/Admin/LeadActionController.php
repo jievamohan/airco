@@ -25,7 +25,7 @@ class LeadActionController extends Controller
 {
     /** @var list<string> */
     private const ACTIONS = [
-        'enrich', 'call_qualification', 'call_conversion', 'send_quote',
+        'enrich', 'call_qualification', 'call_qualification_now', 'call_conversion', 'send_quote',
         'book_appointment', 'start_chase', 'stop_chase', 'mark_lost', 'mark_won', 'reopen',
     ];
 
@@ -53,6 +53,7 @@ class LeadActionController extends Controller
         $message = match ($action) {
             'enrich' => $this->enrich($workflow, $lead),
             'call_qualification' => $this->call($workflow, $lead, CallPurpose::Qualification),
+            'call_qualification_now' => $this->call($workflow, $lead, CallPurpose::Qualification, true),
             'call_conversion' => $this->call($workflow, $lead, CallPurpose::Conversion),
             'send_quote' => $this->sendQuote($lead),
             'book_appointment' => $this->bookAppointment($lead, $data['starts_at'] ?? null, $scheduler),
@@ -73,12 +74,16 @@ class LeadActionController extends Controller
         return 'De aanvraag is opnieuw doorgerekend.';
     }
 
-    private function call(LeadWorkflow $workflow, Lead $lead, CallPurpose $purpose): string
+    private function call(LeadWorkflow $workflow, Lead $lead, CallPurpose $purpose, bool $negeerBelvenster = false): string
     {
-        $call = $workflow->scheduleCall($lead, $purpose);
+        $call = $workflow->scheduleCall($lead, $purpose, null, $negeerBelvenster);
 
         if ($call === null) {
             return 'Er kon geen gesprek ingepland worden. Controleer het telefoonnummer en de status van de lead.';
+        }
+
+        if ($negeerBelvenster) {
+            return sprintf('%s staat klaar en gaat bij de eerstvolgende tik de deur uit, buiten het belvenster om.', $purpose->label());
         }
 
         return sprintf('%s ingepland voor %s.', $purpose->label(), $call->scheduled_for?->format('d-m-Y H:i') ?? 'direct');
