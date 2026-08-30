@@ -6,9 +6,13 @@ namespace App\Services\Voice;
 
 use App\Enums\CallPurpose;
 use App\Enums\QuoteKind;
+use App\Enums\Tier;
 use App\Models\Lead;
 use App\Models\Quote;
+use App\Services\QuoteBuilder;
 use App\Services\SettingsRepository;
+use App\Support\Money;
+use RuntimeException;
 
 /**
  * Stelt de dynamische variabelen samen die de voice agent tijdens het gesprek
@@ -17,7 +21,10 @@ use App\Services\SettingsRepository;
  */
 class CallVariables
 {
-    public function __construct(private readonly SettingsRepository $settings) {}
+    public function __construct(
+        private readonly SettingsRepository $settings,
+        private readonly QuoteBuilder $quotes,
+    ) {}
 
     /**
      * @return array<string, string>
@@ -66,6 +73,7 @@ class CallVariables
             $variables += $this->documentVariables('offerte', $offerte);
 
             $variables['montageduur'] = $this->duration($quote->onsite_minutes);
+            $variables['uitvoeringen'] = $this->uitvoeringen($lead, $quote);
             // De korting hoort bij het bedrag dat de klant ook echt kan
             // aanvaarden; ligt er nog geen offerte, dan rekenen we hem uit over
             // wat er nu ligt zodat de agent nooit met een leeg getal staat.
@@ -80,6 +88,35 @@ class CallVariables
         }
 
         return array_map(static fn (string $value): string => $value === '' ? 'onbekend' : $value, $variables);
+    }
+
+    /**
+     * Wat dezelfde klus in een andere kwaliteitsklasse kost, als één zin die
+     * de agent kan uitspreken.
+     *
+     * "Te duur" is aan de telefoon zelden een nee; vaak is het een vraag naar
+     * een lichtere uitvoering. Dat antwoord is beter dan korting: de marge
+     * blijft staan en de klant krijgt een echte keuze.
+     */
+    private function uitvoeringen(Lead $lead, Quote $quote): string
+    {
+        try {
+            $alternatieven = $this->quotes->alternatives($lead, Tier::tryFrom((string) $quote->tier) ?? Tier::Mid);
+        } catch (RuntimeException) {
+            $alternatieven = [];
+        }
+
+        if ($alternatieven === []) {
+            return 'geen andere uitvoering beschikbaar';
+        }
+
+        return implode('; ', array_map(static fn (array $a): string => sprintf(
+            '%s, %s, ongeveer %s %s',
+            $a['tier']->label(),
+            $a['merk'],
+            Money::euroRound(abs($a['verschil_cents'])),
+            $a['verschil_cents'] < 0 ? 'goedkoper' : 'duurder',
+        ), $alternatieven));
     }
 
     /**

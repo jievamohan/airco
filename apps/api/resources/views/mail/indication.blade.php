@@ -59,6 +59,24 @@
         </tr>
     </table>
 
+    {{-- Aan de telefoon ligt er nog geen bedrag, dus daar valt over de
+         uitvoering niets te kiezen. Hier wel: hetzelfde systeem, alleen een
+         ander merkniveau, met het verschil erbij. --}}
+    @if (! empty($alternatieven))
+        <x-mail.divider />
+        <x-mail.panel title="Liever een andere uitvoering?">
+            <x-mail.text small>
+                Dit richtbedrag rekent met de {{ strtolower($klasse->label()) }}. Hetzelfde systeem
+                en dezelfde montage kan ook in een ander merkniveau — alleen de apparatuur verschilt:
+            </x-mail.text>
+            <x-mail.bullets :items="$alternatieven" />
+            <x-mail.text small muted>
+                Zegt u er niets over, dan houden we het richtbedrag hierboven aan. Wilt u een andere
+                uitvoering, geef het door in het gesprek of per mail — dan rekenen we het opnieuw door.
+            </x-mail.text>
+        </x-mail.panel>
+    @endif
+
     @if (! empty($quote->assumptions))
         <x-mail.divider />
         <x-mail.panel title="Waar we van uit zijn gegaan">

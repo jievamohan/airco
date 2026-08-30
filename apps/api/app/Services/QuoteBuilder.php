@@ -41,10 +41,12 @@ class QuoteBuilder
      *     system: SystemType, tier: Tier, total_kw: float, assumptions: list<string>
      * }
      */
-    public function calculate(Lead $lead): array
+    public function calculate(Lead $lead, ?Tier $tier = null): array
     {
         $sizing = $this->sizing->forLead($lead);
-        $tier = $lead->tier ?? Tier::from($this->settings->string('agent.pricing.default_tier', 'mid'));
+        // Een expliciete klasse hoort alleen bij het doorrekenen van een
+        // alternatief; normaal komt hij van de lead, en anders van de standaard.
+        $tier ??= $lead->tier ?? Tier::from($this->settings->string('agent.pricing.default_tier', 'mid'));
         $system = $sizing['system'];
         $units = max(1, $sizing['indoor_units']);
         $kw = $sizing['kw'];
@@ -486,6 +488,58 @@ class QuoteBuilder
         }
 
         return $item;
+    }
+
+    /**
+     * Wat dezelfde klus in de andere kwaliteitsklassen kost.
+     *
+     * Alleen het merkniveau van de apparatuur verschilt; materiaal, montage en
+     * uren blijven gelijk. Dat maakt het verschil klein genoeg om te noemen —
+     * en dat is precies waarom de klant het wil weten.
+     *
+     * @return list<array{tier: Tier, merk: string, total_cents: int, verschil_cents: int}>
+     */
+    public function alternatives(Lead $lead, Tier $gekozen): array
+    {
+        $basis = $this->calculate($lead, $gekozen)['total_cents'];
+        $alternatieven = [];
+
+        foreach (Tier::cases() as $tier) {
+            if ($tier === $gekozen) {
+                continue;
+            }
+
+            try {
+                $calc = $this->calculate($lead, $tier);
+            } catch (\RuntimeException) {
+                // Staat er voor deze klasse niets in de catalogus, dan noemen we
+                // hem liever niet dan met een verzonnen bedrag.
+                continue;
+            }
+
+            $alternatieven[] = [
+                'tier' => $tier,
+                'merk' => $this->merkVan($calc),
+                'total_cents' => $calc['total_cents'],
+                'verschil_cents' => $calc['total_cents'] - $basis,
+            ];
+        }
+
+        usort($alternatieven, static fn (array $a, array $b): int => $a['verschil_cents'] <=> $b['verschil_cents']);
+
+        return $alternatieven;
+    }
+
+    /**
+     * Het merkniveau staat op de apparatuurregel, en die staat vooraan.
+     *
+     * @param  array{lines: list<array{catalog_item_id: int|null}>, ...}  $calc
+     */
+    private function merkVan(array $calc): string
+    {
+        $id = $calc['lines'][0]['catalog_item_id'] ?? null;
+
+        return $id === null ? '' : (string) CatalogItem::find($id)?->brand;
     }
 
     private function kw(float $kw): string

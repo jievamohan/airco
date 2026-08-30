@@ -63,6 +63,36 @@ class KlantcommunicatieTest extends TestCase
     }
 
     #[Test]
+    public function de_prijsindicatie_noemt_wat_een_andere_klasse_kost(): void
+    {
+        // Aan de telefoon ligt er nog geen bedrag, dus daar valt over de
+        // uitvoering niets te kiezen. Hier wel.
+        $lead = Lead::factory()->create(['tier' => null]);
+        $indicatie = app(QuoteBuilder::class)->createForLead($lead, QuoteKind::Indication);
+
+        $html = (new QuoteMail($lead, $indicatie))->render();
+
+        $this->assertStringContainsString('Liever een andere uitvoering?', $html);
+        $this->assertStringContainsString('Voordelig', $html);
+        $this->assertStringContainsString('Premium', $html);
+        $this->assertStringContainsString('minder', $html);
+        $this->assertStringContainsString('meer', $html);
+    }
+
+    #[Test]
+    public function de_offerte_na_de_opname_biedt_geen_keuzemenu(): void
+    {
+        // Een offerte is een aanbod. Daar alsnog twee andere prijzen naast
+        // zetten maakt van een aanbod een offerteronde.
+        $lead = Lead::factory()->create(['tier' => null]);
+        $offerte = app(QuoteBuilder::class)->createForLead($lead, QuoteKind::Final);
+
+        $html = (new QuoteMail($lead, $offerte))->render();
+
+        $this->assertStringNotContainsString('Liever een andere uitvoering?', $html);
+    }
+
+    #[Test]
     public function de_offertemail_toont_bedrag_nummer_en_bedrijfsgegevens(): void
     {
         $lead = Lead::factory()->create(['name' => 'Mevrouw J. de Vries']);

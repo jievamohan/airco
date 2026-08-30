@@ -18,6 +18,15 @@ final class Money
         return ($cents < 0 ? '− € ' : '€ ').$formatted;
     }
 
+    /**
+     * "€ 351" — hele euro's. Voor bedragen die bij benadering zijn: centen
+     * suggereren daar een precisie die er niet is.
+     */
+    public static function euroRound(int $cents): string
+    {
+        return ($cents < 0 ? '− € ' : '€ ').number_format(abs($cents) / 100, 0, ',', '.');
+    }
+
     /** Aantallen zonder overbodige nullen: 1, 2,5 of 12,75. */
     public static function quantity(float $quantity): string
     {
