@@ -17,10 +17,7 @@
 </template>
 
 <script setup lang="ts">
-useHead({
-  title: 'KlimaatX CRM',
-  meta: [{ name: 'robots', content: 'noindex, nofollow' }],
-})
+useDashboardHead('KlimaatX CRM')
 
 const route = useRoute()
 const api = useApi()
