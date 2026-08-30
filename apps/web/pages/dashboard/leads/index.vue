@@ -34,36 +34,43 @@
         voor een breed scherm, waar je juist kolommen wilt vergelijken.
       -->
       <div v-if="compact" class="cards">
-        <button v-for="lead in rows" :key="lead.uuid" type="button" class="card" @click="open(lead.uuid)">
-          <span class="card__head">
-            <span class="card__title">{{ lead.name }}</span>
-            <span class="badge" :class="`badge--${lead.status}`">{{ lead.status_label }}</span>
-          </span>
+        <button
+          v-for="lead in rows"
+          :key="lead.uuid"
+          type="button"
+          class="card lead"
+          :class="`lead--${lead.status}`"
+          @click="open(lead.uuid)"
+        >
+          <span class="lead__stripe" aria-hidden="true" />
 
-          <span class="card__sub">
-            {{ lead.city ?? 'plaats onbekend' }} · {{ sourceLabels[lead.source] ?? lead.source }}
-          </span>
-
-          <span class="card__figures">
-            <span class="card__amount" :class="{ 'card__amount--muted': !lead.quote_total_cents }">
-              {{ lead.quote_total_cents ? fmt.euro(lead.quote_total_cents) : 'nog geen offerte' }}
+          <span class="lead__body">
+            <span class="lead__top">
+              <span class="card__title">{{ lead.name }}</span>
+              <span class="lead__amount" :class="{ 'lead__amount--none': !lead.quote_total_cents }">
+                {{ lead.quote_total_cents ? fmt.euroRound(lead.quote_total_cents) : 'nog geen offerte' }}
+              </span>
             </span>
-            <span v-if="lead.estimated_kw" class="card__aside">{{ fmt.number(lead.estimated_kw, 1) }} kW</span>
-          </span>
 
-          <span class="card__foot">
-            <span v-if="lead.next_action_at" class="chip" :class="{ 'chip--due': isOverdue(lead.next_action_at) }">
-              <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">
-                <circle cx="8" cy="8" r="6.4" />
-                <path d="M8 4.6V8l2.4 1.6" stroke-linecap="round" />
-              </svg>
-              {{ fmt.relative(lead.next_action_at) }}
+            <span class="lead__meta">
+              <span class="lead__status">{{ lead.status_label }}</span> ·
+              {{ lead.city ?? 'plaats onbekend' }} ·
+              {{ lead.estimated_kw ? `${fmt.number(lead.estimated_kw, 1)} kW` : 'nog niet berekend' }}
             </span>
-            <span v-else class="chip">geen actie gepland</span>
 
-            <span>
-              <template v-if="lead.call_attempts">{{ lead.call_attempts }}× gebeld · </template>
-              binnengekomen {{ fmt.relative(lead.created_at) }}
+            <span class="lead__foot">
+              <span v-if="lead.next_action_at" class="chip" :class="{ 'chip--due': isOverdue(lead.next_action_at) }">
+                <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <circle cx="8" cy="8" r="6.4" />
+                  <path d="M8 4.6V8l2.4 1.6" stroke-linecap="round" />
+                </svg>
+                {{ fmt.relative(lead.next_action_at) }}
+              </span>
+              <span v-else class="chip">geen actie gepland</span>
+
+              <span class="lead__tail">
+                {{ lead.call_attempts ? `${lead.call_attempts}× gebeld` : 'nog niet gebeld' }}
+              </span>
             </span>
           </span>
         </button>

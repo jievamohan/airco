@@ -631,6 +631,90 @@ button.card:focus-visible { outline: 2px solid var(--dash-ink); outline-offset: 
   font-size: 12px;
 }
 
+/* -------------------------------------------------------------- leadkaart */
+
+/*
+  De status is de rand van de kaart, niet een pil erin: een lijst naar beneden
+  scannen leest dan als een kleurkolom. Drie regels, in de volgorde waarin je
+  erover nadenkt — wie en hoeveel, hoe warm en waar, wanneer moet ik wat.
+*/
+
+.lead {
+  --lead-accent: #d4d4d4;
+
+  display: flex;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.lead__stripe {
+  flex: none;
+  width: 3px;
+  background: var(--lead-accent);
+}
+
+.lead__body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-grow: 1;
+  min-width: 0;
+  padding: 13px 14px;
+}
+
+.lead__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lead__amount {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Geen bedrag maar een mededeling: die hoeft niet even hard te schreeuwen. */
+.lead__amount--none {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dash-muted);
+}
+
+.lead__meta {
+  color: var(--dash-muted);
+  font-size: 12.5px;
+}
+
+.lead__status {
+  color: var(--lead-accent);
+  font-weight: 500;
+}
+
+.lead__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 3px;
+}
+
+.lead__tail {
+  color: var(--color-ink-soft);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/* Dezelfde indeling in statussen als de badges op een breed scherm. */
+.lead--won, .lead--appointment_scheduled { --lead-accent: var(--dash-ok); }
+.lead--quoted, .lead--qualified { --lead-accent: #2c6ba8; }
+.lead--calling, .lead--follow_up { --lead-accent: var(--dash-warn); }
+.lead--lost, .lead--unreachable, .lead--do_not_contact { --lead-accent: var(--dash-bad); }
+
 /* ------------------------------------------------------------------- chips */
 
 .chip {

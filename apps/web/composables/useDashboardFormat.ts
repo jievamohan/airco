@@ -7,6 +7,20 @@ export function useDashboardFormat() {
       ? '—'
       : new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(cents / 100)
 
+  /**
+   * Hetzelfde bedrag op hele euro's. In een lijst die je scant dragen de
+   * centen niets bij; op de detailpagina staat het bedrag voluit.
+   */
+  const euroRound = (cents: number | null | undefined) =>
+    cents === null || cents === undefined
+      ? '—'
+      : new Intl.NumberFormat('nl-NL', {
+          style: 'currency',
+          currency: 'EUR',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(cents / 100)
+
   const number = (value: number | null | undefined, decimals = 1) =>
     value === null || value === undefined
       ? '—'
@@ -46,5 +60,5 @@ export function useDashboardFormat() {
   const duration = (minutes: number | null | undefined) =>
     minutes === null || minutes === undefined ? '—' : `${number(minutes / 60, 1)} uur`
 
-  return { euro, number, dateTime, date, relative, duration }
+  return { euro, euroRound, number, dateTime, date, relative, duration }
 }
