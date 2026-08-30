@@ -302,6 +302,74 @@ class LeadWorkflowTest extends TestCase
     }
 
     #[Test]
+    public function dezelfde_woning_met_een_ander_mailadres_blijft_een_lead(): void
+    {
+        // Op contactgegevens sleutelen leverde twee leads voor één woning op.
+        Queue::fake();
+        $intake = app(LeadIntake::class);
+        $adres = ['address' => 'Valkenboslaan 249', 'postcode' => '2563CW', 'city' => 'Den Haag', 'phone' => '0648690000'];
+
+        $eerste = $intake->capture($adres + ['name' => 'R. Mohan', 'email' => 'prive@example.nl'], 'web_form');
+        $tweede = $intake->capture($adres + ['name' => 'R. Mohan', 'email' => 'zakelijk@example.nl'], 'web_form');
+
+        $this->assertFalse($tweede['created']);
+        $this->assertSame($eerste['lead']->id, $tweede['lead']->id);
+    }
+
+    #[Test]
+    public function een_andere_woning_van_dezelfde_klant_wordt_een_eigen_lead(): void
+    {
+        // Sizing, opname en montage hangen aan de locatie, niet aan de persoon.
+        Queue::fake();
+        $intake = app(LeadIntake::class);
+        $contact = ['name' => 'R. Mohan', 'email' => 'r@example.nl', 'phone' => '0648690000'];
+
+        $intake->capture($contact + ['address' => 'Valkenboslaan 249', 'postcode' => '2563CW'], 'web_form');
+        $tweede = $intake->capture($contact + ['address' => 'Keizersgracht 12', 'postcode' => '1015CW'], 'web_form');
+
+        $this->assertTrue($tweede['created']);
+        $this->assertSame(2, Lead::count());
+    }
+
+    #[Test]
+    public function een_aanvraag_na_verlies_hangt_niet_aan_de_afgesloten_lead(): void
+    {
+        // Dit gebeurde op productie: de lead ging op verloren, een minuut later
+        // kwam er een aanvraag binnen, en die werd eraan geplakt. Aan een
+        // verloren lead gebeurt niets meer, dus die aanvraag was dood.
+        Queue::fake();
+        $intake = app(LeadIntake::class);
+        $aanvraag = ['name' => 'R. Mohan', 'email' => 'r@example.nl', 'phone' => '0648690000', 'address' => 'Valkenboslaan 249', 'postcode' => '2563CW'];
+
+        $eerste = $intake->capture($aanvraag, 'web_form')['lead'];
+        $eerste->forceFill(['status' => 'lost'])->save();
+
+        $tweede = $intake->capture($aanvraag, 'web_form');
+
+        $this->assertTrue($tweede['created'], 'Een afgesloten lead hoort geen nieuwe aanvraag meer op te vangen.');
+        $this->assertNotSame($eerste->id, $tweede['lead']->id);
+    }
+
+    #[Test]
+    public function een_herhaalde_aanvraag_is_af_te_splitsen_naar_een_eigen_lead(): void
+    {
+        Queue::fake();
+        $intake = app(LeadIntake::class);
+        $basis = ['name' => 'R. Mohan', 'email' => 'r@example.nl', 'phone' => '0648690000', 'address' => 'Valkenboslaan 249', 'postcode' => '2563CW'];
+
+        $bron = $intake->capture($basis + ['space_size' => 80, 'rooms_count' => 3], 'web_form')['lead'];
+        $intake->capture($basis + ['space_size' => 15, 'rooms_count' => 1], 'web_form');
+
+        $melding = $bron->events()->where('type', 'lead_duplicate')->latest('id')->firstOrFail();
+        $nieuw = $intake->splitFrom($bron, $melding->payload['aanvraag'], 'web_form');
+
+        $this->assertNotSame($bron->id, $nieuw->id);
+        $this->assertSame(15.0, (float) $nieuw->space_size, 'De afgesplitste lead draagt de nieuwe maten.');
+        $this->assertSame(80.0, (float) $bron->fresh()->space_size, 'En de oorspronkelijke lead blijft zoals hij was.');
+        $this->assertDatabaseHas('lead_events', ['lead_id' => $bron->id, 'type' => 'lead_split']);
+    }
+
+    #[Test]
     public function een_herhaalde_aanvraag_laat_wel_een_spoor_na(): void
     {
         // Zonder dit is een tweede aanvraag onzichtbaar: geen nieuwe lead, en
