@@ -23,19 +23,23 @@ class AppointmentMail extends BaseMail
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: $this->appointment->kind === 'survey'
-            ? 'Bevestiging van de opname bij u thuis'
-            : 'Bevestiging van uw installatieafspraak');
+        $start = $this->appointment->starts_at->timezone($this->appointment->timezone);
+
+        return $this->envelopeFor(sprintf(
+            $this->appointment->kind === 'survey' ? 'De opname bij u thuis op %s' : 'Uw installatieafspraak op %s',
+            $start->translatedFormat('l j F'),
+        ));
     }
 
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.appointment',
+            view: 'mail.appointment',
+            text: 'mail.text.appointment',
             with: [
                 'lead' => $this->lead,
                 'appointment' => $this->appointment,
-                'company' => config('agent.company'),
+                'company' => $this->company(),
             ],
         );
     }

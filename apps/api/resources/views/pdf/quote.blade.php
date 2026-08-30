@@ -1,65 +1,157 @@
+@php use App\Support\Money; @endphp
 <!DOCTYPE html>
 <html lang="nl">
 <head>
     <meta charset="utf-8">
-    <title>{{ $quote->number }}</title>
+    <title>{{ $quote->kind->label() }} {{ $quote->number }}</title>
     <style>
+        /* Briefpapier: kop en voet staan vast, de inhoud loopt ertussen door.
+           Maten in px bij 96 dpi; 13px is ongeveer 9,75pt op papier. */
+        @page { margin: 92px 56px 66px; }
+
         * { box-sizing: border-box; }
-        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #1b1b1b; margin: 0; padding: 32px 36px; }
-        h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.02em; }
-        .muted { color: #6b6b6b; }
-        .head { width: 100%; margin-bottom: 28px; }
-        .head td { vertical-align: top; }
-        .head .right { text-align: right; }
-        table.lines { width: 100%; border-collapse: collapse; margin-top: 8px; }
-        table.lines th { text-align: left; border-bottom: 1px solid #1b1b1b; padding: 6px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
-        table.lines td { padding: 6px 4px; border-bottom: 1px solid #e6e6e6; }
-        table.lines .num { text-align: right; white-space: nowrap; }
-        .totals { width: 45%; margin-left: 55%; margin-top: 14px; border-collapse: collapse; }
-        .totals td { padding: 4px 4px; }
-        .totals .num { text-align: right; white-space: nowrap; }
-        .totals tr.grand td { border-top: 1px solid #1b1b1b; font-weight: bold; }
-        .block { margin-top: 24px; }
-        .block h2 { font-size: 12px; margin: 0 0 6px; }
-        ul { margin: 0; padding-left: 16px; }
-        li { margin-bottom: 3px; }
-        .footer { margin-top: 28px; font-size: 10px; color: #6b6b6b; border-top: 1px solid #e6e6e6; padding-top: 10px; }
+
+        body {
+            font-family: "DejaVu Sans", sans-serif;
+            font-size: 13px;
+            line-height: 1.55;
+            color: #1b1b1b;
+            margin: 0;
+            padding: 0;
+        }
+
+        .num { text-align: right; white-space: nowrap; }
+
+        /* --- Briefhoofd --- */
+        #letterhead { position: fixed; top: -78px; left: 0; right: 0; height: 76px; }
+        #letterhead table { width: 100%; border-collapse: collapse; }
+        #letterhead td { vertical-align: top; padding: 0; }
+        .wordmark { font-size: 21px; font-weight: bold; letter-spacing: -0.4px; color: #0a0a0a; }
+        .contact { font-size: 10.5px; line-height: 1.5; color: #6b6b6b; text-align: right; }
+
+        /* Merkstreep: van koel naar warm, in vaste stappen zodat elke
+           pdf-lezer hem hetzelfde tekent. */
+        .rule { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        .rule td { height: 3px; line-height: 3px; font-size: 0; padding: 0; }
+
+        /* --- Voettekst --- */
+        #footer { position: fixed; bottom: -54px; left: 0; right: 0; height: 46px; font-size: 9.5px; color: #9a9a9a; }
+        #footer table { width: 100%; border-collapse: collapse; border-top: 1px solid #ececec; }
+        #footer td { padding-top: 8px; vertical-align: top; }
+        /* Alleen het paginanummer: dompdf kent counter(pages) niet en zou
+           daar "van 0" van maken. */
+        .pagenum:after { content: counter(page); }
+
+        /* --- Documentkop --- */
+        h1 { font-size: 25px; line-height: 1.1; font-weight: bold; letter-spacing: -0.6px; margin: 0 0 2px; color: #0a0a0a; }
+        .subtitle { font-size: 12.5px; color: #6b6b6b; margin: 0 0 16px; }
+
+        table.meta { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
+        table.meta td { vertical-align: top; padding: 0; }
+        .label { font-size: 9px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #9a9a9a; padding-bottom: 4px; }
+        .meta-value { font-size: 13px; line-height: 1.5; }
+        .meta-value strong { color: #0a0a0a; }
+        table.dates { border-collapse: collapse; float: right; }
+        table.dates td { padding: 0 0 3px 18px; text-align: right; vertical-align: baseline; white-space: nowrap; }
+        table.dates td.key { font-size: 11px; color: #9a9a9a; }
+
+        /* --- Specificatie --- */
+        table.lines { width: 100%; border-collapse: collapse; }
+        table.lines th {
+            text-align: left; padding: 0 6px 7px 0; border-bottom: 1.2px solid #0a0a0a;
+            font-size: 9px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #6b6b6b;
+        }
+        table.lines th.num, table.lines td.num { text-align: right; padding-right: 0; padding-left: 6px; }
+        table.lines td { padding: 4px 6px 4px 0; border-bottom: 1px solid #ececec; font-size: 12.5px; vertical-align: top; }
+        table.lines tr.credit td { color: #6b6b6b; }
+
+        table.totals { width: 47%; margin-left: 53%; border-collapse: collapse; margin-top: 9px; }
+        table.totals td { padding: 3px 0; font-size: 12.5px; }
+        table.totals td.key { color: #6b6b6b; }
+        table.totals tr.grand td { border-top: 1.2px solid #0a0a0a; padding-top: 9px; font-size: 14px; font-weight: bold; color: #0a0a0a; }
+
+        /* --- Blokken --- */
+        .blocks { width: 100%; border-collapse: collapse; margin-top: 18px; page-break-inside: avoid; }
+        .blocks td { vertical-align: top; padding: 0 26px 0 0; }
+        .blocks td.last { padding-right: 0; }
+        .block h2 { font-size: 9px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #9a9a9a; margin: 0 0 7px; }
+        ul { margin: 0; padding-left: 15px; }
+        li { margin-bottom: 3px; font-size: 12.5px; line-height: 1.5; }
+
+        .note {
+            margin-top: 18px; padding: 12px 15px; background-color: #fafafa;
+            border: 1px solid #ececec; border-radius: 6px;
+            font-size: 11px; line-height: 1.55; color: #6b6b6b; page-break-inside: avoid;
+        }
     </style>
 </head>
 <body>
-<table class="head">
-    <tr>
-        <td>
-            <h1>{{ $quote->kind->label() }}</h1>
-            <div class="muted">{{ $quote->number }}</div>
-            @unless ($quote->isBinding())
-                <div class="muted">Vrijblijvend richtbedrag, onder voorbehoud van de opname ter plaatse</div>
-            @endunless
-        </td>
-        <td class="right">
-            <strong>{{ $company['name'] }}</strong><br>
-            {{ $company['postcode'] }} {{ $company['city'] }}<br>
-            {{ $company['phone'] }}<br>
-            {{ $company['email'] }}
-            @if ($company['kvk'])<br>KvK {{ $company['kvk'] }}@endif
-            @if ($company['vat_number'])<br>Btw {{ $company['vat_number'] }}@endif
-        </td>
-    </tr>
-</table>
 
-<table class="head">
+<div id="letterhead">
+    <table>
+        <tr>
+            <td class="wordmark">{{ $company['name'] }}</td>
+            <td class="contact">
+                @if ($company['address_line']){{ $company['address_line'] }}<br>@endif
+                @if ($company['phone']){{ $company['phone'] }}@endif
+                @if ($company['phone'] && $company['email']) &nbsp;·&nbsp; @endif
+                @if ($company['email']){{ $company['email'] }}@endif
+                @if ($company['website_label']) &nbsp;·&nbsp; {{ $company['website_label'] }}@endif
+            </td>
+        </tr>
+    </table>
+    <table class="rule">
+        <tr>
+            @foreach (['#4aa8ff', '#5da4f0', '#71a0e2', '#849cd4', '#9898c6', '#ab94b8', '#bf90aa', '#d28c9c', '#e6888e', '#f28580', '#f78a5f', '#ff8a3d'] as $step)
+                <td style="background-color: {{ $step }}">&nbsp;</td>
+            @endforeach
+        </tr>
+    </table>
+</div>
+
+<div id="footer">
+    <table>
+        <tr>
+            <td>{{ $company['legal_line'] }}</td>
+            <td class="num">{{ $quote->kind->label() }} {{ $quote->number }} &nbsp;·&nbsp; pagina <span class="pagenum"></span></td>
+        </tr>
+    </table>
+</div>
+
+<h1>{{ $quote->kind->label() }}</h1>
+<p class="subtitle">
+    @if ($quote->isBinding())
+        Airconditioning, geleverd en gemonteerd
+    @else
+        Richtbedrag voor airconditioning, onder voorbehoud van de opname ter plaatse
+    @endif
+</p>
+
+<table class="meta">
     <tr>
-        <td>
-            <div class="muted">Voor</div>
-            <strong>{{ $lead->name }}</strong><br>
-            {{ $lead->address }}<br>
-            {{ $lead->postcode }} {{ $lead->city }}
+        <td width="55%">
+            <div class="label">Voor</div>
+            <div class="meta-value">
+                <strong>{{ $lead->name }}</strong><br>
+                @if ($lead->address){{ $lead->address }}<br>@endif
+                {{ trim($lead->postcode.' '.$lead->city) }}
+            </div>
         </td>
-        <td class="right">
-            <div class="muted">Datum</div>
-            {{ $quote->created_at->format('d-m-Y') }}<br>
-            <div class="muted" style="margin-top:6px">{{ $quote->isBinding() ? 'Geldig tot' : 'Richtbedrag geldig tot' }}</div>
-            {{ optional($quote->valid_until)->format('d-m-Y') }}
+        <td>
+            <table class="dates">
+                <tr>
+                    <td class="key">{{ $quote->isBinding() ? 'Offertenummer' : 'Kenmerk' }}</td>
+                    <td class="meta-value"><strong>{{ $quote->number }}</strong></td>
+                </tr>
+                <tr>
+                    <td class="key">Datum</td>
+                    <td class="meta-value">{{ $quote->created_at->translatedFormat('j F Y') }}</td>
+                </tr>
+                <tr>
+                    <td class="key">{{ $quote->isBinding() ? 'Geldig tot' : 'Richtbedrag geldig tot' }}</td>
+                    <td class="meta-value">{{ optional($quote->valid_until)->translatedFormat('j F Y') ?? '—' }}</td>
+                </tr>
+            </table>
         </td>
     </tr>
 </table>
@@ -67,19 +159,19 @@
 <table class="lines">
     <thead>
     <tr>
-        <th style="width:52%">Omschrijving</th>
+        <th style="width:50%">Omschrijving</th>
         <th class="num" style="width:14%">Aantal</th>
-        <th class="num" style="width:17%">Prijs</th>
-        <th class="num" style="width:17%">Bedrag</th>
+        <th class="num" style="width:18%">Prijs</th>
+        <th class="num" style="width:18%">Bedrag</th>
     </tr>
     </thead>
     <tbody>
     @foreach ($items as $item)
-        <tr>
+        <tr @class(['credit' => $item->line_total_cents < 0])>
             <td>{{ $item->description }}</td>
-            <td class="num">{{ rtrim(rtrim(number_format((float) $item->quantity, 2, ',', '.'), '0'), ',') }} {{ $item->unit }}</td>
-            <td class="num">€ {{ number_format($item->unit_price_cents / 100, 2, ',', '.') }}</td>
-            <td class="num">€ {{ number_format($item->line_total_cents / 100, 2, ',', '.') }}</td>
+            <td class="num">{{ Money::quantity((float) $item->quantity) }} {{ $item->unit }}</td>
+            <td class="num">{{ Money::euro($item->unit_price_cents) }}</td>
+            <td class="num">{{ Money::euro($item->line_total_cents) }}</td>
         </tr>
     @endforeach
     </tbody>
@@ -87,71 +179,62 @@
 
 <table class="totals">
     <tr>
-        <td>Subtotaal excl. btw</td>
-        <td class="num">€ {{ number_format($quote->subtotal_cents / 100, 2, ',', '.') }}</td>
+        <td class="key">Subtotaal excl. btw</td>
+        <td class="num">{{ Money::euro($quote->subtotal_cents) }}</td>
     </tr>
     <tr>
-        <td>Btw {{ rtrim(rtrim(number_format((float) $quote->vat_rate, 1, ',', '.'), '0'), ',') }}%</td>
-        <td class="num">€ {{ number_format($quote->vat_cents / 100, 2, ',', '.') }}</td>
+        <td class="key">Btw {{ Money::percentage((float) $quote->vat_rate) }}</td>
+        <td class="num">{{ Money::euro($quote->vat_cents) }}</td>
     </tr>
     <tr class="grand">
         <td>Totaal incl. btw</td>
-        <td class="num">€ {{ number_format($quote->total_cents / 100, 2, ',', '.') }}</td>
+        <td class="num">{{ Money::euro($quote->total_cents) }}</td>
     </tr>
 </table>
 
-<div class="block">
-    <h2>Uitvoering</h2>
-    <ul>
-        <li>Systeem: {{ $quote->system_type === 'multi_split' ? 'Multisplit' : 'Single split' }}, {{ number_format((float) $quote->total_kw, 1, ',', '.') }} kW</li>
-        <li>Geschatte montageduur op locatie: {{ number_format($quote->onsite_minutes / 60, 1, ',', '.') }} uur</li>
-        <li>Inclusief inbedrijfstelling, drukproef, vacumeren en uitleg van de bediening</li>
-    </ul>
-</div>
-
-@if (! empty($quote->assumptions))
-    <div class="block">
-        <h2>Aannames</h2>
-        <ul>
-            @foreach ($quote->assumptions as $assumption)
-                <li>{{ $assumption }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
+<table class="blocks">
+    <tr>
+        <td style="width:50%" @class(['last' => empty($quote->assumptions)])>
+            <div class="block">
+                <h2>Uitvoering</h2>
+                <ul>
+                    <li>Systeem: {{ $quote->system_type === 'multi_split' ? 'Multisplit' : 'Single split' }}, {{ Money::kilowatt($quote->total_kw) }}</li>
+                    <li>Geschatte montageduur op locatie: {{ Money::hours($quote->onsite_minutes) }}</li>
+                    <li>Inclusief inbedrijfstelling, drukproef, vacumeren en uitleg van de bediening</li>
+                </ul>
+            </div>
+        </td>
+        @if (! empty($quote->assumptions))
+            <td class="last">
+                <div class="block">
+                    <h2>Aannames</h2>
+                    <ul>
+                        @foreach ($quote->assumptions as $assumption)
+                            <li>{{ $assumption }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </td>
+        @endif
+    </tr>
+</table>
 
 @if ($quote->isBinding())
-    <div class="block">
-        <h2>Wat u hieraan heeft</h2>
-        <ul>
-            <li>Dit is een aanbod: gaat u akkoord, dan geldt dit bedrag voor het beschreven werk.</li>
-            <li>De prijs is vastgesteld na de opname ter plaatse; er komen geen kosten achteraf bij voor wat hierin staat.</li>
-            <li>Meerwerk waar u zelf om vraagt, stemmen we vooraf met u af.</li>
-        </ul>
-    </div>
-
-    <div class="footer">
-        Deze offerte is opgesteld na een opname ter plaatse en geldt tot de hierboven
-        genoemde datum. Wilt u iets wijzigen aan de opstelling of de uitvoering, dan
-        maken we een aangepaste offerte voordat het werk begint.
+    <div class="note">
+        Dit is een aanbod: gaat u akkoord, dan geldt dit bedrag voor het werk zoals hierboven
+        beschreven. De prijs is vastgesteld na de opname ter plaatse, dus er komen achteraf geen
+        kosten bij voor wat hierin staat. Meerwerk waar u zelf om vraagt, stemmen we vooraf met
+        u af. Deze offerte geldt tot de hierboven genoemde datum.
     </div>
 @else
-    <div class="block">
-        <h2>Wat dit wel en niet is</h2>
-        <ul>
-            <li>Dit is een <strong>prijsindicatie</strong> op basis van de gegevens die u ons heeft gegeven, geen offerte.</li>
-            <li>Aan dit bedrag kunnen geen rechten worden ontleend.</li>
-            <li>We komen eerst langs voor een opname: leidinglengte, plek van de buitenunit, doorvoeren en de elektragroep.</li>
-            <li>Direct daarna krijgt u de offerte met de definitieve prijs. Die is bindend, deze indicatie niet.</li>
-        </ul>
-    </div>
-
-    <div class="footer">
-        Deze prijsindicatie is opgesteld op basis van de door u verstrekte gegevens en
-        is vrijblijvend. Wijkt de situatie op locatie af — in leidinglengte,
-        bereikbaarheid van de gevel of de beschikbare elektragroep — dan ziet u dat
-        terug in de offerte die na de opname volgt.
+    <div class="note">
+        <strong>Dit is een prijsindicatie, geen offerte.</strong> Het is een richtbedrag op basis
+        van de door u verstrekte gegevens; aan dit bedrag kunnen geen rechten worden ontleend. We
+        komen eerst langs voor een opname — leidinglengte, plek van de buitenunit, doorvoeren en
+        de elektragroep — en sturen daarna de offerte met de definitieve prijs. Die is bindend,
+        deze indicatie niet.
     </div>
 @endif
+
 </body>
 </html>

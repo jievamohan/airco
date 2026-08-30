@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\View;
 
 class QuotePdfRenderer
 {
+    public function __construct(private readonly CompanyProfile $company) {}
+
     public function render(Quote $quote): string
     {
         $options = new Options;
@@ -23,7 +25,7 @@ class QuotePdfRenderer
             'quote' => $quote,
             'lead' => $quote->lead,
             'items' => $quote->items,
-            'company' => config('agent.company'),
+            'company' => $this->company->all(),
         ])->render());
         $dompdf->render();
 
