@@ -12,6 +12,88 @@ in het CRM terecht.
 
 ---
 
+## 0. Klikpad
+
+De volgorde waarin je het doet, met de schermnamen erbij. De secties hierna
+bevatten de inhoud die je op elke plek nodig hebt.
+
+**Vooraf:** een ElevenLabs-account met Agents, en een Twilio-account. Dat
+laatste is geen voorkeur maar een eis: onze code roept
+`/v1/convai/twilio/outbound-call` aan, dus het nummer moet via Twilio bij
+ElevenLabs binnenkomen. Een SIP-trunknummer werkt niet.
+
+### 1 — Twilio: nummer klaarzetten
+
+Twee smaken, en voor ons voldoet de tweede:
+
+| | Inkomend | Uitgaand |
+|---|---|---|
+| Nummer gekocht bij Twilio | ja | ja |
+| Geverifieerde caller ID | nee | ja |
+
+Wij bellen alleen uit. Zet je je bestaande bedrijfsnummer als geverifieerde
+caller ID, dan belt de agent daar vandaan en komt een klant die terugbelt
+gewoon bij jullie uit — vaak beter dan een los nummer waar niemand opneemt.
+
+Je hebt straks een SID en een token nodig. Maak liever een API key aan (de SID
+begint dan met `SK`) dan je account-brede gegevens te gebruiken.
+
+### 2 — ElevenLabs: agent aanmaken
+
+Dashboard → **Agents** → nieuwe agent → naam invullen en **Blank template**
+kiezen.
+
+Daarna in het tabblad **Agent**:
+
+- **First message** → `{{gespreksopening}}`
+- **System prompt** → de hele tekst uit §2
+
+En in **Voice** een Nederlandse stem. De overige instellingen staan in §1.
+
+### 3 — ElevenLabs: nummer importeren
+
+Tabblad **Phone Numbers** → nummer toevoegen, met vier velden: Label, Phone
+Number, Twilio SID, Twilio Token. ElevenLabs bepaalt zelf of het nummer in- en
+uitgaand kan of alleen uitgaand.
+
+Open daarna het geïmporteerde nummer: het id begint met `phnum_`. **Dat** is
+wat wij nodig hebben, niet het telefoonnummer.
+
+### 4 — ElevenLabs: dataverzameling
+
+Tabblad **Analysis** → **Data collection** → per veld uit §4 op *Add item* en
+type, identifier en beschrijving invullen. De identifiers moeten exact
+overeenkomen; §7 legt uit waarom.
+
+### 5 — ElevenLabs: webhook
+
+Deze staat **werkruimtebreed**, niet bij de agent: instellingenpagina van
+ElevenAgents → post-call webhooks. Zie §5 voor de URL en het type. Kopieer het
+secret dat er bij het aanmaken verschijnt — je ziet het maar één keer.
+
+### 6 — ElevenLabs: API-sleutel
+
+Profielmenu → **API Keys** → nieuwe sleutel. Beperk hem desnoods in scope.
+
+### 7 — Ons dashboard
+
+Vul de vijf velden in en zet proefmodus uit; dat staat uitgeschreven in §6.
+
+### Welke code hoort waar
+
+| Begint met | Wat het is | Waar je hem invult |
+|---|---|---|
+| `agent_…` | de agent uit stap 2 | ElevenLabs agent-id |
+| `phnum_…` | het nummer uit stap 3 | Uitgaand telefoonnummer-id |
+| `sk_…` | Twilio API key-SID | alleen bij ElevenLabs, stap 3 |
+
+> Schermnamen zijn nagelopen in de documentatie van ElevenLabs. Wijkt de
+> interface af, zoek dan op de begrippen uit de tabellen hierboven —
+> *Phone Numbers*, *Data collection*, *post-call webhook* — want die zitten in
+> de API en veranderen niet met een herontwerp mee.
+
+---
+
 ## 1. Agent-instellingen
 
 | Instelling | Waarde |
