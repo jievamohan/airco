@@ -1,7 +1,7 @@
 # KlimaatX API
 
 Laravel 12-applicatie met het CRM en de lead-to-appointment agent: mailbox-intake,
-verrijking, uitbellen via een ElevenLabs voice agent, offertes, opvolgcadans en
+verrijking, uitbellen via een ElevenLabs voice agent, prijsindicaties en offertes, opvolgcadans en
 agenda-afspraken.
 
 De web-app (`apps/web`) praat hier uitsluitend via HTTP mee; het dashboard leeft

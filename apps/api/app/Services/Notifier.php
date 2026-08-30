@@ -33,16 +33,26 @@ class Notifier
     {
         $this->send($lead, 'Gesprek gevoerd: '.$lead->name, [
             'De voice agent heeft de klant gesproken en de ontbrekende gegevens opgehaald.',
-            'De offerte wordt nu opgesteld en verstuurd.',
+            'De vrijblijvende prijsindicatie wordt nu opgesteld en verstuurd.',
+        ]);
+    }
+
+    public function surveyCompleted(Lead $lead): void
+    {
+        $this->send($lead, 'Opname afgerond: '.$lead->name, [
+            'De situatie is ter plaatse bekeken.',
+            'Controleer of de gegevens van de lead kloppen en verstuur daarna de offerte; die is bindend.',
         ]);
     }
 
     public function quoteSent(Lead $lead, Quote $quote): void
     {
         $lines = [
-            sprintf('Offerte %s is gemaild: € %s incl. btw.', $quote->number, number_format($quote->total_cents / 100, 2, ',', '.')),
+            sprintf('%s %s is gemaild: € %s incl. btw.', $quote->kind->label(), $quote->number, number_format($quote->total_cents / 100, 2, ',', '.')),
             sprintf('Geschatte montageduur op locatie: %s uur.', number_format($quote->onsite_minutes / 60, 1, ',', '.')),
-            sprintf('Over %d minuten belt de agent na om de opdracht rond te maken.', $this->settings->int('agent.workflow.conversion_call_delay_minutes', 60)),
+            $quote->isBinding()
+                ? sprintf('Over %d minuten belt de agent na om akkoord te vragen en een installatiedatum te prikken.', $this->settings->int('agent.workflow.close_call_delay_minutes', 60))
+                : sprintf('Over %d minuten belt de agent na om de indicatie door te nemen en een opname ter plaatse in te plannen.', $this->settings->int('agent.workflow.conversion_call_delay_minutes', 60)),
         ];
 
         if ($quote->margin_warning) {
@@ -55,13 +65,26 @@ class Notifier
             );
         }
 
-        $this->send($lead, ($quote->margin_warning ? 'Offerte verstuurd onder de margedrempel: ' : 'Offerte verstuurd: ').$lead->name, $lines);
+        $onderwerp = sprintf(
+            '%s verstuurd%s: ',
+            $quote->kind->label(),
+            $quote->margin_warning ? ' onder de margedrempel' : '',
+        );
+
+        $this->send($lead, $onderwerp.$lead->name, $lines);
     }
 
     public function appointmentBooked(Lead $lead, Appointment $appointment): void
     {
-        $this->send($lead, 'Afspraak ingepland: '.$lead->name, [
-            sprintf('De installatie staat gepland op %s.', $appointment->starts_at->timezone($appointment->timezone)->format('l j F Y \o\m H:i')),
+        $opname = $appointment->kind === 'survey';
+
+        $this->send($lead, ($opname ? 'Opname ingepland: ' : 'Installatie ingepland: ').$lead->name, [
+            sprintf(
+                $opname
+                    ? 'De opname ter plaatse staat gepland op %s. Daarna kan de offerte de deur uit.'
+                    : 'De installatie staat gepland op %s.',
+                $appointment->starts_at->timezone($appointment->timezone)->format('l j F Y \o\m H:i'),
+            ),
             sprintf('Locatie: %s.', $appointment->location ?? $lead->displayLocation()),
             $appointment->provider === 'none'
                 ? 'Er is nog geen agendakoppeling actief; de afspraak staat alleen in het dashboard.'

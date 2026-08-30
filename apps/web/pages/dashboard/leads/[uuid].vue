@@ -20,7 +20,10 @@
         <span class="small muted">{{ verloopSamenvatting }}</span>
       </div>
 
-      <ol class="pijplijn">
+      <!-- Het aantal stappen staat niet vast: de flow groeide van zes naar
+           negen. Het grid telt daarom mee in plaats van een vast getal aan te
+           houden, anders valt de laatste stap op een tweede rij. -->
+      <ol class="pijplijn" :style="{ '--stappen': stappen.length }">
         <li
           v-for="(stap, index) in stappen"
           :key="stap.key"
@@ -375,19 +378,23 @@
         </section>
 
         <section class="panel">
-          <h2 class="panel__title">Offertes</h2>
-          <p v-if="!lead.quotes.length" class="empty">Er is nog geen offerte opgesteld.</p>
+          <h2 class="panel__title">Prijsindicaties en offertes</h2>
+          <p v-if="!lead.quotes.length" class="empty">Er is nog niets opgesteld.</p>
           <div v-for="quote in lead.quotes" v-else :key="quote.id" style="border-bottom: 1px solid var(--dash-line); padding: 12px 0">
             <p class="quote__head">
               <span>
                 <strong>{{ quote.number }}</strong>
-                <span class="badge" style="margin-left: 8px">{{ quoteStatus[quote.status] ?? quote.status }}</span>
+                <!-- Welk van de twee dit is, is het enige dat je hier echt moet
+                     weten: de een bindt, de ander niet. -->
+                <span class="badge" style="margin-left: 8px">{{ quote.kind_label ?? 'Offerte' }}</span>
+                <span class="badge" style="margin-left: 4px">{{ quoteStatus[quote.status] ?? quote.status }}</span>
               </span>
               <span class="quote__total">{{ fmt.euro(quote.total_cents) }} incl. btw</span>
             </p>
             <p class="small muted" style="margin: 4px 0 0">
               Montage ± {{ fmt.duration(quote.onsite_minutes) }} · geldig tot {{ fmt.date(quote.valid_until) }}
               <template v-if="quote.sent_at"> · verstuurd {{ fmt.dateTime(quote.sent_at) }}</template>
+              <template v-if="quote.binding === false"> · richtbedrag, geen aanbod</template>
             </p>
             <p class="small" style="margin: 4px 0 0" :class="quote.margin_warning ? 'is-bad' : 'muted'">
               Kostprijs {{ fmt.euro(quote.cost_cents) }} · marge {{ fmt.number(quote.margin_pct, 1) }}%
@@ -416,6 +423,7 @@
           <div v-for="appointment in lead.appointments" v-else :key="appointment.id" style="padding: 8px 0">
             <p style="margin: 0">
               <strong>{{ fmt.dateTime(appointment.starts_at, appointment.timezone) }}</strong>
+              <span class="badge" style="margin-left: 8px">{{ appointment.kind === 'survey' ? 'Opname' : 'Installatie' }}</span>
             </p>
             <p class="small muted" style="margin: 3px 0 0">
               tot {{ fmt.dateTime(appointment.ends_at, appointment.timezone) }} · {{ providerLabel(appointment.provider) }}
@@ -535,8 +543,10 @@ const error = ref('')
 // knop tussen de rest.
 const overslaanActies = [
   { value: 'enrich', label: 'Opnieuw doorrekenen' },
+  { value: 'send_indication', label: 'Prijsindicatie versturen' },
+  { value: 'mark_surveyed', label: 'Opname afgerond' },
   { value: 'send_quote', label: 'Offerte versturen' },
-  { value: 'book_appointment', label: 'Afspraak inplannen' },
+  { value: 'book_appointment', label: 'Installatie inplannen' },
 ]
 
 const leadActies = [
@@ -560,16 +570,27 @@ const SIZING_MENU: MenuActie[] = [
   { value: 'enrich', label: 'Nu doorrekenen', hint: 'Bepaalt vermogen en advies opnieuw uit de huidige velden.' },
 ]
 
+const INDICATIE_MENU: MenuActie[] = [
+  { value: 'send_indication', label: 'Prijsindicatie versturen', hint: 'Vrijblijvend richtbedrag; de klant kan er geen rechten aan ontlenen.' },
+]
+
+const OPNAME_MENU: MenuActie[] = [
+  { value: 'book_survey', label: 'Opname inplannen', hint: 'Zet het bezoek op het eerstvolgende vrije moment in de agenda.' },
+  { value: 'mark_surveyed', label: 'Opname afgerond', hint: 'Pas hierna kan de offerte de deur uit.' },
+]
+
 const OFFERTE_MENU: MenuActie[] = [
-  { value: 'send_quote', label: 'Offerte versturen', hint: 'Stelt een nieuwe versie op en mailt die naar de klant.' },
+  { value: 'send_quote', label: 'Offerte versturen', hint: 'Bindend aanbod. Kan alleen als de opname is geweest.' },
 ]
 
 const AFSPRAAK_MENU: MenuActie[] = [
-  { value: 'book_appointment', label: 'Afspraak vastleggen', hint: 'Op het eerstvolgende vrije moment in de agenda.' },
+  { value: 'book_appointment', label: 'Installatie vastleggen', hint: 'Op het eerstvolgende vrije moment in de agenda.' },
 ]
 
-function belMenu(purpose: 'qualification' | 'conversion'): MenuActie[] {
-  const stam = purpose === 'qualification' ? 'call_qualification' : 'call_conversion'
+function belMenu(purpose: 'qualification' | 'conversion' | 'close'): MenuActie[] {
+  const stam = purpose === 'qualification'
+    ? 'call_qualification'
+    : purpose === 'conversion' ? 'call_conversion' : 'call_close'
 
   return [
     { value: `${stam}_now`, label: 'Nu bellen', hint: BELVENSTER_NU },
@@ -655,8 +676,17 @@ const stappen = computed<Stap[]>(() => {
   if (!l) return []
 
   const offertes = (l.quotes ?? []) as any[]
-  const verstuurd = offertes.find((q) => q.sent_at)
+  const indicatie = offertes.find((q) => q.kind === 'indication' && q.sent_at)
+  const verstuurd = offertes.find((q) => q.kind === 'final' && q.sent_at)
   const afspraken = ((l.appointments ?? []) as any[]).filter((a) => a.status !== 'cancelled')
+  const opnames = afspraken.filter((a) => a.kind === 'survey')
+  const installaties = afspraken.filter((a) => a.kind !== 'survey')
+  // "Geweest" leest de status van de afspraak én die van de lead: een opname
+  // die handmatig is afgevinkt zonder dat er ooit een afspraak in stond, telt
+  // net zo goed.
+  const opnameGedaan =
+    opnames.some((a) => a.status === 'completed') ||
+    ['surveyed', 'quoted', 'appointment_scheduled', 'won'].includes(l.status)
 
   return [
     {
@@ -666,10 +696,11 @@ const stappen = computed<Stap[]>(() => {
       meta: l.created_at ? fmt.dateTime(l.created_at) : '',
     },
     l.estimated_kw
-      ? { key: 'sizing', label: 'Doorgerekend', state: 'done', meta: `${l.estimated_kw} kW`, menu: SIZING_MENU }
+      ? { key: 'sizing', label: 'Doorgerekend', kort: 'Advies', state: 'done', meta: `${l.estimated_kw} kW`, menu: SIZING_MENU }
       : {
           key: 'sizing',
           label: 'Doorgerekend',
+          kort: 'Advies',
           state: 'pending',
           meta: '—',
           kop: 'Nog niet doorgerekend',
@@ -682,6 +713,43 @@ const stappen = computed<Stap[]>(() => {
       { value: 'call_qualification', label: 'Opnieuw inplannen' },
       { value: 'stop_chase', label: 'Opvolging stoppen' },
     ], belMenu('qualification')),
+    indicatie
+      ? {
+          key: 'indicatie',
+          label: 'Prijsindicatie',
+          kort: 'Indicatie',
+          state: 'done',
+          meta: indicatie.number ?? fmt.dateTime(indicatie.sent_at),
+          menu: INDICATIE_MENU,
+        }
+      : { key: 'indicatie', label: 'Prijsindicatie', kort: 'Indicatie', state: 'pending', meta: '—', menu: INDICATIE_MENU },
+    gesprekStap('conversie', 'Conversiegesprek', 'Conversie', 'conversion', [
+      { value: 'call_conversion_now', label: 'Nu bellen', primair: true },
+      { value: 'call_conversion', label: 'Opnieuw inplannen' },
+      { value: 'stop_chase', label: 'Opvolging stoppen' },
+    ], belMenu('conversion')),
+    opnameGedaan
+      ? {
+          key: 'opname',
+          label: 'Opname ter plaatse',
+          kort: 'Opname',
+          state: 'done',
+          meta: opnames[0] ? fmt.dateTime(opnames[0].starts_at) : 'Afgerond',
+          menu: OPNAME_MENU,
+        }
+      : opnames.length > 0
+        ? {
+            key: 'opname',
+            label: 'Opname ter plaatse',
+            kort: 'Opname',
+            state: 'busy',
+            meta: fmt.dateTime(opnames[0].starts_at),
+            kop: 'De opname staat ingepland',
+            uitleg: `Op ${fmt.dateTime(opnames[0].starts_at)}. Zodra iemand is langsgeweest, markeer je hem als afgerond; daarna kan de offerte de deur uit.`,
+            acties: [{ value: 'mark_surveyed', label: 'Opname afgerond', primair: true }],
+            menu: OPNAME_MENU,
+          }
+        : { key: 'opname', label: 'Opname ter plaatse', kort: 'Opname', state: 'pending', meta: '—', menu: OPNAME_MENU },
     verstuurd
       ? {
           key: 'offerte',
@@ -690,21 +758,36 @@ const stappen = computed<Stap[]>(() => {
           meta: verstuurd.number ?? fmt.dateTime(verstuurd.sent_at),
           menu: OFFERTE_MENU,
         }
-      : { key: 'offerte', label: 'Offerte', state: 'pending', meta: '—', menu: OFFERTE_MENU },
-    gesprekStap('conversie', 'Conversiegesprek', 'Conversie', 'conversion', [
-      { value: 'call_conversion_now', label: 'Nu bellen', primair: true },
-      { value: 'call_conversion', label: 'Opnieuw inplannen' },
+      : {
+          key: 'offerte',
+          label: 'Offerte',
+          state: 'pending',
+          meta: '—',
+          // Geen foutmelding maar de reden: de offerte is een aanbod, en dat
+          // doen we pas als we het gezien hebben.
+          ...(opnameGedaan
+            ? {
+                kop: 'De offerte kan de deur uit',
+                uitleg: 'De opname is geweest. Loop eerst de gegevens van de lead na, want daar rekent de offerte mee.',
+                acties: [{ value: 'send_quote', label: 'Offerte versturen', primair: true }],
+              }
+            : {}),
+          menu: OFFERTE_MENU,
+        },
+    gesprekStap('afsluiting', 'Afsluitgesprek', 'Afsluiting', 'close', [
+      { value: 'call_close_now', label: 'Nu bellen', primair: true },
+      { value: 'call_close', label: 'Opnieuw inplannen' },
       { value: 'stop_chase', label: 'Opvolging stoppen' },
-    ], belMenu('conversion')),
-    afspraken.length > 0
+    ], belMenu('close')),
+    installaties.length > 0
       ? {
           key: 'afspraak',
-          label: 'Afspraak',
+          label: 'Installatie',
           state: 'done',
-          meta: fmt.dateTime(afspraken[0].starts_at),
+          meta: fmt.dateTime(installaties[0].starts_at),
           menu: AFSPRAAK_MENU,
         }
-      : { key: 'afspraak', label: 'Afspraak', state: 'pending', meta: '—', menu: AFSPRAAK_MENU },
+      : { key: 'afspraak', label: 'Installatie', state: 'pending', meta: '—', menu: AFSPRAAK_MENU },
   ]
 })
 
@@ -1308,7 +1391,7 @@ onBeforeUnmount(() => {
 
 .pijplijn {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--stappen, 6), minmax(0, 1fr));
   gap: 4px;
   margin: 0;
   padding: 0;
@@ -1506,7 +1589,7 @@ onBeforeUnmount(() => {
 .verloop__vul { flex: 1; }
 
 @media (max-width: 720px) {
-  /* Zes kolommen naast elkaar worden op een telefoon zes onleesbare kokers. */
+  /* Negen kolommen naast elkaar worden op een telefoon negen onleesbare kokers. */
   .pijplijn { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; }
 
   /* Laten afbreken in plaats van afkappen: op drie kolommen viel juist

@@ -100,6 +100,9 @@ return [
         'provider' => env('CALENDAR_PROVIDER', 'none'),
         'timezone' => env('CALENDAR_TIMEZONE', 'Europe/Amsterdam'),
         'slot_lead_time_hours' => (int) env('CALENDAR_LEAD_TIME_HOURS', 48),
+        // Duur van de opname ter plaatse: kijken, meten, foto's maken. Kort,
+        // maar het is wel het bezoek waarop de offerte gebaseerd wordt.
+        'survey_minutes' => (int) env('CALENDAR_SURVEY_MINUTES', 45),
         'slot_horizon_days' => (int) env('CALENDAR_HORIZON_DAYS', 21),
         'travel_buffer_minutes' => (int) env('CALENDAR_TRAVEL_BUFFER_MINUTES', 30),
         'workday' => [
@@ -144,6 +147,7 @@ return [
     */
     'workflow' => [
         'conversion_call_delay_minutes' => (int) env('CONVERSION_CALL_DELAY_MINUTES', 60),
+        'close_call_delay_minutes' => (int) env('CLOSE_CALL_DELAY_MINUTES', 60),
         'max_call_attempts' => (int) env('MAX_CALL_ATTEMPTS', 4),
         'quote_valid_days' => (int) env('QUOTE_VALID_DAYS', 21),
         'first_call_delay_minutes' => (int) env('FIRST_CALL_DELAY_MINUTES', 3),

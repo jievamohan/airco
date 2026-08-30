@@ -1,34 +1,33 @@
 @php use App\Support\Money; @endphp
 <x-mail.layout
     :company="$company"
-    title="Uw offerte voor airconditioning"
-    :preheader="'Offerte '.$quote->number.' — '.Money::euro($quote->total_cents).' inclusief btw en montage.'"
+    title="Uw vrijblijvende prijsindicatie"
+    :preheader="'Richtbedrag '.Money::euro($quote->total_cents).' inclusief btw en montage — de offerte volgt na de opname.'"
 >
-    <x-mail.heading>Uw offerte voor airconditioning</x-mail.heading>
+    <x-mail.heading>Uw vrijblijvende prijsindicatie</x-mail.heading>
 
     <x-mail.text>Beste {{ $lead->name }},</x-mail.text>
 
     <x-mail.text>
-        Bedankt dat we bij u langs mochten komen. Hieronder staat de offerte, opgesteld op
-        basis van wat we ter plaatse hebben gezien. De volledige specificatie zit als pdf bij
-        deze mail.
+        Bedankt voor het prettige gesprek. Hieronder ziet u wat een installatie voor uw
+        situatie ongeveer kost. De volledige specificatie zit als pdf bij deze mail.
     </x-mail.text>
 
     {{-- De prijs waar het om gaat, in één oogopslag --}}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 18px; background-color:#0a0a0a; border-radius:8px;">
         <tr>
             <td style="padding:22px 24px; font-family:'Outfit','Helvetica Neue',Helvetica,Arial,sans-serif;">
-                <p style="margin:0 0 4px; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#9a9a9a;">Totaal inclusief btw en montage</p>
+                <p style="margin:0 0 4px; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#9a9a9a;">Richtbedrag inclusief btw en montage</p>
                 <p style="margin:0; font-size:30px; line-height:1.15; font-weight:600; letter-spacing:-0.02em; color:#ffffff;">{{ Money::euro($quote->total_cents) }}</p>
             </td>
         </tr>
     </table>
 
-    <x-mail.panel title="Offerte {{ $quote->number }}">
+    <x-mail.panel title="Prijsindicatie {{ $quote->number }}">
         <x-mail.facts>
             <x-mail.fact label="Systeem">{{ $quote->system_type === 'multi_split' ? 'Multisplit' : 'Single split' }}, {{ Money::kilowatt($quote->total_kw) }}</x-mail.fact>
             <x-mail.fact label="Montage op locatie">ongeveer {{ Money::hours($quote->onsite_minutes) }}</x-mail.fact>
-            <x-mail.fact label="Geldig tot">{{ optional($quote->valid_until)->translatedFormat('j F Y') ?? '—' }}</x-mail.fact>
+            <x-mail.fact label="Richtbedrag geldig tot">{{ optional($quote->valid_until)->translatedFormat('j F Y') ?? '—' }}</x-mail.fact>
         </x-mail.facts>
     </x-mail.panel>
 
@@ -55,7 +54,7 @@
             <td align="right" style="padding:4px 0 10px 8px; font-size:14px; color:#2f2f2f; white-space:nowrap;">{{ Money::euro($quote->vat_cents) }}</td>
         </tr>
         <tr>
-            <td colspan="2" align="right" style="padding:10px 8px 0 0; border-top:1px solid #0a0a0a; font-size:15px; font-weight:600; color:#0a0a0a;">Totaal incl. btw</td>
+            <td colspan="2" align="right" style="padding:10px 8px 0 0; border-top:1px solid #0a0a0a; font-size:15px; font-weight:600; color:#0a0a0a;">Richtbedrag incl. btw</td>
             <td align="right" style="padding:10px 0 0 8px; border-top:1px solid #0a0a0a; font-size:15px; font-weight:600; color:#0a0a0a; white-space:nowrap;">{{ Money::euro($quote->total_cents) }}</td>
         </tr>
     </table>
@@ -69,15 +68,17 @@
         <x-mail.divider />
     @endif
 
-    <x-mail.text>
-        Dit bedrag is vastgesteld na de opname bij u thuis. Gaat u akkoord, dan geldt het voor
-        het werk zoals hierboven beschreven; er komen achteraf geen kosten bij voor wat hierin
-        staat.
-    </x-mail.text>
+    <x-mail.panel title="Dit is nog geen offerte">
+        <x-mail.bullets :items="[
+            'Dit is een richtbedrag op basis van wat u ons heeft verteld. U kunt er geen rechten aan ontlenen.',
+            'We komen eerst kort langs: leidinglengte, plek van de buitenunit, doorvoeren en de elektragroep.',
+            'Direct daarna krijgt u de offerte met de definitieve prijs. Die is wél bindend.',
+        ]" />
+    </x-mail.panel>
 
     <x-mail.text>
-        We bellen u binnenkort na om de offerte door te nemen en, als u akkoord bent,
-        meteen een installatiedatum te prikken. Liever zelf contact opnemen? Dat kan ook.
+        We bellen u binnenkort om deze indicatie door te nemen en een moment voor de opname af
+        te spreken. Liever zelf contact opnemen? Dat kan ook.
     </x-mail.text>
 
     @if (! empty($company['phone']))
@@ -85,8 +86,9 @@
     @endif
 
     <x-mail.text muted small>
-        Deze offerte is opgesteld na een opname ter plaatse en geldt tot de genoemde datum.
-        Wilt u iets wijzigen aan de opstelling of de uitvoering, dan maken we daar een
-        aangepaste offerte voor voordat het werk begint.
+        Deze prijsindicatie is opgesteld op basis van de gegevens die u heeft doorgegeven en is
+        vrijblijvend. Wijkt de situatie op locatie af — in leidinglengte, bereikbaarheid van de
+        gevel of de beschikbare elektragroep — dan ziet u dat terug in de offerte die na de
+        opname volgt.
     </x-mail.text>
 </x-mail.layout>

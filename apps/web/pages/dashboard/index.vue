@@ -32,9 +32,14 @@
           <p class="kpi__sub">{{ data.totals.calls_answered }} van {{ data.totals.calls }} gesprekken</p>
         </div>
         <div class="kpi">
+          <p class="kpi__label">Prijsindicaties</p>
+          <p class="kpi__value">{{ data.totals.indications_sent }}</p>
+          <p class="kpi__sub">verstuurd na het gesprek</p>
+        </div>
+        <div class="kpi">
           <p class="kpi__label">Offertes verstuurd</p>
           <p class="kpi__value">{{ data.totals.quotes_sent }}</p>
-          <p class="kpi__sub">{{ data.totals.quotes_accepted }} geaccepteerd</p>
+          <p class="kpi__sub">na de opname · {{ data.totals.quotes_accepted }} geaccepteerd</p>
         </div>
         <div class="kpi">
           <p class="kpi__label">Offerteacceptatie</p>
@@ -135,6 +140,7 @@ type Analytics = {
     calls: number
     calls_answered: number
     answer_rate: number
+    indications_sent: number
     quotes_sent: number
     quotes_accepted: number
     quote_acceptance_rate: number

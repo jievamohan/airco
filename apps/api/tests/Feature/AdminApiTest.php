@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\CallPurpose;
+use App\Enums\QuoteKind;
 use App\Jobs\ProcessNewLeadJob;
+use App\Jobs\SendQuoteJob;
 use App\Models\CatalogItem;
 use App\Models\Lead;
 use App\Models\SequenceStep;
@@ -371,6 +373,29 @@ class AdminApiTest extends TestCase
 
         $this->postJson('/api/admin/leads/'.$lead->uuid.'/actions', ['action' => 'enrich'])->assertOk();
         $this->assertContains('action_triggered', $lead->events()->pluck('type')->all());
+    }
+
+    #[Test]
+    public function de_offerte_gaat_niet_de_deur_uit_voordat_er_een_opname_is_geweest(): void
+    {
+        Queue::fake();
+        $this->actingAsOwner();
+
+        $lead = Lead::factory()->create(['status' => 'indicated']);
+
+        $antwoord = $this->postJson('/api/admin/leads/'.$lead->uuid.'/actions', ['action' => 'send_quote'])->assertOk();
+        $this->assertStringContainsString('opname', strtolower((string) $antwoord->json('message')));
+        Queue::assertNotPushed(SendQuoteJob::class);
+
+        // De prijsindicatie mag wel: die belooft niets.
+        $this->postJson('/api/admin/leads/'.$lead->uuid.'/actions', ['action' => 'send_indication'])->assertOk();
+        Queue::assertPushed(SendQuoteJob::class, static fn (SendQuoteJob $job): bool => $job->kind === QuoteKind::Indication);
+
+        // Na de opname wel.
+        $this->postJson('/api/admin/leads/'.$lead->uuid.'/actions', ['action' => 'mark_surveyed', 'notes' => 'Buitenunit kan op het platte dak.'])->assertOk();
+        $this->postJson('/api/admin/leads/'.$lead->uuid.'/actions', ['action' => 'send_quote'])->assertOk();
+
+        Queue::assertPushed(SendQuoteJob::class, static fn (SendQuoteJob $job): bool => $job->kind === QuoteKind::Final);
     }
 
     #[Test]

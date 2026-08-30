@@ -3,7 +3,7 @@
 <html lang="nl">
 <head>
     <meta charset="utf-8">
-    <title>Offerte {{ $quote->number }}</title>
+    <title>{{ $quote->kind->label() }} {{ $quote->number }}</title>
     <style>
         /* Briefpapier: kop en voet staan vast, de inhoud loopt ertussen door.
            Maten in px bij 96 dpi; 13px is ongeveer 9,75pt op papier. */
@@ -113,13 +113,19 @@
     <table>
         <tr>
             <td>{{ $company['legal_line'] }}</td>
-            <td class="num">Offerte {{ $quote->number }} &nbsp;·&nbsp; pagina <span class="pagenum"></span></td>
+            <td class="num">{{ $quote->kind->label() }} {{ $quote->number }} &nbsp;·&nbsp; pagina <span class="pagenum"></span></td>
         </tr>
     </table>
 </div>
 
-<h1>Offerte</h1>
-<p class="subtitle">Airconditioning, geleverd en gemonteerd</p>
+<h1>{{ $quote->kind->label() }}</h1>
+<p class="subtitle">
+    @if ($quote->isBinding())
+        Airconditioning, geleverd en gemonteerd
+    @else
+        Richtbedrag voor airconditioning, onder voorbehoud van de opname ter plaatse
+    @endif
+</p>
 
 <table class="meta">
     <tr>
@@ -134,7 +140,7 @@
         <td>
             <table class="dates">
                 <tr>
-                    <td class="key">Offertenummer</td>
+                    <td class="key">{{ $quote->isBinding() ? 'Offertenummer' : 'Kenmerk' }}</td>
                     <td class="meta-value"><strong>{{ $quote->number }}</strong></td>
                 </tr>
                 <tr>
@@ -142,7 +148,7 @@
                     <td class="meta-value">{{ $quote->created_at->translatedFormat('j F Y') }}</td>
                 </tr>
                 <tr>
-                    <td class="key">Geldig tot</td>
+                    <td class="key">{{ $quote->isBinding() ? 'Geldig tot' : 'Richtbedrag geldig tot' }}</td>
                     <td class="meta-value">{{ optional($quote->valid_until)->translatedFormat('j F Y') ?? '—' }}</td>
                 </tr>
             </table>
@@ -213,11 +219,22 @@
     </tr>
 </table>
 
-<div class="note">
-    Deze offerte is opgesteld op basis van de door u verstrekte gegevens. Wijkt de situatie op
-    locatie af — bijvoorbeeld in leidinglengte, bereikbaarheid van de gevel of de beschikbare
-    elektragroep — dan stemmen we een aangepaste prijs met u af voordat het werk begint.
-</div>
+@if ($quote->isBinding())
+    <div class="note">
+        Dit is een aanbod: gaat u akkoord, dan geldt dit bedrag voor het werk zoals hierboven
+        beschreven. De prijs is vastgesteld na de opname ter plaatse, dus er komen achteraf geen
+        kosten bij voor wat hierin staat. Meerwerk waar u zelf om vraagt, stemmen we vooraf met
+        u af. Deze offerte geldt tot de hierboven genoemde datum.
+    </div>
+@else
+    <div class="note">
+        <strong>Dit is een prijsindicatie, geen offerte.</strong> Het is een richtbedrag op basis
+        van de door u verstrekte gegevens; aan dit bedrag kunnen geen rechten worden ontleend. We
+        komen eerst langs voor een opname — leidinglengte, plek van de buitenunit, doorvoeren en
+        de elektragroep — en sturen daarna de offerte met de definitieve prijs. Die is bindend,
+        deze indicatie niet.
+    </div>
+@endif
 
 </body>
 </html>

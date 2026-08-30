@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\LeadStatus;
+use App\Enums\QuoteKind;
 use App\Jobs\BookAppointmentJob;
 use App\Mail\AppointmentMail;
 use App\Models\Lead;
@@ -51,10 +52,10 @@ class AppointmentSchedulerTest extends TestCase
     #[Test]
     public function een_afspraak_wordt_vastgelegd_bevestigd_en_zet_de_lead_op_ingepland(): void
     {
-        $lead = Lead::factory()->create(['status' => 'follow_up']);
-        $quote = app(QuoteBuilder::class)->createForLead($lead);
+        $lead = Lead::factory()->create(['status' => 'surveyed']);
+        $quote = app(QuoteBuilder::class)->createForLead($lead, QuoteKind::Final);
 
-        $appointment = app(AppointmentScheduler::class)->book($lead, $quote);
+        $appointment = app(AppointmentScheduler::class)->book($lead, $quote, null, 'installation');
 
         $this->assertSame('installation', $appointment->kind);
         $this->assertSame($quote->onsite_minutes, (int) $appointment->starts_at->diffInMinutes($appointment->ends_at));
@@ -66,6 +67,25 @@ class AppointmentSchedulerTest extends TestCase
         $this->assertSame('accepted', $quote->refresh()->status);
 
         Mail::assertSent(AppointmentMail::class);
+    }
+
+    #[Test]
+    public function een_opname_zet_de_lead_op_ingepland_maar_accepteert_de_indicatie_niet(): void
+    {
+        $lead = Lead::factory()->create(['status' => 'indicated']);
+        $indicatie = app(QuoteBuilder::class)->createForLead($lead);
+
+        $appointment = app(AppointmentScheduler::class)->book($lead, $indicatie, null, 'survey');
+
+        $this->assertSame('survey', $appointment->kind);
+        $this->assertStringContainsString('Opname', $appointment->title);
+
+        $lead->refresh();
+        $this->assertSame(LeadStatus::SurveyScheduled, $lead->status);
+        $this->assertNull($lead->won_at, 'Een opname is nog geen opdracht.');
+
+        // Een prijsindicatie is geen aanbod; die kan de klant niet aanvaarden.
+        $this->assertSame('draft', $indicatie->refresh()->status);
     }
 
     #[Test]

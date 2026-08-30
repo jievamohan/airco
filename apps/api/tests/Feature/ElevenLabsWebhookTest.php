@@ -7,11 +7,13 @@ namespace Tests\Feature;
 use App\Enums\CallOutcome;
 use App\Enums\CallPurpose;
 use App\Enums\LeadStatus;
+use App\Enums\QuoteKind;
 use App\Jobs\BookAppointmentJob;
 use App\Jobs\SendQuoteJob;
 use App\Models\Call;
 use App\Models\Lead;
 use App\Models\Setting;
+use App\Services\QuoteBuilder;
 use App\Services\SettingsRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -132,7 +134,9 @@ class ElevenLabsWebhookTest extends TestCase
         $this->assertSame(LeadStatus::Qualified, $lead->status);
         $this->assertSame(7, $lead->pipe_length_m);
 
-        Queue::assertPushed(SendQuoteJob::class);
+        // Wat na een telefoongesprek de deur uit gaat is een indicatie, geen
+        // aanbod: we hebben de situatie niet gezien.
+        Queue::assertPushed(SendQuoteJob::class, static fn (SendQuoteJob $job): bool => $job->kind === QuoteKind::Indication);
     }
 
     #[Test]
@@ -158,11 +162,11 @@ class ElevenLabsWebhookTest extends TestCase
     }
 
     #[Test]
-    public function akkoord_tijdens_het_conversiegesprek_zet_een_afspraak_in_de_wachtrij(): void
+    public function akkoord_tijdens_het_conversiegesprek_plant_een_opname_en_geen_installatie(): void
     {
         Queue::fake();
 
-        $lead = Lead::factory()->create(['status' => 'quoted']);
+        $lead = Lead::factory()->create(['status' => 'indicated']);
         $call = $this->callFor($lead, CallPurpose::Conversion);
 
         $payload = [
@@ -185,7 +189,69 @@ class ElevenLabsWebhookTest extends TestCase
             ->assertOk();
 
         $this->assertSame(CallOutcome::AppointmentBooked, $call->refresh()->outcome);
-        Queue::assertPushed(BookAppointmentJob::class);
+        Queue::assertPushed(BookAppointmentJob::class, static fn (BookAppointmentJob $job): bool => $job->kind === 'survey');
+    }
+
+    #[Test]
+    public function akkoord_tijdens_het_afsluitgesprek_plant_de_installatie(): void
+    {
+        Queue::fake();
+
+        $lead = Lead::factory()->create(['status' => 'quoted']);
+        app(QuoteBuilder::class)->createForLead($lead, QuoteKind::Final)
+            ->forceFill(['status' => 'sent', 'sent_at' => now()])->save();
+
+        $call = $this->callFor($lead, CallPurpose::Close);
+
+        $payload = [
+            'data' => [
+                'conversation_id' => 'conv-test-1',
+                'status' => 'done',
+                'metadata' => ['call_duration_secs' => 190],
+                'analysis' => [
+                    'call_successful' => 'success',
+                    'data_collection_results' => [
+                        'outcome' => ['value' => 'appointment_booked'],
+                        'appointment_start' => ['value' => '2026-09-22 08:00:00'],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->withHeaders($this->signedHeaders($payload))
+            ->postJson('/api/webhooks/elevenlabs/post-call', $payload)
+            ->assertOk();
+
+        Queue::assertPushed(BookAppointmentJob::class, static fn (BookAppointmentJob $job): bool => $job->kind === 'installation');
+    }
+
+    #[Test]
+    public function zonder_verstuurde_offerte_blijft_een_afspraak_een_opname(): void
+    {
+        Queue::fake();
+
+        // De agent prikt in een opvolgpoging een datum. Er ligt geen offerte,
+        // dus dat kan niets anders zijn dan het bezoek waaruit die volgt.
+        $lead = Lead::factory()->create(['status' => 'follow_up']);
+        $call = $this->callFor($lead, CallPurpose::Close);
+
+        $payload = [
+            'data' => [
+                'conversation_id' => 'conv-test-1',
+                'status' => 'done',
+                'metadata' => ['call_duration_secs' => 120],
+                'analysis' => [
+                    'call_successful' => 'success',
+                    'data_collection_results' => ['outcome' => ['value' => 'appointment_booked']],
+                ],
+            ],
+        ];
+
+        $this->withHeaders($this->signedHeaders($payload))
+            ->postJson('/api/webhooks/elevenlabs/post-call', $payload)
+            ->assertOk();
+
+        Queue::assertPushed(BookAppointmentJob::class, static fn (BookAppointmentJob $job): bool => $job->kind === 'survey');
     }
 
     #[Test]

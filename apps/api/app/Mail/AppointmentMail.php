@@ -25,7 +25,10 @@ class AppointmentMail extends BaseMail
     {
         $start = $this->appointment->starts_at->timezone($this->appointment->timezone);
 
-        return $this->envelopeFor(sprintf('Uw installatieafspraak op %s', $start->translatedFormat('l j F')));
+        return $this->envelopeFor(sprintf(
+            $this->appointment->kind === 'survey' ? 'De opname bij u thuis op %s' : 'Uw installatieafspraak op %s',
+            $start->translatedFormat('l j F'),
+        ));
     }
 
     public function content(): Content

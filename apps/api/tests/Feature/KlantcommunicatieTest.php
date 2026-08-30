@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\QuoteKind;
 use App\Mail\AppointmentMail;
 use App\Mail\ChaseMail;
 use App\Mail\OwnerNotificationMail;
@@ -48,7 +49,7 @@ class KlantcommunicatieTest extends TestCase
     public function de_offertemail_toont_bedrag_nummer_en_bedrijfsgegevens(): void
     {
         $lead = Lead::factory()->create(['name' => 'Mevrouw J. de Vries']);
-        $quote = app(QuoteBuilder::class)->createForLead($lead);
+        $quote = app(QuoteBuilder::class)->createForLead($lead, QuoteKind::Final);
 
         $html = (new QuoteMail($lead, $quote))->render();
 
@@ -64,6 +65,21 @@ class KlantcommunicatieTest extends TestCase
     }
 
     #[Test]
+    public function de_prijsindicatie_zegt_in_de_mail_dat_het_geen_offerte_is(): void
+    {
+        $lead = Lead::factory()->create();
+        $indicatie = app(QuoteBuilder::class)->createForLead($lead);
+
+        $html = (new QuoteMail($lead, $indicatie))->render();
+
+        $this->assertStringContainsString('prijsindicatie', mb_strtolower($html));
+        $this->assertStringContainsString('geen rechten aan ontlenen', $html);
+        $this->assertStringContainsString('Richtbedrag incl. btw', $html);
+        $this->assertStringNotContainsString('Totaal incl. btw', $html, 'Een richtbedrag is geen eindtotaal.');
+        $this->assertStringNotContainsString('{{', $html);
+    }
+
+    #[Test]
     public function elke_klantmail_heeft_een_platte_tekstversie_die_rendert(): void
     {
         $lead = Lead::factory()->create(['status' => 'follow_up']);
@@ -72,6 +88,7 @@ class KlantcommunicatieTest extends TestCase
 
         $mails = [
             new QuoteMail($lead, $quote),
+            new QuoteMail($lead, app(QuoteBuilder::class)->createForLead($lead, QuoteKind::Final)),
             new AppointmentMail($lead, $appointment, app(IcsBuilder::class)->forAppointment($appointment)),
             new ChaseMail($lead, 'quote_without_call', $quote),
             new OwnerNotificationMail($lead, 'Nieuwe aanvraag', ['Regel een.']),
@@ -116,6 +133,21 @@ class KlantcommunicatieTest extends TestCase
         $start = $appointment->starts_at->timezone($appointment->timezone);
         $this->assertStringContainsString($start->format('H:i'), $html);
         $this->assertStringContainsString($appointment->location ?? $lead->displayLocation(), $html);
+        $this->assertStringNotContainsString('{{', $html);
+    }
+
+    #[Test]
+    public function de_bevestiging_van_de_opname_gaat_over_meten_en_niet_over_monteren(): void
+    {
+        $lead = Lead::factory()->create(['status' => 'indicated']);
+        $indicatie = app(QuoteBuilder::class)->createForLead($lead);
+        $opname = app(AppointmentScheduler::class)->book($lead, $indicatie, null, 'survey');
+
+        $html = (new AppointmentMail($lead, $opname, app(IcsBuilder::class)->forAppointment($opname)))->render();
+
+        $this->assertStringContainsString('opname', mb_strtolower($html));
+        $this->assertStringContainsString('opmeten', $html);
+        $this->assertStringNotContainsString('Bedankt voor uw akkoord', $html, 'Er is nog nergens mee ingestemd.');
         $this->assertStringNotContainsString('{{', $html);
     }
 

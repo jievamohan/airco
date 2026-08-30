@@ -24,7 +24,7 @@ Indicatie inclusief btw en montage: {{ Money::euro($quote->total_cents) }}
 Systeem: {{ $quote->system_type === 'multi_split' ? 'Multisplit' : 'Single split' }}, {{ Money::kilowatt($quote->total_kw) }}
 Montage op locatie: ongeveer {{ Money::hours($quote->onsite_minutes) }}
 
-Dit is een indicatie, nog geen offerte. Bij de schouw kijken we naar de leidinglengte, de plek van de buitenunit en de elektra; pas daarna staat de prijs vast.
+Dit is een indicatie, nog geen offerte: u kunt er geen rechten aan ontlenen. Bij de opname ter plaatse kijken we naar de leidinglengte, de plek van de buitenunit en de elektra. Pas daarna sturen we de offerte, en die is bindend.
 @endif
 
 @if (! empty($company['phone']))Bel {{ $company['phone'] }}.

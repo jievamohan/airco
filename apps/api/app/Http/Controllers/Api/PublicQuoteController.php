@@ -25,12 +25,17 @@ class PublicQuoteController extends Controller
 
         if ($quote->viewed_at === null) {
             $quote->forceFill(['viewed_at' => now(), 'status' => $quote->status === 'sent' ? 'viewed' : $quote->status])->save();
-            $timeline->record($quote->lead, 'quote_viewed', 'Offerte bekeken', $quote->number);
+            $timeline->record($quote->lead, 'quote_viewed', $quote->kind->label().' bekeken', $quote->number);
         }
 
         return response()->json([
             'number' => $quote->number,
             'status' => $quote->status,
+            'kind' => $quote->kind->value,
+            'kind_label' => $quote->kind->label(),
+            // Of de klant er rechten aan kan ontlenen. De publieke pagina hoort
+            // daar geen twijfel over te laten: een indicatie is geen aanbod.
+            'binding' => $quote->isBinding(),
             'customer_name' => $quote->lead->name,
             'system' => $quote->system_type,
             'total_kw' => $quote->total_kw,

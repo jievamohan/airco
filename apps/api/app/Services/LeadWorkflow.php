@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Enums\CallOutcome;
 use App\Enums\CallPurpose;
 use App\Enums\LeadStatus;
+use App\Enums\QuoteKind;
 use App\Models\Call;
 use App\Models\Lead;
 use App\Models\LeadSequenceRun;
@@ -148,7 +149,7 @@ class LeadWorkflow
             return $call;
         }
 
-        $quote = $call->purpose === CallPurpose::Qualification ? null : $lead->latestQuote()->first();
+        $quote = $call->purpose === CallPurpose::Qualification ? null : $this->documentFor($lead, $call->purpose);
         $variables = $this->variables->build($lead, $call->purpose, $quote);
 
         $result = $this->voice->startCall($call, (string) $call->to_number, $variables);
@@ -238,7 +239,7 @@ class LeadWorkflow
             $outcome === CallOutcome::DoNotContact => tap($call, fn () => $this->markDoNotContact($lead)),
             $outcome === CallOutcome::Declined => tap($call, fn () => $this->markLost($lead, 'Afgewezen tijdens gesprek.')),
             $call->purpose === CallPurpose::Qualification => tap($call, fn () => $this->onQualified($lead)),
-            default => tap($call, fn () => $this->onConversionAnswered($lead, $outcome)),
+            default => tap($call, fn () => $this->onConversionAnswered($lead, $call->purpose, $outcome)),
         };
     }
 
@@ -248,7 +249,7 @@ class LeadWorkflow
         $this->notifier->leadQualified($lead);
     }
 
-    private function onConversionAnswered(Lead $lead, CallOutcome $outcome): void
+    private function onConversionAnswered(Lead $lead, CallPurpose $purpose, CallOutcome $outcome): void
     {
         if ($outcome === CallOutcome::AppointmentBooked) {
             return; // afspraak wordt door BookAppointmentJob afgehandeld
@@ -256,7 +257,9 @@ class LeadWorkflow
 
         if ($outcome === CallOutcome::CallbackRequested) {
             $this->timeline->record($lead, 'callback_requested', 'Terugbelverzoek', 'De klant wil op een later moment teruggebeld worden.');
-            $this->scheduleCall($lead, CallPurpose::Conversion, now()->addDay());
+            // Met hetzelfde doel terugbellen: wie op de offerte zat te wachten,
+            // hoort niet opnieuw de prijsindicatie doorgenomen te krijgen.
+            $this->scheduleCall($lead, $purpose === CallPurpose::Close ? CallPurpose::Close : CallPurpose::Conversion, now()->addDay());
 
             return;
         }
@@ -264,20 +267,43 @@ class LeadWorkflow
         $this->transition($lead, LeadStatus::FollowUp);
     }
 
+    /**
+     * Het bedrag dat in dít gesprek op tafel ligt: bij het afsluitgesprek de
+     * offerte, daarvoor de prijsindicatie. Zonder dit onderscheid noemt de
+     * agent na de opname alsnog het oude richtbedrag.
+     */
+    private function documentFor(Lead $lead, CallPurpose $purpose): ?Quote
+    {
+        if ($purpose === CallPurpose::Close) {
+            return $lead->quotes()->where('kind', QuoteKind::Final->value)->latest('id')->first()
+                ?? $lead->latestQuote()->first();
+        }
+
+        return $lead->quotes()->where('kind', QuoteKind::Indication->value)->latest('id')->first()
+            ?? $lead->latestQuote()->first();
+    }
+
     // -----------------------------------------------------------------
-    // Stap 4 — offerte
+    // Stap 4 — prijsindicatie, opname, offerte
     // -----------------------------------------------------------------
 
-    public function buildQuote(Lead $lead): Quote
+    /**
+     * Stelt een prijsindicatie of een offerte op.
+     *
+     * Het onderscheid is niet cosmetisch: aan een offerte kan de klant rechten
+     * ontlenen, dus die hoort pas te ontstaan als iemand ter plaatse heeft
+     * gekeken. Alles wat daarvoor de deur uit gaat, is een richtbedrag.
+     */
+    public function buildQuote(Lead $lead, QuoteKind $kind = QuoteKind::Indication): Quote
     {
-        $quote = $this->quotes->createForLead($lead);
+        $quote = $this->quotes->createForLead($lead, $kind);
 
         $this->timeline->record(
             $lead,
-            'quote_created',
-            'Offerte opgesteld',
+            $kind->isBinding() ? 'quote_created' : 'indication_created',
+            $kind->label().' opgesteld',
             sprintf('%s — € %s incl. btw.', $quote->number, number_format($quote->total_cents / 100, 2, ',', '.')),
-            ['quote_id' => $quote->id, 'number' => $quote->number, 'total_cents' => $quote->total_cents],
+            ['quote_id' => $quote->id, 'number' => $quote->number, 'kind' => $kind->value, 'total_cents' => $quote->total_cents],
         );
 
         if ($quote->margin_warning) {
@@ -298,39 +324,118 @@ class LeadWorkflow
         return $quote;
     }
 
+    /**
+     * De prijsindicatie is gemaild. Daarna belt de agent na om hem door te
+     * nemen en een opname ter plaatse af te spreken — niet om de opdracht
+     * rond te maken, want er ligt nog geen aanbod.
+     */
+    public function markIndicationSent(Lead $lead, Quote $quote): void
+    {
+        if (! $this->markSent($lead, $quote, 'indication_sent', 'Prijsindicatie gemaild')) {
+            return;
+        }
+
+        $this->transition($lead, LeadStatus::Indicated);
+
+        $delay = $this->settings->int('agent.workflow.conversion_call_delay_minutes', 60);
+        $this->scheduleCall($lead, CallPurpose::Conversion, now()->addMinutes($delay));
+    }
+
+    /**
+     * De offerte is gemaild. Die bindt, dus hierna gaat het gesprek nog maar
+     * over één ding: akkoord en een installatiedatum.
+     */
     public function markQuoteSent(Lead $lead, Quote $quote): void
     {
-        $quote->forceFill(['status' => 'sent', 'sent_at' => now()])->save();
-
-        $this->timeline->record(
-            $lead,
-            'quote_sent',
-            'Offerte gemaild',
-            sprintf('%s verstuurd naar %s.', $quote->number, (string) $lead->email),
-            ['quote_id' => $quote->id],
-        );
-
-        $this->notifier->quoteSent($lead, $quote);
-
-        // Een lead die de afspraak al rond heeft, hoort niet terug de
-        // verkoopfunnel in: een herziene offerte naar een geboekte klant mag
-        // geen nieuw conversiegesprek uitlokken.
-        if (in_array($lead->status, [LeadStatus::AppointmentScheduled, LeadStatus::Won], true)) {
-            $this->timeline->record(
-                $lead,
-                'quote_resent',
-                'Herziene offerte bij een geboekte klant',
-                'De status blijft staan en er wordt geen conversiegesprek ingepland.',
-                ['quote_id' => $quote->id],
-            );
-
+        if (! $this->markSent($lead, $quote, 'quote_sent', 'Offerte gemaild')) {
             return;
         }
 
         $this->transition($lead, LeadStatus::Quoted);
 
-        $delay = $this->settings->int('agent.workflow.conversion_call_delay_minutes', 60);
-        $this->scheduleCall($lead, CallPurpose::Conversion, now()->addMinutes($delay));
+        $delay = $this->settings->int('agent.workflow.close_call_delay_minutes', 60);
+        $this->scheduleCall($lead, CallPurpose::Close, now()->addMinutes($delay));
+    }
+
+    /**
+     * Legt vast dat het bezoek is geweest. Pas daarna mag er een offerte uit:
+     * de aannames uit het telefoongesprek zijn dan vervangen door wat er
+     * werkelijk staat.
+     */
+    public function markSurveyed(Lead $lead, ?string $notes = null): void
+    {
+        if ($notes !== null && trim($notes) !== '') {
+            $lead->forceFill(['notes' => trim(($lead->notes ?? '')."\n\nUit de opname: ".trim($notes))])->save();
+        }
+
+        $lead->appointments()
+            ->where('kind', 'survey')
+            ->where('status', 'scheduled')
+            ->update(['status' => 'completed']);
+
+        $this->timeline->record(
+            $lead,
+            'survey_completed',
+            'Opname ter plaatse afgerond',
+            $notes !== null && trim($notes) !== '' ? trim($notes) : 'De situatie is ter plaatse bekeken; de offerte kan opgesteld worden.',
+        );
+
+        $this->transition($lead, LeadStatus::Surveyed);
+        $this->notifier->surveyCompleted($lead);
+    }
+
+    /**
+     * Of er een bindende offerte uit mag. Zolang niemand ter plaatse is
+     * geweest, is een offerte een belofte op basis van een telefoongesprek.
+     */
+    public function surveyDone(Lead $lead): bool
+    {
+        if (in_array($lead->status, [LeadStatus::Surveyed, LeadStatus::Quoted, LeadStatus::AppointmentScheduled, LeadStatus::Won], true)) {
+            return true;
+        }
+
+        return $lead->appointments()
+            ->where('kind', 'survey')
+            ->whereIn('status', ['completed', 'confirmed'])
+            ->exists();
+    }
+
+    /**
+     * Het gedeelde deel van "verstuurd": vastleggen, melden, en bepalen of de
+     * lead hierdoor nog een stap in de funnel opschuift.
+     *
+     * @return bool of de lead de bijbehorende status en het nabelgesprek krijgt
+     */
+    private function markSent(Lead $lead, Quote $quote, string $eventType, string $eventTitle): bool
+    {
+        $quote->forceFill(['status' => 'sent', 'sent_at' => now()])->save();
+
+        $this->timeline->record(
+            $lead,
+            $eventType,
+            $eventTitle,
+            sprintf('%s verstuurd naar %s.', $quote->number, (string) $lead->email),
+            ['quote_id' => $quote->id, 'kind' => $quote->kind->value],
+        );
+
+        $this->notifier->quoteSent($lead, $quote);
+
+        // Een lead die de installatie al rond heeft, hoort niet terug de
+        // verkoopfunnel in: een herzien document naar een geboekte klant mag
+        // geen nieuw verkoopgesprek uitlokken.
+        if (in_array($lead->status, [LeadStatus::AppointmentScheduled, LeadStatus::Won], true)) {
+            $this->timeline->record(
+                $lead,
+                'quote_resent',
+                sprintf('Herziene %s bij een geboekte klant', $quote->kind->noun()),
+                'De status blijft staan en er wordt geen gesprek ingepland.',
+                ['quote_id' => $quote->id],
+            );
+
+            return false;
+        }
+
+        return true;
     }
 
     // -----------------------------------------------------------------
@@ -380,7 +485,9 @@ class LeadWorkflow
             ['sequence_run_id' => $run->id],
         );
 
-        if (! $lead->status->isTerminal() && $lead->status !== LeadStatus::Quoted) {
+        // Een lead met een bedrag of een bezoek in de agenda staat verder dan
+        // "in opvolging"; die status zou het verloop terugdraaien.
+        if (! $lead->status->isTerminal() && ! in_array($lead->status, LeadStatus::inSalesTraject(), true)) {
             $this->transition($lead, LeadStatus::FollowUp);
         }
 

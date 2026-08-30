@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\QuoteKind;
 use App\Enums\SystemType;
 use App\Enums\Tier;
 use App\Models\CatalogItem;
@@ -92,7 +93,7 @@ class QuoteBuilder
         $pipe = $lead->pipe_length_m;
 
         if ($pipe === null) {
-            $assumptions[] = sprintf('Uitgegaan van %d meter koelleiding per binnenunit; meerlengte wordt nagerekend bij de schouw.', self::INCLUDED_PIPE_M);
+            $assumptions[] = sprintf('Uitgegaan van %d meter koelleiding per binnenunit; meerlengte wordt nagerekend bij de opname.', self::INCLUDED_PIPE_M);
         } elseif ($pipe > self::INCLUDED_PIPE_M) {
             $extra = (float) ($pipe - self::INCLUDED_PIPE_M) * $units;
             $item = $this->bySku('MAT-LEIDING-EXTRA');
@@ -235,19 +236,28 @@ class QuoteBuilder
     }
 
     /**
-     * Slaat de berekening op als nieuwe offerteversie voor de lead.
+     * Slaat de berekening op als nieuwe versie voor de lead.
+     *
+     * Standaard is dat een prijsindicatie: die mag op afstand de deur uit. Een
+     * offerte is een aanbod waaraan de klant rechten ontleent, en die hoort
+     * pas te ontstaan als iemand de situatie ter plaatse heeft gezien.
      */
-    public function createForLead(Lead $lead): Quote
+    public function createForLead(Lead $lead, QuoteKind $kind = QuoteKind::Indication): Quote
     {
         $calc = $this->calculate($lead);
 
-        return DB::transaction(function () use ($lead, $calc): Quote {
+        if (! $kind->isBinding()) {
+            $calc['assumptions'][] = 'Richtbedrag op basis van de opgegeven gegevens. De definitieve prijs staat pas vast na de opname ter plaatse; aan deze indicatie kunnen geen rechten worden ontleend.';
+        }
+
+        return DB::transaction(function () use ($lead, $calc, $kind): Quote {
             $version = (int) $lead->quotes()->max('version') + 1;
             $validDays = $this->settings->int('agent.workflow.quote_valid_days', 21);
 
             $quote = $lead->quotes()->create([
-                'number' => $this->nextNumber($lead, $version),
+                'number' => $this->nextNumber($lead, $kind, $version),
                 'version' => $version,
+                'kind' => $kind->value,
                 'status' => 'draft',
                 'public_token' => Str::random(48),
                 'system_type' => $calc['system']->value,
@@ -400,9 +410,9 @@ class QuoteBuilder
         return '€ '.number_format($cents / 100, 2, ',', '.');
     }
 
-    private function nextNumber(Lead $lead, int $version): string
+    private function nextNumber(Lead $lead, QuoteKind $kind, int $version): string
     {
-        return sprintf('OFF-%s-%04d-%d', now()->format('Y'), $lead->id, $version);
+        return sprintf('%s-%s-%04d-%d', $kind->numberPrefix(), now()->format('Y'), $lead->id, $version);
     }
 
     /**

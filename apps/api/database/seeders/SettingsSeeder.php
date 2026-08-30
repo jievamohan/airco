@@ -33,7 +33,9 @@ class SettingsSeeder extends Seeder
         ['key' => 'agent.auth.session_lifetime_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Sessieduur dashboard (minuten)', 'description' => 'Hoe lang je ingelogd blijft zonder "onthoud mij". Standaard een werkdag.'],
         ['key' => 'agent.auth.remember_lifetime_days', 'group' => 'werking', 'type' => 'int', 'label' => 'Duur van "onthoud mij" (dagen)'],
         ['key' => 'agent.workflow.first_call_delay_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Wachttijd voor eerste belpoging (minuten)'],
-        ['key' => 'agent.workflow.conversion_call_delay_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Wachttijd tot het conversiegesprek (minuten)', 'description' => 'Standaard 60 minuten na het versturen van de offerte.'],
+        ['key' => 'agent.workflow.conversion_call_delay_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Wachttijd tot het conversiegesprek (minuten)', 'description' => 'Standaard 60 minuten na het versturen van de prijsindicatie. In dat gesprek wordt de opname ter plaatse ingepland.'],
+        ['key' => 'agent.workflow.close_call_delay_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Wachttijd tot het afsluitgesprek (minuten)', 'description' => 'Standaard 60 minuten na het versturen van de offerte, het gesprek waarin de installatiedatum wordt geprikt.'],
+        ['key' => 'agent.calendar.survey_minutes', 'group' => 'werking', 'type' => 'int', 'label' => 'Duur van de opname ter plaatse (minuten)', 'description' => 'Hoeveel tijd er in de agenda wordt gezet voor het bezoek waarop de offerte gebaseerd wordt.'],
         ['key' => 'agent.workflow.max_call_attempts', 'group' => 'werking', 'type' => 'int', 'label' => 'Maximaal aantal belpogingen'],
         ['key' => 'agent.workflow.quote_valid_days', 'group' => 'werking', 'type' => 'int', 'label' => 'Geldigheid offerte (dagen)'],
 

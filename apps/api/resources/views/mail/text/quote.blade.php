@@ -3,7 +3,7 @@ UW OFFERTE VOOR AIRCONDITIONING
 
 Beste {{ $lead->name }},
 
-Bedankt voor het prettige gesprek. Hieronder staat de offerte zoals we die hebben besproken. De volledige specificatie zit als pdf bij deze mail.
+Bedankt dat we bij u langs mochten komen. Hieronder staat de offerte, opgesteld op basis van wat we ter plaatse hebben gezien. De volledige specificatie zit als pdf bij deze mail.
 
 Totaal inclusief btw en montage: {{ Money::euro($quote->total_cents) }}
 
@@ -28,9 +28,11 @@ WAAR WE VAN UIT ZIJN GEGAAN
 @endforeach
 @endif
 
+Dit bedrag is vastgesteld na de opname bij u thuis. Gaat u akkoord, dan geldt het voor het werk zoals hierboven beschreven; er komen achteraf geen kosten bij voor wat hierin staat.
+
 We bellen u binnenkort na om de offerte door te nemen en, als u akkoord bent, meteen een installatiedatum te prikken. Liever zelf contact opnemen?@if (! empty($company['phone'])) Bel {{ $company['phone'] }}.@endif
 
-Deze offerte is opgesteld op basis van de gegevens die u heeft doorgegeven. Wijkt de situatie op locatie af — bijvoorbeeld in leidinglengte, bereikbaarheid van de gevel of de beschikbare elektragroep — dan stemmen we een aangepaste prijs met u af voordat het werk begint.
+Deze offerte is opgesteld na een opname ter plaatse en geldt tot de genoemde datum. Wilt u iets wijzigen aan de opstelling of de uitvoering, dan maken we daar een aangepaste offerte voor voordat het werk begint.
 
 Met vriendelijke groet,
 {{ $company['name'] }}

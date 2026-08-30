@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\CallOutcome;
 use App\Enums\CallPurpose;
+use App\Enums\QuoteKind;
 use App\Models\Lead;
 use App\Services\LeadWorkflow;
 use App\Services\QuoteBuilder;
@@ -179,6 +180,38 @@ class VoiceAgentPromptTest extends TestCase
                 sprintf('Het document noemt veld "%s", maar deze test dekt het niet af.', $veld),
             );
         }
+    }
+
+    #[Test]
+    public function elk_gesprekstype_heeft_een_eigen_blok_in_het_script(): void
+    {
+        $blokken = explode('```text', $this->document());
+        $prompt = explode('```', $blokken[1])[0];
+
+        foreach (CallPurpose::cases() as $purpose) {
+            $this->assertStringContainsString(
+                '## Als gesprekstype = '.$purpose->value,
+                $prompt,
+                sprintf('Gesprekstype "%s" bestaat in de code maar niet in het script; de agent verzint dan zelf wat hij doet.', $purpose->value),
+            );
+        }
+    }
+
+    #[Test]
+    public function het_afsluitgesprek_krijgt_het_offertebedrag_en_het_conversiegesprek_het_richtbedrag(): void
+    {
+        $lead = Lead::factory()->create(['status' => 'quoted']);
+        $indicatie = app(QuoteBuilder::class)->createForLead($lead);
+        $offerte = app(QuoteBuilder::class)->createForLead($lead, QuoteKind::Final);
+        $offerte->forceFill(['status' => 'sent', 'sent_at' => now()])->save();
+
+        $conversie = app(CallVariables::class)->build($lead, CallPurpose::Conversion, $indicatie);
+        $afsluiting = app(CallVariables::class)->build($lead, CallPurpose::Close, $offerte);
+
+        $this->assertSame($indicatie->number, $conversie['indicatie_nummer']);
+        $this->assertSame($offerte->number, $conversie['offerte_nummer'], 'Ook in het conversiegesprek moet de set compleet zijn.');
+        $this->assertSame($offerte->number, $afsluiting['offerte_nummer']);
+        $this->assertSame($indicatie->number, $afsluiting['indicatie_nummer']);
     }
 
     #[Test]
