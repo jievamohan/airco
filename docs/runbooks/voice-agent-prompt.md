@@ -24,6 +24,21 @@ ElevenLabs binnenkomen. Een SIP-trunknummer werkt niet.
 
 ### 1 — Twilio: nummer klaarzetten
 
+> **Een Twilio-trial werkt hier niet.** Bij het importeren in ElevenLabs krijg
+> je dan:
+>
+> ```
+> An error occurred while communicating with Twilio.
+> HTTP 401 {"code":20003,"message":"This feature is not available on a Trial
+> account. Please upgrade your account to gain access."}
+> ```
+>
+> ElevenLabs bevraagt de Twilio-API om je nummers op te halen, en die API is op
+> een trial afgesloten. Dat is niet te omzeilen met andere velden. Upgraden is
+> dus de eerste stap, niet de laatste — en dat is precies wat de trial níét
+> laat zien, want bellen zelf mag daar wel (75 minuten, naar geverifieerde
+> nummers).
+
 Twee smaken, en voor ons voldoet de tweede:
 
 | | Inkomend | Uitgaand |
@@ -38,14 +53,31 @@ gewoon bij jullie uit — vaak beter dan een los nummer waar niemand opneemt.
 Je hebt straks een SID en een token nodig. Maak liever een API key aan (de SID
 begint dan met `SK`) dan je account-brede gegevens te gebruiken.
 
+Kies je toch voor een gekocht Nederlands nummer: Twilio eist voor niet-Amerikaanse
+nummers eerst een **compliance registration** met bedrijfs- en adresgegevens,
+mét doorlooptijd. Een geverifieerde caller ID van een nummer dat je al hebt
+slaat dat over.
+
 ### 2 — ElevenLabs: agent aanmaken
 
 Dit kan met de hand, maar doe het niet: de prompt is zesduizend tekens en §4
 telt achttien velden waarvan de namen exact moeten kloppen. Eén typefout in een
 identifier en die informatie komt nooit in het CRM aan, zonder foutmelding.
 
-Kies eerst een Nederlandse stem in de stemmenbibliotheek en noteer het
-`voice_id`.
+Kies eerst een Nederlandse stem en noteer het `voice_id`.
+
+> Let op welk id je pakt. Een stem uit de **Voice Library** is nog niet van jou:
+> je moet hem eerst aan je eigen stemmen toevoegen, en dan krijgt hij een
+> **ander** `voice_id`. Het id van de bibliotheekpagina levert bij het aanmaken
+> `A voice for the voice_id … was not found` op. Kopieer het id uit je eigen
+> stemmenlijst.
+>
+> Controleren welke stemmen je account kent:
+>
+> ```bash
+> curl -s https://api.elevenlabs.io/v1/voices -H "xi-api-key: JE_SLEUTEL" \
+>   | python3 -c "import json,sys; [print(v['voice_id'], '·', v['name']) for v in json.load(sys.stdin)['voices']]"
+> ```
 
 **Vanuit het dashboard** (geen shell nodig): vul onder **Instellingen → Voice
 agent** de API-sleutel en het voice_id in, sla op, en klik op **Agent aanmaken
