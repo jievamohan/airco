@@ -15,6 +15,7 @@ use App\Models\Sequence;
 use App\Services\Voice\CallVariables;
 use App\Services\Voice\VoiceAgentClient;
 use Illuminate\Support\Carbon;
+use Throwable;
 
 /**
  * De toestandsmachine van een lead.
@@ -451,6 +452,78 @@ class LeadWorkflow
      *
      * @param  array<string, mixed>  $collected
      */
+    /**
+     * Waarden waarvan de kolom of de workflow maar een paar mogelijkheden kent.
+     * De prompt vraagt de agent hier `m2` of `good` terug te geven, maar een
+     * gesprek is geen formulier: hij kwam een keer met "vierkante meter", en
+     * dat past niet in een kolom van drie tekens.
+     *
+     * @var array<string, array<string, string>>
+     */
+    private const TOEGESTAAN = [
+        'space_unit' => [
+            'm2' => 'm2', 'm²' => 'm2', 'vierkante meter' => 'm2', 'vierkantemeter' => 'm2',
+            'm3' => 'm3', 'm³' => 'm3', 'kubieke meter' => 'm3', 'kubiekemeter' => 'm3',
+        ],
+        'insulation' => [
+            'good' => 'good', 'goed' => 'good',
+            'average' => 'average', 'gemiddeld' => 'average', 'standaard' => 'average',
+            'poor' => 'poor', 'matig' => 'poor', 'slecht' => 'poor',
+        ],
+        'tier' => [
+            'budget' => 'budget', 'voordelig' => 'budget',
+            'mid' => 'mid', 'midden' => 'mid',
+            'premium' => 'premium',
+        ],
+    ];
+
+    /**
+     * Lengte van de vrije tekstkolommen, zodat een uitgebreid antwoord de
+     * opslag niet laat klappen.
+     *
+     * @var array<string, int>
+     */
+    private const MAX_LENGTE = [
+        'wall_type' => 255,
+        'outdoor_unit_placement' => 255,
+        'email' => 190,
+    ];
+
+    /**
+     * Zet één antwoord uit het gesprek om naar iets wat de kolom aankan.
+     * `null` betekent: niet te gebruiken, sla dit veld over.
+     */
+    private function normaliseerVeld(string $field, string $type, mixed $value): mixed
+    {
+        if (isset(self::TOEGESTAAN[$field])) {
+            $sleutel = mb_strtolower(trim((string) $value));
+
+            return self::TOEGESTAAN[$field][$sleutel] ?? null;
+        }
+
+        return match ($type) {
+            'int' => is_numeric($value) ? (int) $value : null,
+            'float' => is_numeric($value) ? (float) $value : null,
+            'bool' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+            'date' => $this->normaliseerDatum($value),
+            default => mb_substr(trim((string) $value), 0, self::MAX_LENGTE[$field] ?? 255),
+        };
+    }
+
+    private function normaliseerDatum(mixed $value): ?string
+    {
+        try {
+            return Carbon::parse((string) $value)->toDateString();
+        } catch (Throwable) {
+            // "ergens in het najaar" is een prima antwoord aan de telefoon en
+            // een onbruikbare datum in de database.
+            return null;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $collected
+     */
     private function applyCollected(Lead $lead, array $collected): void
     {
         $map = [
@@ -471,25 +544,40 @@ class LeadWorkflow
         ];
 
         $updates = [];
+        $genegeerd = [];
 
         foreach ($map as $field => $type) {
             if (! array_key_exists($field, $collected) || $collected[$field] === null || $collected[$field] === '') {
                 continue;
             }
 
-            $value = $collected[$field];
+            $waarde = $this->normaliseerVeld($field, $type, $collected[$field]);
 
-            $updates[$field] = match ($type) {
-                'int' => (int) $value,
-                'float' => (float) $value,
-                'bool' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
-                'date' => Carbon::parse((string) $value)->toDateString(),
-                default => (string) $value,
-            };
+            if ($waarde === null) {
+                $genegeerd[] = $field;
+
+                continue;
+            }
+
+            $updates[$field] = $waarde;
         }
 
         if (isset($collected['notes']) && is_string($collected['notes']) && $collected['notes'] !== '') {
             $updates['notes'] = trim(($lead->notes ?? '')."\n\nUit telefoongesprek: ".$collected['notes']);
+        }
+
+        if ($genegeerd !== []) {
+            // Zichtbaar maken wat er niet doorkwam. Stil weglaten betekent dat
+            // iemand later een leeg veld ziet en niet weet of het niet gevraagd
+            // is of niet begrepen.
+            $this->timeline->record(
+                $lead,
+                'lead_field_ignored',
+                'Antwoord uit het gesprek niet overgenomen',
+                implode(', ', $genegeerd).' — de agent gaf iets terug dat hier niet in past.',
+                ['velden' => $genegeerd],
+                'voice_agent',
+            );
         }
 
         if ($updates === []) {
