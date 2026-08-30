@@ -14,6 +14,7 @@ use App\Models\LeadSequenceRun;
 use App\Services\AppointmentScheduler;
 use App\Services\LeadIntake;
 use App\Services\LeadWorkflow;
+use App\Services\QuoteBuilder;
 use App\Services\Voice\FakeVoiceAgentClient;
 use App\Services\Voice\VoiceAgentClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,6 +47,31 @@ class LeadWorkflowTest extends TestCase
     {
         Carbon::setTestNow();
         parent::tearDown();
+    }
+
+    #[Test]
+    public function het_verrijken_kiest_geen_kwaliteitsklasse_voor_je(): void
+    {
+        // De standaardklasse is een terugvaloptie, geen besluit. Hem hier
+        // wegschrijven maakte er in het dashboard "Midden" van, alsof iemand
+        // dat gekozen had.
+        $lead = Lead::factory()->create(['tier' => null, 'space_size' => 40, 'space_unit' => 'm2']);
+
+        app(LeadWorkflow::class)->enrich($lead);
+
+        $this->assertNull($lead->fresh()->tier, 'De klasse hoort leeg te blijven.');
+    }
+
+    #[Test]
+    public function een_offerte_zonder_gekozen_klasse_valt_terug_op_de_standaard(): void
+    {
+        $lead = Lead::factory()->create(['tier' => null, 'space_size' => 40, 'space_unit' => 'm2']);
+        app(LeadWorkflow::class)->enrich($lead);
+
+        $quote = app(QuoteBuilder::class)->createForLead($lead->fresh(), QuoteKind::Indication);
+
+        $this->assertGreaterThan(0, $quote->total_cents, 'Er hoort gewoon een offerte uit te komen.');
+        $this->assertNull($lead->fresh()->tier, 'En de lead blijft ook daarna zonder keuze staan.');
     }
 
     #[Test]
