@@ -15,13 +15,57 @@
     <p v-if="error" class="notice notice--bad" role="alert">{{ error }}</p>
 
     <section class="panel">
-      <h2 class="panel__title">Stappen opnieuw aftrappen</h2>
-      <p class="panel__note">
-        Elke actie maakt een nieuwe poging aan; bestaande gesprekken en offertes blijven bewaard.
-      </p>
-      <div class="actions">
+      <div class="verloop__head">
+        <h2 class="panel__title">Verloop</h2>
+        <span class="small muted">{{ verloopSamenvatting }}</span>
+      </div>
+
+      <ol class="pijplijn">
+        <li v-for="stap in stappen" :key="stap.key" :class="['pijplijn__stap', `pijplijn__stap--${stap.state}`]">
+          <span class="pijplijn__balk" />
+          <span class="pijplijn__naam">{{ stap.kort ?? stap.label }}</span>
+          <span class="pijplijn__meta">{{ stap.meta }}</span>
+        </li>
+      </ol>
+
+      <!--
+        Alleen de stap die aandacht vraagt krijgt ruimte. Alles tegelijk tonen
+        is precies wat de rij van elf knoppen deed.
+      -->
+      <div v-if="aandachtStap" :class="['aandacht', `aandacht--${aandachtStap.state}`]">
+        <div class="aandacht__tekst">
+          <p class="aandacht__titel">{{ aandachtStap.kop }}</p>
+          <p class="aandacht__uitleg small">{{ aandachtStap.uitleg }}</p>
+        </div>
+        <div class="actions">
+          <button
+            v-for="actie in aandachtStap.acties"
+            :key="actie.value"
+            type="button"
+            :class="['btn', 'btn--small', actie.primair ? '' : 'btn--ghost']"
+            :disabled="busy"
+            @click="trigger(actie.value)"
+          >
+            {{ actie.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="verloop__rest">
+        <span class="small muted">Overslaan naar:</span>
         <button
-          v-for="action in actions"
+          v-for="action in overslaanActies"
+          :key="action.value"
+          type="button"
+          class="btn btn--ghost btn--small"
+          :disabled="busy"
+          @click="trigger(action.value)"
+        >
+          {{ action.label }}
+        </button>
+        <span class="verloop__vul" />
+        <button
+          v-for="action in leadActies"
           :key="action.value"
           type="button"
           class="btn btn--ghost btn--small"
@@ -383,21 +427,158 @@ const busy = ref(false)
 const flash = ref('')
 const error = ref('')
 
-const actions = [
+// De stappen die de agent doorloopt, in de volgorde waarin ze gebeuren.
+// Alles wat over de héle lead gaat (gewonnen, verloren, heropenen) hoort hier
+// níét bij: dat zijn geen stappen en stonden eerder wel als gelijkwaardige
+// knop tussen de rest.
+const overslaanActies = [
   { value: 'enrich', label: 'Opnieuw doorrekenen' },
-  { value: 'call_qualification', label: 'Kwalificatiegesprek inplannen' },
-  // Aparte actie, niet een vinkje bij de vorige: buiten het belvenster bellen
-  // hoort een bewuste keuze te zijn en geen instelling die aan blijft staan.
-  { value: 'call_qualification_now', label: 'Nu bellen (buiten belvenster)' },
-  { value: 'send_quote', label: 'Offerte opnieuw versturen' },
-  { value: 'call_conversion', label: 'Conversiegesprek inplannen' },
+  { value: 'send_quote', label: 'Offerte versturen' },
   { value: 'book_appointment', label: 'Afspraak inplannen' },
-  { value: 'start_chase', label: 'Opvolging starten' },
-  { value: 'stop_chase', label: 'Opvolging stoppen' },
-  { value: 'mark_won', label: 'Markeer als gewonnen' },
-  { value: 'mark_lost', label: 'Markeer als verloren' },
-  { value: 'reopen', label: 'Lead heropenen' },
 ]
+
+const leadActies = [
+  { value: 'mark_won', label: 'Gewonnen' },
+  { value: 'mark_lost', label: 'Verloren' },
+  { value: 'reopen', label: 'Heropenen' },
+]
+
+type StapStaat = 'done' | 'failed' | 'busy' | 'pending'
+
+type Stap = {
+  key: string
+  /** Volledige naam, voor de tekst onder de balk. */
+  label: string
+  /** Korte naam voor de balk zelf: "Kwalificatiegesprek" is één woord zonder
+   *  breekpunt en werd op een telefoon afgekapt tot onleesbaar. */
+  kort?: string
+  state: StapStaat
+  meta: string
+  kop?: string
+  uitleg?: string
+  acties?: { value: string; label: string; primair?: boolean }[]
+}
+
+function gesprekken(purpose: string) {
+  return ((lead.value?.calls ?? []) as any[]).filter((c) => c.purpose === purpose)
+}
+
+/** De laatste beschrijving bij een gebeurtenis van dit type, als die er is. */
+function laatsteReden(...types: string[]): string {
+  const gebeurtenis = ((lead.value?.events ?? []) as any[]).find(
+    (e) => types.includes(e.type) && e.description,
+  )
+
+  return gebeurtenis?.description ?? ''
+}
+
+function gesprekStap(key: string, label: string, kort: string, purpose: string, acties: Stap['acties']): Stap {
+  const lijst = gesprekken(purpose)
+  const gelukt = lijst.find((c) => c.status === 'completed' && c.outcome !== 'failed')
+  const wachtend = lijst.find((c) => c.status === 'queued')
+  const mislukt = lijst.filter((c) => c.status === 'failed' || c.outcome === 'failed')
+
+  if (gelukt) {
+    return { key, label, kort, state: 'done', meta: gelukt.outcome_label ?? 'Gesproken' }
+  }
+
+  if (mislukt.length > 0 && !wachtend) {
+    return {
+      key,
+      label,
+      kort,
+      state: 'failed',
+      meta: `${mislukt.length}× mislukt`,
+      kop: `${label} is ${mislukt.length === 1 ? 'mislukt' : `${mislukt.length} keer mislukt`}`,
+      uitleg: laatsteReden('call_failed') || 'Er is geen reden vastgelegd.',
+      acties,
+    }
+  }
+
+  if (wachtend) {
+    return {
+      key,
+      label,
+      kort,
+      state: 'busy',
+      meta: wachtend.scheduled_for ? fmt.dateTime(wachtend.scheduled_for) : 'Staat klaar',
+      kop: `${label} staat klaar`,
+      uitleg: wachtend.scheduled_for
+        ? `Gaat automatisch de deur uit om ${fmt.dateTime(wachtend.scheduled_for)}.`
+        : 'Gaat bij de eerstvolgende tik de deur uit.',
+      acties,
+    }
+  }
+
+  return { key, label, kort, state: 'pending', meta: '—' }
+}
+
+const stappen = computed<Stap[]>(() => {
+  const l = lead.value
+  if (!l) return []
+
+  const offertes = (l.quotes ?? []) as any[]
+  const verstuurd = offertes.find((q) => q.sent_at)
+  const afspraken = ((l.appointments ?? []) as any[]).filter((a) => a.status !== 'cancelled')
+
+  return [
+    {
+      key: 'aanvraag',
+      label: 'Aanvraag',
+      state: 'done',
+      meta: l.created_at ? fmt.dateTime(l.created_at) : '',
+    },
+    l.estimated_kw
+      ? { key: 'sizing', label: 'Doorgerekend', state: 'done', meta: `${l.estimated_kw} kW` }
+      : {
+          key: 'sizing',
+          label: 'Doorgerekend',
+          state: 'pending',
+          meta: '—',
+          kop: 'Nog niet doorgerekend',
+          uitleg: 'Zonder ruimtemaat kan het advies niet bepaald worden.',
+          acties: [{ value: 'enrich', label: 'Nu doorrekenen', primair: true }],
+        },
+    gesprekStap('kwalificatie', 'Kwalificatiegesprek', 'Kwalificatie', 'qualification', [
+      { value: 'call_qualification_now', label: 'Nu bellen', primair: true },
+      { value: 'call_qualification', label: 'Opnieuw inplannen' },
+      { value: 'stop_chase', label: 'Opvolging stoppen' },
+    ]),
+    verstuurd
+      ? {
+          key: 'offerte',
+          label: 'Offerte',
+          state: 'done',
+          meta: verstuurd.number ?? fmt.dateTime(verstuurd.sent_at),
+        }
+      : { key: 'offerte', label: 'Offerte', state: 'pending', meta: '—' },
+    gesprekStap('conversie', 'Conversiegesprek', 'Conversie', 'conversion', [
+      { value: 'call_conversion', label: 'Opnieuw inplannen', primair: true },
+      { value: 'stop_chase', label: 'Opvolging stoppen' },
+    ]),
+    afspraken.length > 0
+      ? { key: 'afspraak', label: 'Afspraak', state: 'done', meta: fmt.dateTime(afspraken[0].starts_at) }
+      : { key: 'afspraak', label: 'Afspraak', state: 'pending', meta: '—' },
+  ]
+})
+
+/**
+ * De eerste stap die iets van je wil: mislukt gaat vóór bezig, want daar
+ * gebeurt niets meer vanzelf.
+ */
+const aandachtStap = computed<Stap | null>(
+  () => stappen.value.find((s) => s.state === 'failed') ?? stappen.value.find((s) => s.state === 'busy') ?? null,
+)
+
+const verloopSamenvatting = computed(() => {
+  const totaal = stappen.value.length
+  const klaar = stappen.value.filter((s) => s.state === 'done').length
+
+  if (stappen.value.some((s) => s.state === 'failed')) return `Stap ${klaar + 1} van ${totaal} · vastgelopen`
+  if (klaar === totaal) return 'Alle stappen doorlopen'
+
+  return `Stap ${klaar + 1} van ${totaal}`
+})
 
 const spaceUnits = [
   { value: 'm2', label: 'm²' },
@@ -641,6 +822,118 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* ------------------------------------------------------------------ verloop
+   De pijplijn vat samen waar de lead staat; alleen de stap die aandacht
+   vraagt krijgt ruimte. De vorige opzet — elf gelijkwaardige knoppen — vertelde
+   niet wat er al gebeurd was, wat er misging, of wat er logisch volgde.
+   -------------------------------------------------------------------------- */
+
+.verloop__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.pijplijn {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pijplijn__stap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pijplijn__balk {
+  height: 4px;
+  border-radius: 999px;
+  background: #ededed;
+}
+
+.pijplijn__naam {
+  font-size: 12.5px;
+  color: var(--dash-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pijplijn__meta {
+  font-size: 11.5px;
+  color: #9a9a9a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pijplijn__stap--done .pijplijn__balk { background: var(--dash-ok); }
+.pijplijn__stap--done .pijplijn__naam { color: var(--dash-ink); font-weight: 500; }
+.pijplijn__stap--done .pijplijn__meta { color: var(--dash-muted); }
+
+.pijplijn__stap--busy .pijplijn__balk { background: var(--dash-warn); }
+.pijplijn__stap--busy .pijplijn__naam { color: var(--dash-warn); font-weight: 600; }
+.pijplijn__stap--busy .pijplijn__meta { color: var(--dash-warn); }
+
+.pijplijn__stap--failed .pijplijn__balk { background: var(--dash-bad); }
+.pijplijn__stap--failed .pijplijn__naam { color: var(--dash-bad); font-weight: 600; }
+.pijplijn__stap--failed .pijplijn__meta { color: var(--dash-bad); }
+
+.aandacht {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.aandacht--failed { border-color: #eecccc; background: #fdf5f5; }
+.aandacht--busy { border-color: #eadfc0; background: #fdfaf3; }
+
+.aandacht__tekst { min-width: 0; flex: 1 1 320px; }
+.aandacht__titel { margin: 0; font-weight: 600; }
+.aandacht__uitleg { margin: 4px 0 0; color: #4a4a4a; }
+
+.verloop__rest {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.verloop__vul { flex: 1; }
+
+@media (max-width: 720px) {
+  /* Zes kolommen naast elkaar worden op een telefoon zes onleesbare kokers. */
+  .pijplijn { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; }
+
+  /* Laten afbreken in plaats van afkappen: op drie kolommen viel juist
+     "Kwalificatiegesprek" weg achter een beletselteken, en dat is doorgaans
+     de stap die je wilt lezen. */
+  .pijplijn__naam,
+  .pijplijn__meta {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .verloop__vul { display: none; }
+}
+
 /* Een regel die er tijdens het kijken bij komt, mag even opvallen — anders
    verandert de tijdlijn onder je handen zonder dat je het merkt. */
 .timeline__item--nieuw {
