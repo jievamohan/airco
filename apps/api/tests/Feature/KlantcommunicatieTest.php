@@ -64,15 +64,29 @@ class KlantcommunicatieTest extends TestCase
     }
 
     #[Test]
-    public function elke_klantmail_heeft_een_platte_tekstversie(): void
+    public function elke_klantmail_heeft_een_platte_tekstversie_die_rendert(): void
     {
-        $lead = Lead::factory()->create();
+        $lead = Lead::factory()->create(['status' => 'follow_up']);
         $quote = app(QuoteBuilder::class)->createForLead($lead);
+        $appointment = app(AppointmentScheduler::class)->book($lead, $quote);
 
-        $content = (new QuoteMail($lead, $quote))->content();
+        $mails = [
+            new QuoteMail($lead, $quote),
+            new AppointmentMail($lead, $appointment, app(IcsBuilder::class)->forAppointment($appointment)),
+            new ChaseMail($lead, 'quote_without_call', $quote),
+            new OwnerNotificationMail($lead, 'Nieuwe aanvraag', ['Regel een.']),
+        ];
 
-        $this->assertSame('mail.quote', $content->view);
-        $this->assertSame('mail.text.quote', $content->text);
+        foreach ($mails as $mail) {
+            $content = $mail->content();
+
+            $this->assertNotNull($content->text, $mail::class.' heeft geen tekstversie.');
+
+            $tekst = view($content->text, $content->with)->render();
+
+            $this->assertNotSame('', trim($tekst));
+            $this->assertStringContainsString($lead->name, $tekst);
+        }
     }
 
     #[Test]

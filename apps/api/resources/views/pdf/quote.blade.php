@@ -6,7 +6,7 @@
     <title>Offerte {{ $quote->number }}</title>
     <style>
         /* Briefpapier: kop en voet staan vast, de inhoud loopt ertussen door.
-           Maten in px bij 96 dpi; 14px ≈ 10,5pt leesletter. */
+           Maten in px bij 96 dpi; 13px is ongeveer 9,75pt op papier. */
         @page { margin: 92px 56px 66px; }
 
         * { box-sizing: border-box; }
@@ -20,7 +20,6 @@
             padding: 0;
         }
 
-        .muted { color: #6b6b6b; }
         .num { text-align: right; white-space: nowrap; }
 
         /* --- Briefhoofd --- */
