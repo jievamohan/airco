@@ -38,6 +38,10 @@ services:
     volumes:
       - ./apps/api:/app
       - api_vendor:/app/vendor
+      # De tests lezen docs/runbooks/ via base_path('../../docs'). Vanaf /app
+      # komt dat uit op /docs, dus daar hangen we de map van de host op.
+      # Read-only: containers lezen de documentatie, ze schrijven hem niet.
+      - ./docs:/docs:ro
     depends_on:
       db:
         condition: service_healthy
@@ -65,6 +69,10 @@ services:
     volumes:
       - ./apps/api:/app
       - api_vendor:/app/vendor
+      # De tests lezen docs/runbooks/ via base_path('../../docs'). Vanaf /app
+      # komt dat uit op /docs, dus daar hangen we de map van de host op.
+      # Read-only: containers lezen de documentatie, ze schrijven hem niet.
+      - ./docs:/docs:ro
     depends_on:
       api:
         # service_started wacht alleen tot de container draait, niet tot het
