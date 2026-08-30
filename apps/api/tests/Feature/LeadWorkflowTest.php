@@ -302,6 +302,52 @@ class LeadWorkflowTest extends TestCase
     }
 
     #[Test]
+    public function een_herhaalde_aanvraag_laat_wel_een_spoor_na(): void
+    {
+        // Zonder dit is een tweede aanvraag onzichtbaar: geen nieuwe lead, en
+        // in de lijst niets dat verandert. Wie net het formulier invulde, zoekt
+        // dan tevergeefs.
+        Queue::fake();
+        Carbon::setTestNow(Carbon::parse('2026-09-01 09:00:00'));
+
+        $intake = app(LeadIntake::class);
+        $attributes = ['name' => 'Jan Jansen', 'email' => 'jan@example.nl', 'phone' => '0612345678'];
+        $eerste = $intake->capture($attributes, 'web_form')['lead'];
+
+        Carbon::setTestNow(Carbon::parse('2026-09-01 14:30:00'));
+        $intake->capture($attributes, 'web_form');
+
+        $vers = $eerste->refresh();
+        $this->assertSame('2026-09-01 14:30:00', $vers->last_request_at->format('Y-m-d H:i:s'));
+        $this->assertTrue($vers->last_request_at->greaterThan($vers->created_at));
+        $this->assertSame(2, $vers->requests_count);
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
+    public function een_afwijkend_antwoord_in_een_herhaalde_aanvraag_verdwijnt_niet_stil(): void
+    {
+        // Wat er staat is vaak aan de telefoon nagevraagd, dus dat overschrijven
+        // we niet. Maar iemand die opnieuw invult met een grotere ruimte moet
+        // wel gezien worden.
+        Queue::fake();
+
+        $intake = app(LeadIntake::class);
+        $attributes = ['name' => 'Jan Jansen', 'email' => 'jan@example.nl', 'phone' => '0612345678', 'space_size' => 40];
+        $lead = $intake->capture($attributes, 'web_form')['lead'];
+
+        $intake->capture(['space_size' => 120] + $attributes, 'web_form');
+
+        $this->assertSame(40.0, (float) $lead->refresh()->space_size, 'De nagevraagde waarde blijft staan.');
+
+        $melding = $lead->events()->where('type', 'lead_duplicate')->latest('id')->first();
+        $this->assertNotNull($melding);
+        $this->assertStringContainsString('ruimtemaat', (string) $melding->description);
+        $this->assertStringContainsString('120', (string) $melding->description);
+    }
+
+    #[Test]
     public function elke_stap_belandt_in_de_tijdlijn(): void
     {
         $workflow = app(LeadWorkflow::class);

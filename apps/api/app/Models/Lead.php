@@ -51,6 +51,8 @@ use Illuminate\Support\Str;
  * @property int $call_attempts
  * @property int $email_attempts
  * @property Carbon|null $last_contact_at
+ * @property Carbon|null $last_request_at
+ * @property int $requests_count
  * @property Carbon|null $next_action_at
  * @property Carbon|null $owner_notified_at
  * @property Carbon|null $won_at
@@ -88,6 +90,7 @@ class Lead extends Model
             'needs_extra_group' => 'bool',
             'desired_start' => 'date',
             'last_contact_at' => 'datetime',
+            'last_request_at' => 'datetime',
             'next_action_at' => 'datetime',
             'owner_notified_at' => 'datetime',
             'won_at' => 'datetime',

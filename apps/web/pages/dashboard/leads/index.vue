@@ -46,7 +46,12 @@
 
           <span class="lead__body">
             <span class="lead__top">
-              <span class="card__title">{{ lead.name }}</span>
+              <span class="card__title">
+                {{ lead.name }}
+                <!-- Een klant die het formulier opnieuw invult meldt zichzelf;
+                     dat hoort niet alleen in de tijdlijn te staan. -->
+                <span v-if="lead.repeat_request" class="opnieuw">opnieuw aangevraagd</span>
+              </span>
               <span class="lead__amount" :class="{ 'lead__amount--none': !lead.quote_total_cents }">
                 {{ lead.quote_total_cents ? fmt.euroRound(lead.quote_total_cents) : 'nog geen bedrag' }}
                 <span v-if="lead.quote_total_cents && lead.quote_binding === false" class="lead__amount-soort">indicatie</span>
@@ -57,6 +62,11 @@
               <span class="lead__status">{{ lead.status_label }}</span> ·
               {{ lead.city ?? 'plaats onbekend' }} ·
               {{ lead.estimated_kw ? `${fmt.number(lead.estimated_kw, 1)} kW` : 'nog niet berekend' }}
+              <!-- Absoluut, niet relatief: "binnen een minuut" is wat Intl van een
+                   verstreken moment maakt, en je wilt hier weten wannéér. -->
+              <template v-if="lead.repeat_request">
+                · {{ lead.requests_count }}e aanvraag {{ fmt.dayLabel(lead.last_request_at).toLowerCase() }} {{ fmt.time(lead.last_request_at) }}
+              </template>
             </span>
 
             <span class="lead__foot">
@@ -89,12 +99,15 @@
               <th class="num">Bedrag</th>
               <th class="num">Belpogingen</th>
               <th>Volgende actie</th>
-              <th>Binnengekomen</th>
+              <th>Laatste aanvraag</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="lead in rows" :key="lead.uuid" class="row" @click="open(lead.uuid)">
-              <td><strong>{{ lead.name }}</strong></td>
+              <td>
+                <strong>{{ lead.name }}</strong>
+                <span v-if="lead.repeat_request" class="opnieuw">opnieuw</span>
+              </td>
               <td>{{ lead.city ?? '—' }}</td>
               <td><span class="badge" :class="`badge--${lead.status}`">{{ lead.status_label }}</span></td>
               <td class="muted">{{ sourceLabels[lead.source] ?? lead.source }}</td>
@@ -105,7 +118,7 @@
               </td>
               <td class="num">{{ lead.call_attempts }}</td>
               <td class="muted">{{ lead.next_action_at ? fmt.relative(lead.next_action_at) : '—' }}</td>
-              <td class="muted">{{ fmt.dateTime(lead.created_at) }}</td>
+              <td class="muted">{{ fmt.dateTime(lead.last_request_at ?? lead.created_at) }}</td>
             </tr>
           </tbody>
         </table>
@@ -144,6 +157,9 @@ type LeadRow = {
   call_attempts: number
   next_action_at: string | null
   created_at: string | null
+  last_request_at: string | null
+  requests_count: number
+  repeat_request: boolean
 }
 
 type Meta = { current_page: number; last_page: number; total: number }
@@ -213,6 +229,22 @@ onMounted(async () => {
 
 <style scoped>
 .row { cursor: pointer; }
+
+/* Zacht, niet alarmerend: dit is goed nieuws, geen storing. Het staat naast de
+   naam omdat je daar leest, en niet onderaan bij de metaregel. */
+.opnieuw {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eaf2fb;
+  color: #2c6ba8;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 
 .pager {
   display: flex;

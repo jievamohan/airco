@@ -28,7 +28,14 @@ class LeadController extends Controller
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
         ]);
 
-        $query = Lead::query()->with('latestQuote')->latest('id');
+        // Op laatste aanvraag, niet op aanmaakdatum: een klant die het
+        // formulier opnieuw invult wordt anders begraven onder leads waar niets
+        // gebeurt. Voor een lead die maar één keer aanvroeg is het dezelfde
+        // volgorde als eerst.
+        $query = Lead::query()
+            ->with('latestQuote')
+            ->orderByRaw('COALESCE(last_request_at, created_at) DESC')
+            ->orderByDesc('id');
 
         if (! empty($filters['status'])) {
             $query->whereIn('status', explode(',', $filters['status']));
