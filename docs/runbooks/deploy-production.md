@@ -221,9 +221,23 @@ Die laatste twee zijn het account waarmee je straks het dashboard in komt — zi
 De deploy draait deze `composer install` daarna bij elke keer opnieuw; hier is
 hij alleen nodig omdat je `artisan` al vóór de eerste deploy gebruikt.
 
-> `php artisan config:cache` legt `.env` vast in een cachebestand. Wijzig je
-> `.env` later met de hand, draai dan `php artisan config:cache` opnieuw —
-> anders draait de applicatie nog op de oude waarden.
+> **Een `.env` wijzigen vergt twee stappen, niet één.**
+>
+> ```bash
+> php artisan config:cache
+> systemctl --user restart klimaatx-queue
+> ```
+>
+> De eerste legt `.env` opnieuw vast in het cachebestand dat de applicatie
+> leest. De tweede is de stap die mensen overslaan: de wachtrij is een
+> langlopend PHP-proces dat zijn configuratie bij het opstarten inleest, en een
+> nieuwe cache op schijf bereikt hem niet. Alles wat via de wachtrij gaat —
+> offertes, meldingen, opvolgmails — blijft dus de oude waarde gebruiken tot hij
+> herstart. Vanzelf gebeurt dat pas na een uur (`--max-time=3600`) of bij de
+> volgende deploy.
+>
+> Dit kostte een keer een halve middag: `.env` zei allang `MAIL_SCHEME=smtp`
+> terwijl het logboek bleef klagen over `tls`.
 
 ### 5. Het dashboardaccount
 
@@ -447,7 +461,8 @@ tail -f apps/api/storage/logs/laravel-$(date +%F).log
 | Deploy stopt op "basisgegevens seeden mislukt" | `OWNER_INITIAL_PASSWORD` is leeg of te kort (stap 5) |
 | Kan niet inloggen op het dashboard | Het account bestaat nog niet: `php artisan db:seed --force` na het invullen van stap 5 |
 | Wachtwoord kwijt | Geen herstelmail; zet een nieuw hash met `php artisan tinker` (`$u->update(['password' => \Hash::make('…')])`). Tinker bewaart die regel in `~/.config/psysh/` |
-| Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
+| Wijziging in `.env` heeft geen effect | `php artisan config:cache` **en** `systemctl --user restart klimaatx-queue` — de worker leest zijn configuratie bij het opstarten |
+| Mail mislukt met `550 … can not send emails from …` | `MAIL_FROM_ADDRESS` hoort bij het account uit `MAIL_USERNAME`; de meeste servers weigeren een andere afzender |
 | Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |
 | Een wijziging aan de deploy zelf lijkt niet te werken | Kijk in het log of er `verder met het deployscript uit deze commit` staat; zonder die regel draait er nog een versie van vóór de overdracht |
 | `composer: command not found` | Composer staat niet op PATH; installeer hem in `~/bin` (stap 1) — de deploy vindt hem daar zelf |
