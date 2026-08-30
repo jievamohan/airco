@@ -24,6 +24,19 @@ in het CRM terecht.
 
 Vul daarna het systeemprompt uit §2 en de dataverzameling uit §4 in.
 
+### Uitgaand telefoonnummer
+
+Zonder nummer kan de agent alleen opgebeld worden, niet zelf bellen — en dit
+systeem belt uit. Koppel bij ElevenLabs onder **Phone Numbers** een nummer
+(eigen Twilio-account of een nummer van ElevenLabs zelf).
+
+Wat wij nodig hebben is niet het nummer maar het **id** ervan: onze code stuurt
+`agent_phone_number_id` mee bij elke oproep. Je vindt het in de URL of in de
+detailweergave van dat nummer, en het begint met `phnum_`.
+
+Gebruik een nummer dat de klant kan terugbellen. Belt hij terug op een nummer
+dat nergens uitkomt, dan is dat een lead die je zelf hebt weggegooid.
+
 ---
 
 ## 2. Systeemprompt
@@ -246,7 +259,7 @@ ElevenLabs, anders komt er vrije tekst binnen die wij negeren.
 Zet de post-call webhook op:
 
 ```
-POST https://<api-host>/api/webhooks/elevenlabs/post-call
+POST https://airco.sinoxi.nl/api/webhooks/elevenlabs/post-call
 ```
 
 Het secret dat ElevenLabs toont, vul je in bij **Instellingen → Voice agent →
@@ -257,9 +270,33 @@ handtekening en elk verzoek ouder dan dertig minuten.
 
 ## 6. Voordat je hem op echte klanten loslaat
 
-1. Zet `AGENT_DRY_RUN` op `false` en `ELEVENLABS_ENABLED` op `true`.
+1. Vul in het dashboard onder **Instellingen → Voice agent** deze vijf in:
+
+   | Veld | Waar het vandaan komt |
+   |---|---|
+   | Voice agent actief | aanzetten |
+   | ElevenLabs API-sleutel | ElevenLabs → profiel → API key |
+   | ElevenLabs agent-id | de agent uit §1, begint met `agent_` |
+   | Uitgaand telefoonnummer-id | het `phnum_`-id uit §1 |
+   | Webhook-secret | het secret dat ElevenLabs bij de webhook toont (§5) |
+
+   Zet daarna onder **Instellingen → Werking** de **proefmodus uit**. Dit is de
+   valkuil: alles goed invullen en die schakelaar vergeten geeft geen
+   foutmelding, maar wel een nepclient die niets belt. De code valt terug op
+   die nepclient zodra proefmodus aan staat *of* de voice agent uit — beide
+   moeten dus goed staan.
+
+   > Een instelling in het dashboard overschrijft `.env`. Staat het veld leeg,
+   > dan beslist `.env`, en pas daarna de standaard uit `config/agent.php`.
+   > Iets in `.env` zetten terwijl er een dashboardwaarde staat, doet dus niets.
+
 2. Maak in het dashboard handmatig een lead aan met **je eigen
    telefoonnummer**, en trap "Kwalificatiegesprek inplannen" af.
+
+   Let op het tijdstip. Er wordt alleen gebeld binnen de belvensters uit
+   `config/agent.php`: maandag t/m vrijdag 09:00–20:00, zaterdag 10:00–17:00,
+   zondag niet. Daarbuiten gebeurt er niets, zonder melding — een test op een
+   late avond lijkt daardoor op een defect.
 3. Neem op. Loop het gesprek af zoals een klant zou doen, en wijk een keer
    bewust af: onderbreek hem, stel een vraag die niet in het script staat, zeg
    dat je niet meer gebeld wil worden.
@@ -273,7 +310,20 @@ klant terechtkomt.
 
 ---
 
-## 7. Wat hier bewust niet in staat
+## 7. Dit document wordt getest
+
+`tests/Feature/VoiceAgentPromptTest.php` leest dit bestand en controleert drie
+dingen: dat elke `{{variabele}}` in het prompt ook echt door onze code wordt
+meegestuurd, dat elk veld uit §4 daadwerkelijk op de lead wordt overgenomen, en
+dat elke uitkomst uit §4 als uitkomst bestaat.
+
+Verzin je hier een veldnaam bij, of hernoem je er een, dan valt CI om. Dat is de
+bedoeling: een veld dat alleen in de documentatie bestaat, levert een gesprek op
+waarvan de helft nergens terechtkomt.
+
+---
+
+## 8. Wat hier bewust niet in staat
 
 Het script belooft nergens een prijs, levertijd of garantie die niet uit onze
 eigen gegevens komt. Dat is geen stijlkeuze: een voice agent die zelf een bedrag
