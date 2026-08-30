@@ -43,6 +43,30 @@ export function useDashboardFormat() {
           ...(timeZone ? { timeZone } : {}),
         }).format(new Date(iso))
 
+  /** Alleen het klokje, voor lijsten waar de dag al boven de groep staat. */
+  const time = (iso: string | null | undefined) =>
+    !iso
+      ? '—'
+      : new Intl.DateTimeFormat('nl-NL', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+
+  /**
+   * "Vandaag" en "Gisteren" lezen sneller dan een datum, en verderop terug in
+   * de tijd zegt de datum zelf weer meer dan een aantal dagen geleden.
+   */
+  const dayLabel = (iso: string | null | undefined) => {
+    if (!iso) return 'Onbekend'
+
+    const dag = new Date(iso)
+    const vandaag = new Date()
+    const opDag = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+    const verschil = Math.round((opDag(vandaag) - opDag(dag)) / 86_400_000)
+
+    if (verschil === 0) return 'Vandaag'
+    if (verschil === 1) return 'Gisteren'
+
+    return new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short' }).format(dag)
+  }
+
   const date = (iso: string | null | undefined) =>
     !iso ? '—' : new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso))
 
@@ -60,5 +84,5 @@ export function useDashboardFormat() {
   const duration = (minutes: number | null | undefined) =>
     minutes === null || minutes === undefined ? '—' : `${number(minutes / 60, 1)} uur`
 
-  return { euro, euroRound, number, dateTime, date, relative, duration }
+  return { euro, euroRound, number, dateTime, time, dayLabel, date, relative, duration }
 }

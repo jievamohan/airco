@@ -369,38 +369,84 @@
         </section>
 
         <section class="panel">
-          <h2 class="panel__title">Verstuurde mail</h2>
+          <div class="lijst__kop">
+            <h2 class="panel__title">Verstuurde mail</h2>
+            <span v-if="mislukteMail" class="small" style="color: var(--dash-bad)">{{ mislukteMail }}</span>
+          </div>
+
           <p v-if="!lead.emails.length" class="empty">Nog geen mail verstuurd.</p>
-          <table v-else class="data">
-            <tbody>
-              <tr v-for="email in lead.emails" :key="email.id">
-                <td>
-                  {{ email.subject }}
-                  <span class="small muted" style="display: block">{{ fmt.dateTime(email.sent_at) }}</span>
-                </td>
-                <td class="num"><span class="badge">{{ emailStatus[email.status] ?? email.status }}</span></td>
-              </tr>
-            </tbody>
-          </table>
+
+          <div v-for="groep in mailPerDag" v-else :key="groep.dag" class="daggroep">
+            <div class="daggroep__kop">
+              <span>{{ groep.dag }}</span>
+              <span class="daggroep__lijn" />
+            </div>
+
+            <div v-for="regel in groep.regels" :key="regel.id" class="mailregel">
+              <span :class="['stip', `stip--${regel.staat}`]" />
+              <div class="mailregel__tekst">
+                <p class="mailregel__onderwerp">{{ regel.subject }}</p>
+                <p :class="['mailregel__meta', regel.staat === 'bad' ? 'is-bad' : '']">{{ regel.meta }}</p>
+              </div>
+              <span class="tijd">{{ regel.tijd }}</span>
+            </div>
+          </div>
+
+          <button
+            v-if="meerMail"
+            type="button"
+            class="btn btn--ghost btn--small lijst__meer"
+            @click="alleMail = true"
+          >
+            Toon alle {{ mailRegels.length }}
+          </button>
         </section>
 
         <section class="panel">
-          <h2 class="panel__title">Tijdlijn</h2>
-          <div class="timeline">
-            <div
-              v-for="event in lead.events"
-              :key="event.id"
-              class="timeline__item"
-              :class="{ 'timeline__item--nieuw': nieuweGebeurtenissen.has(event.id) }"
-            >
-              <span class="timeline__dot" />
-              <div>
-                <p class="timeline__title">{{ event.title }}</p>
-                <p class="timeline__meta">{{ fmt.dateTime(event.occurred_at) }} · {{ actorLabel(event.actor) }}</p>
-                <p v-if="event.description" class="timeline__desc small">{{ event.description }}</p>
+          <div class="lijst__kop">
+            <h2 class="panel__title">Tijdlijn</h2>
+            <span class="small muted">{{ lead.events.length }} gebeurtenissen</span>
+          </div>
+
+          <div v-for="groep in tijdlijnPerDag" :key="groep.dag" class="daggroep">
+            <div class="daggroep__kop">
+              <span>{{ groep.dag }}</span>
+              <span class="daggroep__lijn" />
+            </div>
+
+            <div class="timeline">
+              <div
+                v-for="event in groep.regels"
+                :key="event.id"
+                class="timeline__item"
+                :class="{ 'timeline__item--nieuw': nieuweGebeurtenissen.has(event.id) }"
+              >
+                <span :class="['timeline__dot', `timeline__dot--${event.kleur}`]" />
+                <div>
+                  <div class="timeline__regel">
+                    <p class="timeline__title">{{ event.title }}</p>
+                    <span class="tijd">{{ fmt.time(event.occurred_at) }}</span>
+                  </div>
+                  <p class="timeline__meta">{{ event.meta }}</p>
+                  <p
+                    v-if="event.description"
+                    :class="['timeline__desc', 'small', event.kleur === 'bad' ? 'timeline__desc--bad' : '']"
+                  >
+                    {{ event.description }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
+
+          <button
+            v-if="meerTijdlijn"
+            type="button"
+            class="btn btn--ghost btn--small lijst__meer"
+            @click="alleTijdlijn = true"
+          >
+            Toon alle {{ tijdlijnRegels.length }}
+          </button>
         </section>
       </div>
     </div>
@@ -723,6 +769,153 @@ async function trigger(action: string) {
   }
 }
 
+// ------------------------------------------------ mail en tijdlijn
+
+/**
+ * Beide panelen liepen eindeloos door en zagen er identiek uit, terwijl ze een
+ * andere vraag beantwoorden: de mail zegt of de klant bereikt is, de tijdlijn
+ * wat er gebeurd is. Ze krijgen nu allebei daggroepen — dan volstaat een
+ * klokje per regel — en ze worden afgekapt tot het recente deel.
+ */
+const MAIL_ZICHTBAAR = 6
+const TIJDLIJN_ZICHTBAAR = 12
+
+const alleMail = ref(false)
+const alleTijdlijn = ref(false)
+
+type Dag<T> = { dag: string; regels: T[] }
+
+/**
+ * Groepeert op dag, nieuwste eerst. Zelf sorteren en niet vertrouwen op de
+ * volgorde uit de API: die sorteert op id, en dat loopt uiteen zodra een regel
+ * met terugwerkende kracht wordt vastgelegd — dan verschijnt "Vandaag" twee
+ * keer met "Gisteren" ertussen.
+ */
+function perDag<T>(regels: T[], moment: (r: T) => string | null | undefined): Dag<T>[] {
+  const groepen: Dag<T>[] = []
+  const gesorteerd = [...regels].sort(
+    (a, b) => new Date(moment(b) ?? 0).getTime() - new Date(moment(a) ?? 0).getTime(),
+  )
+
+  for (const regel of gesorteerd) {
+    const dag = fmt.dayLabel(moment(regel))
+    const laatste = groepen[groepen.length - 1]
+
+    if (laatste && laatste.dag === dag) laatste.regels.push(regel)
+    else groepen.push({ dag, regels: [regel] })
+  }
+
+  return groepen
+}
+
+const emailStaat: Record<string, string> = {
+  sent: 'ok',
+  failed: 'bad',
+  queued: 'wacht',
+  skipped: 'uit',
+}
+
+/**
+ * Opeenvolgende pogingen met hetzelfde onderwerp én dezelfde afloop worden één
+ * regel met een telling. Zes keer "Offerte verstuurd — mislukt" onder elkaar
+ * zegt niet meer dan één keer, en verdringt wel de rest van het paneel.
+ */
+const mailRegels = computed(() => {
+  const mails = ((lead.value?.emails ?? []) as any[])
+  const regels: any[] = []
+
+  for (const mail of mails) {
+    const vorige = regels[regels.length - 1]
+
+    if (vorige && vorige.subject === mail.subject && vorige.status === mail.status) {
+      vorige.aantal += 1
+      vorige.eerste = mail
+      continue
+    }
+
+    regels.push({ ...mail, aantal: 1, eerste: mail })
+  }
+
+  return regels.map((r) => {
+    const staat = emailStaat[r.status] ?? 'uit'
+    const moment = r.sent_at ?? r.attempted_at
+    const label = emailStatus[r.status] ?? r.status
+
+    return {
+      id: r.id,
+      subject: r.subject,
+      staat,
+      moment,
+      tijd: fmt.time(moment),
+      meta:
+        r.aantal > 1
+          ? `${r.aantal} pogingen ${label.toLowerCase()} · eerste ${fmt.time(r.eerste.sent_at ?? r.eerste.attempted_at)}`
+          : r.status === 'sent'
+            ? `naar ${lead.value?.email ?? 'de klant'}`
+            : label,
+    }
+  })
+})
+
+const meerMail = computed(() => !alleMail.value && mailRegels.value.length > MAIL_ZICHTBAAR)
+
+const mailPerDag = computed(() =>
+  perDag(alleMail.value ? mailRegels.value : mailRegels.value.slice(0, MAIL_ZICHTBAAR), (r) => r.moment),
+)
+
+/**
+ * Kleur zegt wie er aan het werk was, zodat je in een lange lijst het handwerk
+ * van het automatische kunt scheiden. Een mislukking gaat daar overheen — dat
+ * wil je als eerste zien.
+ */
+function gebeurtenisKleur(event: any): string {
+  if (/mislukt|geweigerd|niet overgenomen|onbereikbaar/i.test(event.title ?? '')) return 'bad'
+
+  return { user: 'mens', voice_agent: 'agent', lead: 'klant' }[event.actor as string] ?? 'systeem'
+}
+
+/**
+ * Ook hier opeenvolgende herhalingen samenvouwen. Veertien keer "Offerte
+ * gemaild" onder elkaar duwt precies de regels uit beeld waar je naar zoekt —
+ * de mislukking en wat een mens deed. De beschrijving van de nieuwste blijft
+ * staan, want die is meestal de enige die je nog wilt lezen.
+ */
+const tijdlijnRegels = computed(() => {
+  const regels: any[] = []
+
+  for (const event of ((lead.value?.events ?? []) as any[])) {
+    const vorige = regels[regels.length - 1]
+
+    if (vorige && vorige.title === event.title && vorige.actor === event.actor) {
+      vorige.aantal += 1
+      continue
+    }
+
+    regels.push({ ...event, aantal: 1, kleur: gebeurtenisKleur(event) })
+  }
+
+  return regels.map((r) => ({
+    ...r,
+    meta: r.aantal > 1 ? `${actorLabel(r.actor)} · ${r.aantal} keer` : actorLabel(r.actor),
+  }))
+})
+
+const meerTijdlijn = computed(() => !alleTijdlijn.value && tijdlijnRegels.value.length > TIJDLIJN_ZICHTBAAR)
+
+const tijdlijnPerDag = computed(() =>
+  perDag(
+    alleTijdlijn.value ? tijdlijnRegels.value : tijdlijnRegels.value.slice(0, TIJDLIJN_ZICHTBAAR),
+    (e) => e.occurred_at,
+  ),
+)
+
+const mislukteMail = computed(() => {
+  const mails = (lead.value?.emails ?? []) as any[]
+  const mislukt = mails.filter((m) => m.status === 'failed').length
+
+  return mislukt === 0 ? '' : `${mislukt} van ${mails.length} mislukt`
+})
+
 // ------------------------------------------------------- meekijken
 
 /**
@@ -822,6 +1015,110 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* --------------------------------------------------------- mail en tijdlijn
+   Beide panelen stapelden gelijkwaardige regels tot ver voorbij de vouw. Nu
+   draagt de dag de context, staat de tijd rechts in een kolom die je kunt
+   scannen, en zegt kleur wie er aan het werk was.
+   -------------------------------------------------------------------------- */
+
+.lijst__kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.lijst__meer { margin-top: 16px; width: 100%; }
+
+.daggroep + .daggroep { margin-top: 14px; }
+
+.daggroep__kop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dash-muted);
+}
+
+.daggroep__lijn {
+  flex: 1;
+  height: 1px;
+  background: #f0f0f0;
+}
+
+/* Rechts uitgelijnd en met vaste cijferbreedte, zodat de klokjes onder elkaar
+   één kolom vormen in plaats van te dansen. */
+.tijd {
+  font-size: 12px;
+  color: var(--dash-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.mailregel {
+  display: grid;
+  grid-template-columns: 7px 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 5px 0;
+}
+
+.mailregel__tekst { min-width: 0; }
+
+.mailregel__onderwerp {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mailregel__meta {
+  margin: 1px 0 0;
+  font-size: 12px;
+  color: var(--dash-muted);
+}
+
+.mailregel__meta.is-bad { color: var(--dash-bad); }
+
+.stip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  align-self: center;
+  background: #d4d4d4;
+}
+
+.stip--ok { background: var(--dash-ok); }
+.stip--bad { background: var(--dash-bad); }
+.stip--wacht { background: var(--dash-warn); }
+
+.timeline__regel {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.timeline__dot--mens { background: var(--dash-ink); }
+.timeline__dot--agent { background: #2c6ba8; }
+.timeline__dot--klant { background: #2c6ba8; }
+.timeline__dot--systeem { background: #d4d4d4; }
+.timeline__dot--bad { background: var(--dash-bad); }
+
+/* De reden van een mislukking is het enige in deze lijst dat je echt moet
+   lezen; die krijgt daarom een eigen vlak in plaats van nog een grijze regel. */
+.timeline__desc--bad {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid #eecccc;
+  border-radius: 6px;
+  background: #fdf5f5;
+  color: #4a4a4a;
+}
+
 /* ------------------------------------------------------------------ verloop
    De pijplijn vat samen waar de lead staat; alleen de stap die aandacht
    vraagt krijgt ruimte. De vorige opzet — elf gelijkwaardige knoppen — vertelde
