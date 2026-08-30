@@ -15,11 +15,22 @@ use Tests\TestCase;
  */
 class SyncVoiceAgentCommandTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        // putenv werkt op het hele proces: laten staan betekent dat een test
+        // verderop een sleutel ziet die deze test heeft neergezet.
+        putenv('ELEVENLABS_API_KEY');
+
+        parent::tearDown();
+    }
+
     #[Test]
     public function zonder_stem_doet_het_niets(): void
     {
+        // De melding komt uit de gedeelde service en mag dus niet naar een
+        // commandovlag verwijzen: het dashboard gebruikt dezelfde code.
         $this->artisan('voice:agent-sync')
-            ->expectsOutputToContain('Geef --voice mee')
+            ->expectsOutputToContain('Geen voice_id opgegeven')
             ->assertExitCode(1);
     }
 

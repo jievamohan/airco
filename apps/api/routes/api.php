@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\LeadActionController;
 use App\Http\Controllers\Api\Admin\LeadController;
 use App\Http\Controllers\Api\Admin\SequenceController;
 use App\Http\Controllers\Api\Admin\SettingController;
+use App\Http\Controllers\Api\Admin\VoiceAgentController;
 use App\Http\Controllers\Api\ElevenLabsWebhookController;
 use App\Http\Controllers\Api\LeadIntakeController;
 use App\Http\Controllers\Api\PublicQuoteController;
@@ -61,6 +62,10 @@ Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(functi
 
     Route::get('/sequences', [SequenceController::class, 'index'])->name('sequences.index');
     Route::patch('/sequences/steps/{id}', [SequenceController::class, 'updateStep'])->whereNumber('id')->name('sequences.steps.update');
+
+    Route::post('/voice/agent-sync', [VoiceAgentController::class, 'sync'])
+        ->middleware('throttle:6,1')
+        ->name('voice.agent-sync');
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::patch('/settings', [SettingController::class, 'update'])->name('settings.update');
