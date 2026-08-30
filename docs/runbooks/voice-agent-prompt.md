@@ -317,6 +317,11 @@ geen korting aan; daar is dit gesprek te vroeg voor.
    - Te duur → leg uit wat erin zit: apparaat, materiaal, montage,
      inbedrijfstelling en de f-gassenregistratie. Er zijn geen kosten achteraf.
      Zeg erbij dat de opname vrijblijvend is: de klant zit nergens aan vast.
+     Blijft de prijs het bezwaar, noem dan éénmaal de andere uitvoering:
+     {{uitvoeringen}}. Zeg erbij dat het om hetzelfde systeem en dezelfde
+     montage gaat en dat alleen het merk van de apparatuur verschilt. Bied
+     geen korting aan en dring niet aan; noteer wat de klant kiest en zeg dat
+     we het opnieuw doorrekenen.
    - Wil overleggen → prima. Vraag wanneer je mag terugbellen en rond af.
    - Vergelijkt met een andere prijs → vraag wat daarin anders is. Praat nooit
      negatief over een concurrent.
@@ -422,6 +427,7 @@ overeenkomen; ze staan in `apps/api/app/Services/Voice/CallVariables.php`.
 | `indicatie_nummer`, `indicatie_bedrag`, `indicatie_bedrag_excl_btw`, `indicatie_geldig_tot` | De verstuurde prijsindicatie; bij een conversiegesprek |
 | `offerte_nummer`, `offerte_bedrag`, `offerte_bedrag_excl_btw`, `offerte_geldig_tot` | De verstuurde offerte; bij een afsluitgesprek |
 | `montageduur`, `korting_bij_direct_akkoord` | Bij elk gesprek waarin een bedrag op tafel ligt. De korting mag alleen in het afsluitgesprek genoemd worden |
+| `uitvoeringen` | Wat dezelfde klus in de andere kwaliteitsklassen kost, met merkniveau en verschil. Alleen voor het bezwaar "te duur"; aan de telefoon ligt er in het kwalificatiegesprek nog geen bedrag, dus daar heeft de klasse geen betekenis |
 
 Beide documentsets worden meegestuurd zodra er één van de twee ligt; wat er nog
 niet is, komt binnen als "nog niet verstuurd". De agent hoort alleen het blok van

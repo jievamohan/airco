@@ -99,6 +99,23 @@ class VoiceAgentPromptTest extends TestCase
     }
 
     #[Test]
+    public function de_agent_kan_een_andere_uitvoering_noemen_met_een_bedrag(): void
+    {
+        // Zonder bedrag is "voordelig of premium?" geen vraag maar een
+        // karaktertest. In het conversiegesprek ligt er wel een bedrag.
+        $lead = Lead::factory()->create(['status' => 'quoted', 'tier' => null]);
+        $quote = app(QuoteBuilder::class)->createForLead($lead);
+
+        $zin = app(CallVariables::class)->build($lead, CallPurpose::Conversion, $quote)['uitvoeringen'];
+
+        $this->assertStringContainsString('Voordelig', $zin);
+        $this->assertStringContainsString('Premium', $zin);
+        $this->assertStringContainsString('goedkoper', $zin);
+        $this->assertStringContainsString('duurder', $zin);
+        $this->assertMatchesRegularExpression('/€ [\d.]+/', $zin, 'Er hoort een bedrag in te staan.');
+    }
+
+    #[Test]
     public function de_openingszin_meldt_de_digitale_assistent_en_de_opname(): void
     {
         $lead = Lead::factory()->create();

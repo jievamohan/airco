@@ -20,6 +20,16 @@ SPECIFICATIE
 Subtotaal excl. btw: {{ Money::euro($quote->subtotal_cents) }}
 Btw {{ Money::percentage((float) $quote->vat_rate) }}: {{ Money::euro($quote->vat_cents) }}
 Richtbedrag incl. btw: {{ Money::euro($quote->total_cents) }}
+@if (! empty($alternatieven))
+
+LIEVER EEN ANDERE UITVOERING?
+Dit richtbedrag rekent met de {{ strtolower($klasse->label()) }}. Hetzelfde systeem en dezelfde montage kan ook in een ander merkniveau:
+@foreach ($alternatieven as $regel)
+- {{ $regel }}
+@endforeach
+
+Zegt u er niets over, dan houden we het richtbedrag hierboven aan.
+@endif
 @if (! empty($quote->assumptions))
 
 WAAR WE VAN UIT ZIJN GEGAAN
