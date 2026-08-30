@@ -40,15 +40,41 @@ begint dan met `SK`) dan je account-brede gegevens te gebruiken.
 
 ### 2 — ElevenLabs: agent aanmaken
 
-Dashboard → **Agents** → nieuwe agent → naam invullen en **Blank template**
-kiezen.
+Dit kan met de hand, maar doe het niet: de prompt is zesduizend tekens en §4
+telt achttien velden waarvan de namen exact moeten kloppen. Eén typefout in een
+identifier en die informatie komt nooit in het CRM aan, zonder foutmelding.
 
-Daarna in het tabblad **Agent**:
+Kies eerst een Nederlandse stem in de stemmenbibliotheek en noteer het
+`voice_id`. Daarna:
 
-- **First message** → `{{gespreksopening}}`
-- **System prompt** → de hele tekst uit §2
+```bash
+cd apps/api
+ELEVENLABS_API_KEY=<jouw-sleutel> php artisan voice:agent-sync --voice=<voice_id>
+```
 
-En in **Voice** een Nederlandse stem. De overige instellingen staan in §1.
+Het commando leest de prompt uit §2 en de velden uit §4 van dit document en
+zet ze bij ElevenLabs neer. Het antwoordt met een `agent_…`-id; dat heb je in
+stap 7 nodig.
+
+Wil je eerst zien wat er verstuurd wordt, zonder iets aan te maken:
+
+```bash
+php artisan voice:agent-sync --voice=<voice_id> --dry-run
+```
+
+De sleutel staat bewust in de omgeving van dat ene commando en niet in `.env`:
+hij is alleen nodig om de agent neer te zetten, en hoort daarna nergens meer
+te staan behalve in het dashboard.
+
+Draai je het later opnieuw na een wijziging in dit document, geef dan het
+bestaande id mee — anders komt er een tweede agent naast te staan:
+
+```bash
+ELEVENLABS_API_KEY=… php artisan voice:agent-sync --voice=<voice_id> --agent=<agent_id>
+```
+
+Wat het commando **niet** doet: het nummer koppelen, de webhook aanzetten en de
+sleutels invullen. Dat blijft stap 3, 5 en 7.
 
 ### 3 — ElevenLabs: nummer importeren
 
@@ -61,9 +87,13 @@ wat wij nodig hebben, niet het telefoonnummer.
 
 ### 4 — ElevenLabs: dataverzameling
 
-Tabblad **Analysis** → **Data collection** → per veld uit §4 op *Add item* en
-type, identifier en beschrijving invullen. De identifiers moeten exact
-overeenkomen; §7 legt uit waarom.
+Heeft het commando uit stap 2 al gedaan. Controleren kan in tabblad
+**Analysis** → **Data collection**: daar horen de achttien velden uit §4 te
+staan.
+
+Vul je ze liever met de hand, dan is het per veld *Add item* met type,
+identifier en beschrijving. De identifiers moeten exact overeenkomen; §7 legt
+uit waarom.
 
 ### 5 — ElevenLabs: webhook
 
