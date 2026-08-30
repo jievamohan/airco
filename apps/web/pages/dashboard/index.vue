@@ -5,7 +5,7 @@
         <h1 class="dash__title">Overzicht</h1>
         <p class="dash__lede">Hoe de agent het doet, van binnengekomen aanvraag tot ingeplande afspraak.</p>
       </div>
-      <div class="filters" style="margin: 0">
+      <div class="filters filters--dates" style="margin: 0">
         <label class="small muted">
           Van
           <input v-model="from" type="date" @change="load" />

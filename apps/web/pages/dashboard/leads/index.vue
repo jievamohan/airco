@@ -27,8 +27,49 @@
 
     <p v-if="error" class="notice notice--bad" role="alert">{{ error }}</p>
 
-    <section class="panel">
-      <div class="table-wrap">
+    <section class="panel panel--bare">
+      <!--
+        Op een telefoon een kaart per lead: naam en status eerst, dan het
+        bedrag, dan wanneer er iets moet gebeuren. De tabel hieronder blijft
+        voor een breed scherm, waar je juist kolommen wilt vergelijken.
+      -->
+      <div v-if="compact" class="cards">
+        <button v-for="lead in rows" :key="lead.uuid" type="button" class="card" @click="open(lead.uuid)">
+          <span class="card__head">
+            <span class="card__title">{{ lead.name }}</span>
+            <span class="badge" :class="`badge--${lead.status}`">{{ lead.status_label }}</span>
+          </span>
+
+          <span class="card__sub">
+            {{ lead.city ?? 'plaats onbekend' }} · {{ sourceLabels[lead.source] ?? lead.source }}
+          </span>
+
+          <span class="card__figures">
+            <span class="card__amount" :class="{ 'card__amount--muted': !lead.quote_total_cents }">
+              {{ lead.quote_total_cents ? fmt.euro(lead.quote_total_cents) : 'nog geen offerte' }}
+            </span>
+            <span v-if="lead.estimated_kw" class="card__aside">{{ fmt.number(lead.estimated_kw, 1) }} kW</span>
+          </span>
+
+          <span class="card__foot">
+            <span v-if="lead.next_action_at" class="chip" :class="{ 'chip--due': isOverdue(lead.next_action_at) }">
+              <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">
+                <circle cx="8" cy="8" r="6.4" />
+                <path d="M8 4.6V8l2.4 1.6" stroke-linecap="round" />
+              </svg>
+              {{ fmt.relative(lead.next_action_at) }}
+            </span>
+            <span v-else class="chip">geen actie gepland</span>
+
+            <span>
+              <template v-if="lead.call_attempts">{{ lead.call_attempts }}× gebeld · </template>
+              binnengekomen {{ fmt.relative(lead.created_at) }}
+            </span>
+          </span>
+        </button>
+      </div>
+
+      <div v-else class="table-wrap">
         <table class="data">
           <thead>
             <tr>
@@ -61,11 +102,11 @@
 
       <p v-if="!rows.length && !error" class="empty">Geen leads gevonden met deze filters.</p>
 
-      <div v-if="meta && meta.last_page > 1" class="actions" style="margin-top: 16px">
+      <div v-if="meta && meta.last_page > 1" class="pager">
         <button type="button" class="btn btn--ghost btn--small" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">
           Vorige
         </button>
-        <span class="small muted" style="align-self: center">Pagina {{ meta.current_page }} van {{ meta.last_page }} · {{ meta.total }} leads</span>
+        <span class="small muted pager__count">Pagina {{ meta.current_page }} van {{ meta.last_page }} · {{ meta.total }} leads</span>
         <button type="button" class="btn btn--ghost btn--small" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">
           Volgende
         </button>
@@ -97,6 +138,7 @@ type Meta = { current_page: number; last_page: number; total: number }
 
 const api = useApi()
 const fmt = useDashboardFormat()
+const compact = useIsCompact()
 
 const rows = ref<LeadRow[]>([])
 const meta = ref<Meta | null>(null)
@@ -113,6 +155,11 @@ const sourceLabels: Record<string, string> = {
   mailbox: 'Mailbox',
   api: 'Koppeling',
   manual: 'Handmatig',
+}
+
+/** Een actie die in het verleden ligt vraagt om aandacht en kleurt rood. */
+function isOverdue(iso: string) {
+  return new Date(iso).getTime() < Date.now()
 }
 
 function open(uuid: string) {
@@ -154,4 +201,18 @@ onMounted(async () => {
 
 <style scoped>
 .row { cursor: pointer; }
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 720px) {
+  /* De teller op een eigen regel, de knoppen daaronder even breed. */
+  .pager { display: grid; grid-template-columns: 1fr 1fr; }
+  .pager__count { grid-column: 1 / -1; order: -1; text-align: center; }
+}
 </style>

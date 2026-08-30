@@ -8,7 +8,7 @@
           <span class="muted"> · {{ lead.city ?? 'plaats onbekend' }} · binnengekomen {{ fmt.dateTime(lead.created_at) }}</span>
         </p>
       </div>
-      <NuxtLink to="/dashboard/leads" class="btn btn--ghost btn--small">Terug naar de lijst</NuxtLink>
+      <NuxtLink to="/dashboard/leads" class="btn btn--ghost btn--small back">Terug naar de lijst</NuxtLink>
     </div>
 
     <p v-if="flash" class="notice notice--ok" role="status">{{ flash }}</p>
@@ -122,10 +122,12 @@
           <h2 class="panel__title">Offertes</h2>
           <p v-if="!lead.quotes.length" class="empty">Er is nog geen offerte opgesteld.</p>
           <div v-for="quote in lead.quotes" v-else :key="quote.id" style="border-bottom: 1px solid var(--dash-line); padding: 12px 0">
-            <p style="margin: 0">
-              <strong>{{ quote.number }}</strong>
-              <span class="badge" style="margin-left: 8px">{{ quoteStatus[quote.status] ?? quote.status }}</span>
-              <span style="float: right">{{ fmt.euro(quote.total_cents) }} incl. btw</span>
+            <p class="quote__head">
+              <span>
+                <strong>{{ quote.number }}</strong>
+                <span class="badge" style="margin-left: 8px">{{ quoteStatus[quote.status] ?? quote.status }}</span>
+              </span>
+              <span class="quote__total">{{ fmt.euro(quote.total_cents) }} incl. btw</span>
             </p>
             <p class="small muted" style="margin: 4px 0 0">
               Montage ± {{ fmt.duration(quote.onsite_minutes) }} · geldig tot {{ fmt.date(quote.valid_until) }}
@@ -137,7 +139,7 @@
             </p>
             <details style="margin-top: 6px">
               <summary class="small muted" style="cursor: pointer">Regels tonen</summary>
-              <table class="data" style="margin-top: 8px">
+              <table class="data quote__items" style="margin-top: 8px">
                 <tbody>
                   <tr v-for="(item, index) in quote.items" :key="index">
                     <td>{{ item.description }}</td>
@@ -324,3 +326,27 @@ async function trigger(action: string) {
 
 onMounted(load)
 </script>
+
+<style scoped>
+.quote__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.quote__total { white-space: nowrap; }
+
+@media (max-width: 720px) {
+  /* Een knop naast een lange leadnaam wordt anders een smalle koker. */
+  .back {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+  }
+
+  .quote__items td:first-child { min-width: 0; }
+}
+</style>

@@ -14,7 +14,48 @@
       <h2 class="panel__title">{{ sequence.name }}</h2>
       <p class="panel__note">{{ sequence.description }}</p>
 
-      <div class="table-wrap">
+      <!--
+        Een kaart per stap: het nummer en het kanaal zijn de kop, want zo praat
+        je erover ("stap 2, de mail"). De wachttijd staat naast wat die tijd in
+        het echt betekent, zodat je niet zelf hoeft te rekenen.
+      -->
+      <div v-if="compact" class="cards">
+        <div v-for="step in sequence.steps" :key="step.id" class="card">
+          <span class="card__head">
+            <span class="card__title">
+              <span class="pip">{{ step.position }}</span>{{ step.channel === 'call' ? 'Bellen' : 'Mailen' }}
+            </span>
+            <label class="toggle">
+              <input v-model="step.active" type="checkbox" />
+              <span>Actief</span>
+            </label>
+          </span>
+
+          <label class="field">
+            <span class="field__label">Omschrijving</span>
+            <input v-model.trim="step.label" class="cell" />
+          </label>
+
+          <div class="card__fields">
+            <label class="field">
+              <span class="field__label">Wachttijd (min)</span>
+              <input v-model.number="step.delay_minutes" type="number" min="0" step="5" class="cell" />
+            </label>
+            <span class="field">
+              <span class="field__label">Oftewel</span>
+              <span class="field__static">{{ humanDelay(step.delay_minutes) }}</span>
+            </span>
+          </div>
+
+          <div class="card__actions">
+            <button type="button" class="btn btn--ghost btn--small" :disabled="busy === step.id" @click="save(step)">
+              Opslaan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="table-wrap">
         <table class="data">
           <thead>
             <tr>
@@ -73,15 +114,20 @@ type Step = {
 type Sequence = { key: string; name: string; description: string | null; active: boolean; steps: Step[] }
 
 const api = useApi()
+const compact = useIsCompact()
 const sequences = ref<Sequence[]>([])
 const busy = ref<number | null>(null)
 const flash = ref('')
 const error = ref('')
 
 function humanDelay(minutes: number) {
-  if (minutes < 60) return `${minutes} minuten`
-  if (minutes < 60 * 24) return `${(minutes / 60).toFixed(1).replace('.0', '')} uur`
-  return `${(minutes / 1440).toFixed(1).replace('.0', '')} dagen`
+  const round = (value: number) => value.toFixed(1).replace('.0', '')
+
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minuut' : 'minuten'}`
+  if (minutes < 60 * 24) return `${round(minutes / 60)} uur`
+
+  const days = round(minutes / 1440)
+  return `${days} ${days === '1' ? 'dag' : 'dagen'}`
 }
 
 async function load() {
@@ -125,4 +171,11 @@ onMounted(load)
 
 .cell--wide { width: 100%; min-width: 220px; }
 .cell--narrow { width: 80px; text-align: right; }
+
+.field .cell { width: 100%; }
+
+@media (max-width: 720px) {
+  /* Onder de 16px zoomt Safari op iOS in zodra het veld focus krijgt. */
+  .cell { font-size: 16px; }
+}
 </style>
