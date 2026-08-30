@@ -343,7 +343,12 @@
         <section class="panel">
           <h2 class="panel__title">Tijdlijn</h2>
           <div class="timeline">
-            <div v-for="event in lead.events" :key="event.id" class="timeline__item">
+            <div
+              v-for="event in lead.events"
+              :key="event.id"
+              class="timeline__item"
+              :class="{ 'timeline__item--nieuw': nieuweGebeurtenissen.has(event.id) }"
+            >
               <span class="timeline__dot" />
               <div>
                 <p class="timeline__title">{{ event.title }}</p>
@@ -537,10 +542,137 @@ async function trigger(action: string) {
   }
 }
 
-onMounted(load)
+// ------------------------------------------------------- meekijken
+
+/**
+ * De tijdlijn loopt vol terwijl je ernaar kijkt: de agent belt, de webhook komt
+ * terug, de opvolging schuift op. Dat elke minuut zelf moeten verversen is
+ * precies op het moment dat je wél wilt meekijken het vervelendst.
+ */
+const VERVERS_INTERVAL_MS = 10_000
+
+let ververser: ReturnType<typeof setInterval> | null = null
+const nieuweGebeurtenissen = ref<Set<number>>(new Set())
+let bekendeGebeurtenissen: Set<number> | null = null
+
+function markeerNieuw(data: LeadDetail) {
+  // LeadDetail is losjes getypeerd, dus de ids expliciet als getal nemen.
+  const huidige = new Set<number>(((data.events ?? []) as { id: number }[]).map((e) => Number(e.id)))
+
+  // De eerste keer is alles "nieuw"; dan markeren we niets.
+  if (bekendeGebeurtenissen === null) {
+    bekendeGebeurtenissen = huidige
+    return
+  }
+
+  const verschil: number[] = [...huidige].filter((id) => !bekendeGebeurtenissen!.has(id))
+  bekendeGebeurtenissen = huidige
+
+  if (verschil.length === 0) return
+
+  nieuweGebeurtenissen.value = new Set<number>([...nieuweGebeurtenissen.value, ...verschil])
+}
+
+/**
+ * Ververst stil op de achtergrond. Twee dingen bewust anders dan `load()`:
+ * het formulier wordt niet overschreven zolang je iets hebt gewijzigd — anders
+ * verdwijnt je invoer onder je handen — en een mislukte poging laat de pagina
+ * met rust in plaats van er een foutmelding overheen te zetten. Bij de volgende
+ * ronde is het meestal weer over.
+ */
+async function ververs() {
+  if (busy.value) return
+
+  try {
+    const result = await api.get<{ data: LeadDetail }>(`/admin/leads/${route.params.uuid}`)
+
+    // Vóór het vervangen kijken, niet erna: `dirty` vergelijkt het formulier met
+    // `lead`, en zodra dat de nieuwe serverstand is lijkt een onaangeraakt veld
+    // óók gewijzigd. Dan zou het formulier na de eerste serverwijziging voorgoed
+    // achterlopen.
+    const warenErWijzigingen = dirty.value
+
+    markeerNieuw(result.data)
+    lead.value = result.data
+    if (!warenErWijzigingen) fillForm(result.data)
+  } catch {
+    /* stil: een korte hapering hoort de pagina niet te verstoren */
+  }
+}
+
+function startVerversen() {
+  if (ververser !== null) return
+  ververser = setInterval(ververs, VERVERS_INTERVAL_MS)
+}
+
+function stopVerversen() {
+  if (ververser === null) return
+  clearInterval(ververser)
+  ververser = null
+}
+
+// Een tabblad op de achtergrond hoeft niet elke tien seconden de API te
+// bevragen; bij terugkomst halen we meteen op wat er gemist is.
+function opZichtbaarheid() {
+  if (document.hidden) {
+    stopVerversen()
+    return
+  }
+
+  void ververs()
+  startVerversen()
+}
+
+onMounted(async () => {
+  await load()
+  markeerNieuw(lead.value ?? ({ events: [] } as unknown as LeadDetail))
+
+  // Opent de pagina in een achtergrondtabblad, dan begint het verversen pas
+  // zodra iemand er daadwerkelijk naar kijkt.
+  if (!document.hidden) startVerversen()
+
+  document.addEventListener('visibilitychange', opZichtbaarheid)
+})
+
+onBeforeUnmount(() => {
+  stopVerversen()
+  document.removeEventListener('visibilitychange', opZichtbaarheid)
+})
 </script>
 
 <style scoped>
+/* Een regel die er tijdens het kijken bij komt, mag even opvallen — anders
+   verandert de tijdlijn onder je handen zonder dat je het merkt. */
+.timeline__item--nieuw {
+  animation: tijdlijn-nieuw 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes tijdlijn-nieuw {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline__item--nieuw {
+    animation: tijdlijn-nieuw-rustig 240ms linear both;
+  }
+
+  @keyframes tijdlijn-nieuw-rustig {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
 .quote__head {
   display: flex;
   flex-wrap: wrap;
