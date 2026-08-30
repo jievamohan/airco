@@ -13,7 +13,8 @@ Beste {{ $lead->name }},
 
 We probeerden u te bereiken over uw aanvraag voor airconditioning, maar kregen geen gehoor. Geen probleem — laat ons weten wanneer het u schikt, dan bellen we op dat moment terug. U kunt ook gewoon antwoorden op deze mail.
 
-Bel {{ $company['phone'] }}.
+@if (! empty($company['phone']))Bel {{ $company['phone'] }}.
+@endif
 @elseif ($variant === 'quote_without_call')
 
 Het is nog niet gelukt u telefonisch te spreken. Daarom sturen we alvast een indicatie op basis van de gegevens uit uw aanvraag.
@@ -26,7 +27,8 @@ Montage op locatie: ongeveer {{ Money::hours($quote->onsite_minutes) }}
 Dit is een indicatie, nog geen offerte. Bij de schouw kijken we naar de leidinglengte, de plek van de buitenunit en de elektra; pas daarna staat de prijs vast.
 @endif
 
-Bel {{ $company['phone'] }}.
+@if (! empty($company['phone']))Bel {{ $company['phone'] }}.
+@endif
 @else
 
 We hebben u een paar keer geprobeerd te bereiken over uw aanvraag. Omdat we u niet willen blijven benaderen, is dit ons laatste bericht.

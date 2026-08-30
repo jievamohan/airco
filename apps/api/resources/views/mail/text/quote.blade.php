@@ -28,7 +28,7 @@ WAAR WE VAN UIT ZIJN GEGAAN
 @endforeach
 @endif
 
-We bellen u binnenkort na om de offerte door te nemen en, als u akkoord bent, meteen een installatiedatum te prikken. Liever zelf contact opnemen? Bel {{ $company['phone'] }}.
+We bellen u binnenkort na om de offerte door te nemen en, als u akkoord bent, meteen een installatiedatum te prikken. Liever zelf contact opnemen?@if (! empty($company['phone'])) Bel {{ $company['phone'] }}.@endif
 
 Deze offerte is opgesteld op basis van de gegevens die u heeft doorgegeven. Wijkt de situatie op locatie af — bijvoorbeeld in leidinglengte, bereikbaarheid van de gevel of de beschikbare elektragroep — dan stemmen we een aangepaste prijs met u af voordat het werk begint.
 

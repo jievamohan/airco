@@ -19,7 +19,7 @@ ZO HELPT U ONZE MONTEURS
 - Houd de plek van de buitenunit en de route ernaartoe bereikbaar.
 - Zorg dat er iemand aanwezig is die beslissingen kan nemen over de plaatsing.
 
-Moet de afspraak verzet worden? Laat het ons even weten, dan zoeken we samen een ander moment. Bel {{ $company['phone'] }}.
+Moet de afspraak verzet worden? Laat het ons even weten, dan zoeken we samen een ander moment.@if (! empty($company['phone'])) Bel {{ $company['phone'] }}.@endif
 
 Met vriendelijke groet,
 {{ $company['name'] }}
