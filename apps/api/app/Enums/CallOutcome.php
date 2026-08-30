@@ -27,6 +27,20 @@ enum CallOutcome: string
         ], true);
     }
 
+    /**
+     * Is er genoeg gesproken om de prijsindicatie te sturen?
+     *
+     * De agent belooft in elk geslaagd kwalificatiegesprek dat de indicatie
+     * binnen enkele minuten in de mail staat, en sluit af met "ik bel u zo
+     * terug" — waarna ElevenLabs het gesprek als terugbelverzoek teruggeeft.
+     * Alleen op "opgenomen" wachten liet daardoor juist de gesprekken
+     * stilvallen die goed gingen.
+     */
+    public function earnsIndication(): bool
+    {
+        return in_array($this, [self::Answered, self::CallbackRequested], true);
+    }
+
     public function label(): string
     {
         return match ($this) {
