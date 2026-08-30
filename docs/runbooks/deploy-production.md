@@ -211,8 +211,12 @@ php artisan key:generate
 ```
 
 Vul in `.env` minstens in: `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`,
-de `MAIL_*`-gegevens, en de sleutels van de spraakagent. `APP_URL` staat al op
-`https://airco.sinoxi.nl`. `.env` staat in `.gitignore` en hoort nooit in git.
+`OWNER_NOTIFICATION_EMAIL`, `OWNER_INITIAL_PASSWORD`, de `MAIL_*`-gegevens en de
+sleutels van de spraakagent. `APP_URL` staat al op `https://airco.sinoxi.nl`.
+`.env` staat in `.gitignore` en hoort nooit in git.
+
+Die laatste twee zijn het account waarmee je straks het dashboard in komt — zie
+[§ Het dashboardaccount](#het-dashboardaccount) hieronder.
 
 De deploy draait deze `composer install` daarna bij elke keer opnieuw; hier is
 hij alleen nodig omdat je `artisan` al vóór de eerste deploy gebruikt.
@@ -221,7 +225,44 @@ hij alleen nodig omdat je `artisan` al vóór de eerste deploy gebruikt.
 > `.env` later met de hand, draai dan `php artisan config:cache` opnieuw —
 > anders draait de applicatie nog op de oude waarden.
 
-### 5. Eerste deploy
+### 5. Het dashboardaccount
+
+Er is geen registratieformulier: het eerste account komt uit de seeder, die bij
+elke deploy meedraait. Twee regels in `.env` bepalen wie dat is:
+
+```bash
+OWNER_NOTIFICATION_EMAIL=jij@voorbeeld.nl
+OWNER_INITIAL_PASSWORD=een-eigen-wachtwoord-van-minimaal-12-tekens
+```
+
+De seeder **weigert** een account aan te maken zolang `OWNER_INITIAL_PASSWORD`
+leeg of korter dan twaalf tekens is, en op productie ook bij de
+ontwikkelstandaard `wachtwoord-wijzigen`. Dat is niet pietluttig: `.env.example`
+levert die regel leeg op, en een leeg wachtwoord verifieert gewoon — zonder die
+grens zou een seed een dashboardaccount neerzetten waar iedereen op binnenloopt.
+Struikelt de deploy op "basisgegevens seeden mislukt", dan is dit bijna altijd
+de reden.
+
+Na de eerste deploy log je in op `https://airco.sinoxi.nl/dashboard/login`,
+wijzig je het wachtwoord, en maak je de regel in `.env` weer leeg:
+
+```bash
+OWNER_INITIAL_PASSWORD=
+php artisan config:cache
+```
+
+Bestaat het account eenmaal, dan laat de seeder het met rust — een volgende
+deploy zet je gewijzigde wachtwoord dus niet terug.
+
+Een tweede gebruiker maak je er met de hand bij:
+
+```bash
+cd /home/sinoxi/domains/airco.sinoxi.nl/apps/api
+php artisan tinker
+>>> \App\Models\User::create(['name'=>'…','email'=>'…','role'=>'owner','password'=>\Hash::make('…')]);
+```
+
+### 6. Eerste deploy
 
 ```bash
 cd /home/sinoxi/domains/airco.sinoxi.nl
@@ -242,7 +283,7 @@ systemctl --user list-timers klimaatx-scheduler.timer
 Alle drie de URL's horen `200` te geven. Vul daarna één keer beide formulieren
 in en kijk of de leads in het dashboard verschijnen, met de juiste bron.
 
-### 6. Blijft de wachtrij draaien na uitloggen?
+### 7. Blijft de wachtrij draaien na uitloggen?
 
 De units draaien in de **gebruikersscope** van systemd, dus zonder sudo. Die
 stoppen bij uitloggen tenzij "linger" aanstaat. Het installatiescript zet dat
@@ -319,7 +360,7 @@ lopen:
 3. Git-sync: met `KLIMAATX_DEPLOY_SHA` een `fetch` + `reset --hard`, anders
    `git pull --ff-only`
 4. `composer install --no-dev --optimize-autoloader`
-5. `php artisan migrate --force`
+5. `php artisan migrate --force` en `php artisan db:seed --force`
 6. `pnpm install --frozen-lockfile` + `nuxt generate` met `NUXT_PUBLIC_API_BASE=/api`
 7. Controle op de build: `index.html`, `_nuxt/`, `v2/index.html`, en of de
    juiste API-basis erin gebakken is
@@ -384,6 +425,8 @@ tail -f apps/api/storage/logs/laravel-$(date +%F).log
 | `/dashboard/leads/<uuid>` geeft een JSON-404 | De dashboardregel in `.htaccess` staat na de front controller |
 | Formulier meldt "geen verbinding" | De build is gemaakt zonder `NUXT_PUBLIC_API_BASE=/api`; de deploy controleert hierop |
 | Leads komen binnen maar er gebeurt niets | `klimaatx-queue` draait niet, of linger staat uit |
+| Deploy stopt op "basisgegevens seeden mislukt" | `OWNER_INITIAL_PASSWORD` is leeg of te kort (stap 5) |
+| Kan niet inloggen op het dashboard | Het account bestaat nog niet: `php artisan db:seed --force` na het invullen van stap 5 |
 | Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
 | Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |
 | `composer: command not found` | Composer staat niet op PATH; installeer hem in `~/bin` (stap 1) — de deploy vindt hem daar zelf |

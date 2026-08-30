@@ -320,6 +320,19 @@ run_deploy() {
     exit 1
   fi
 
+  # Instellingen, catalogus en opvolgcadans zijn geen voorbeelddata maar
+  # basisgegevens: zonder die rijen kan de agent niets. De seeders werken met
+  # firstOrCreate, dus dit vult hooguit aan wat een nieuwe versie meebrengt en
+  # laat prijzen die in het dashboard zijn aangepast staan. Een seeder die zich
+  # niet zo gedraagt hoort hier dan ook niet bij te komen.
+  if ! (cd "$LARAVEL_ROOT" && php artisan db:seed --force); then
+    echo "deploy: basisgegevens seeden mislukt" >&2
+    echo "        Bij de allereerste deploy komt dit meestal door een lege" >&2
+    echo "        OWNER_INITIAL_PASSWORD in .env; zie de runbook." >&2
+    restore_pre_pull_ui
+    exit 1
+  fi
+
   if ! generate_site || ! require_generate_artifact; then
     echo "deploy: Nuxt-build mislukt" >&2
     restore_pre_pull_ui
