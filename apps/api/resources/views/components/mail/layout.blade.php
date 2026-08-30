@@ -31,7 +31,13 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f3;">
     <tr>
         <td align="center" style="padding:32px 12px;">
-            <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background-color:#ffffff; border:1px solid #e8e8e8; border-radius:10px;">
+            {{-- Outlook op Windows rekent met Word en negeert max-width; die
+                 krijgt daarom een eigen tabel van 600. Alle andere clients
+                 krijgen een tabel die meekrimpt, anders staat er op een
+                 telefoon 600 pixels in een venster van 375 en zoomt de mail
+                 zichzelf tot onleesbaar uit. --}}
+            <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; background-color:#ffffff; border:1px solid #e8e8e8; border-radius:10px;">
 
                 {{-- Briefhoofd --}}
                 <tr>
@@ -89,9 +95,11 @@
                 @endunless
 
             </table>
+            <!--[if mso]></td></tr></table><![endif]-->
 
             {{-- Voettekst --}}
-            <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+            <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px;">
                 <tr>
                     <td class="kx-pad" align="center" style="padding:18px 36px 0; font-family:'Outfit','Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#9a9a9a;">
                         @if (! empty($company['legal_line']))
@@ -111,6 +119,7 @@
                     </td>
                 </tr>
             </table>
+            <!--[if mso]></td></tr></table><![endif]-->
 
         </td>
     </tr>

@@ -46,6 +46,23 @@ class KlantcommunicatieTest extends TestCase
     }
 
     #[Test]
+    public function de_mail_kan_op_een_telefoonscherm_krimpen(): void
+    {
+        // De brief stond op een vaste 600 pixels. In een venster van 375 zoomt
+        // een mailclient de hele mail dan uit tot de tekst onleesbaar is, en
+        // daar wordt het merendeel van deze mails gelezen.
+        $lead = Lead::factory()->create();
+        $html = (new QuoteMail($lead, app(QuoteBuilder::class)->createForLead($lead, QuoteKind::Final)))->render();
+
+        // "max-width:600px" bevat "width:600px", dus op de losse eigenschap letten.
+        $this->assertStringNotContainsString('style="width:600px', $html, 'De brief mag niet op een vaste breedte staan.');
+        $this->assertStringContainsString('width:100%; max-width:600px', $html, 'Meekrimpen tot 600 als bovengrens.');
+
+        // Outlook op Windows negeert max-width; die houdt zijn eigen tabel.
+        $this->assertStringContainsString('<!--[if mso]>', $html);
+    }
+
+    #[Test]
     public function de_offertemail_toont_bedrag_nummer_en_bedrijfsgegevens(): void
     {
         $lead = Lead::factory()->create(['name' => 'Mevrouw J. de Vries']);
