@@ -45,7 +45,14 @@ telt achttien velden waarvan de namen exact moeten kloppen. Eén typefout in een
 identifier en die informatie komt nooit in het CRM aan, zonder foutmelding.
 
 Kies eerst een Nederlandse stem in de stemmenbibliotheek en noteer het
-`voice_id`. Daarna:
+`voice_id`.
+
+**Vanuit het dashboard** (geen shell nodig): vul onder **Instellingen → Voice
+agent** de API-sleutel en het voice_id in, sla op, en klik op **Agent aanmaken
+of bijwerken**. Het agent-id wordt daarna zelf ingevuld. Bestaat de agent al,
+dan wordt hij bijgewerkt in plaats van dubbel aangemaakt.
+
+**Of vanaf de server**, met dezelfde code:
 
 ```bash
 cd apps/api

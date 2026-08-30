@@ -56,6 +56,32 @@
     </form>
 
     <!--
+      Los van het instellingenformulier: dit praat met ElevenLabs en hoort niet
+      mee te liften op "Instellingen opslaan".
+    -->
+    <section class="panel" style="margin-top: 24px">
+      <h2 class="panel__title">Agent bij ElevenLabs</h2>
+      <p class="panel__note">
+        Zet de gespreksprompt en alle achttien dataverzamelingsvelden bij ElevenLabs
+        neer, uit het runbook. Vul hierboven eerst de API-sleutel en het voice_id in
+        en sla op. Bestaat de agent al, dan wordt hij bijgewerkt in plaats van dubbel
+        aangemaakt.
+      </p>
+
+      <p v-if="agentFlash" class="notice notice--ok" role="status">{{ agentFlash }}</p>
+      <p v-if="agentError" class="notice notice--bad" role="alert">{{ agentError }}</p>
+
+      <div class="actions" style="margin-top: 20px">
+        <button type="button" class="btn" :disabled="agentBusy" @click="syncAgent">
+          {{ agentBusy ? 'Bezig bij ElevenLabs…' : 'Agent aanmaken of bijwerken' }}
+        </button>
+        <span class="small muted" style="align-self: center">
+          Dit koppelt geen telefoonnummer en zet de webhook niet aan.
+        </span>
+      </div>
+    </section>
+
+    <!--
       Een eigen formulier, niet een sectie van het bovenstaande: dit gaat naar
       een ander endpoint en mag niet meeliften op "Instellingen opslaan".
     -->
@@ -187,6 +213,36 @@ async function save() {
     error.value = err.errors ? Object.values(err.errors).flat().join(' ') : err.message
   } finally {
     busy.value = false
+  }
+}
+
+// -------------------------------------------------------------- voice agent
+
+const agentBusy = ref(false)
+const agentFlash = ref('')
+const agentError = ref('')
+
+async function syncAgent() {
+  agentBusy.value = true
+  agentFlash.value = ''
+  agentError.value = ''
+
+  try {
+    const result = await api.post<{ agent_id: string; bijgewerkt: boolean; velden: number }>(
+      '/admin/voice/agent-sync',
+    )
+
+    agentFlash.value = result.bijgewerkt
+      ? `Agent bijgewerkt (${result.velden} velden). Id: ${result.agent_id}`
+      : `Agent aangemaakt (${result.velden} velden). Id: ${result.agent_id}`
+
+    // Het id is server-side vastgelegd; opnieuw laden zodat het veld hierboven
+    // klopt met wat er nu staat.
+    await load()
+  } catch (e) {
+    agentError.value = (e as ApiError).message
+  } finally {
+    agentBusy.value = false
   }
 }
 

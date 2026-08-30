@@ -18,8 +18,10 @@ class SyncVoiceAgentCommandTest extends TestCase
     #[Test]
     public function zonder_stem_doet_het_niets(): void
     {
+        // De melding komt uit de gedeelde service en mag dus niet naar een
+        // commandovlag verwijzen: het dashboard gebruikt dezelfde code.
         $this->artisan('voice:agent-sync')
-            ->expectsOutputToContain('Geef --voice mee')
+            ->expectsOutputToContain('Geen voice_id opgegeven')
             ->assertExitCode(1);
     }
 

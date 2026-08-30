@@ -58,7 +58,8 @@ class SettingsSeeder extends Seeder
         // Voice agent
         ['key' => 'agent.elevenlabs.enabled', 'group' => 'voice', 'type' => 'bool', 'label' => 'Voice agent actief'],
         ['key' => 'agent.elevenlabs.api_key', 'group' => 'voice', 'type' => 'string', 'label' => 'ElevenLabs API-sleutel', 'secret' => true],
-        ['key' => 'agent.elevenlabs.agent_id', 'group' => 'voice', 'type' => 'string', 'label' => 'ElevenLabs agent-id'],
+        ['key' => 'agent.elevenlabs.agent_id', 'group' => 'voice', 'type' => 'string', 'label' => 'ElevenLabs agent-id', 'description' => 'Wordt ingevuld zodra je de agent hieronder aanmaakt.'],
+        ['key' => 'agent.elevenlabs.voice_id', 'group' => 'voice', 'type' => 'string', 'label' => 'Stem (voice_id)', 'description' => 'Het voice_id van de Nederlandse stem uit de stemmenbibliotheek van ElevenLabs.'],
         ['key' => 'agent.elevenlabs.agent_phone_number_id', 'group' => 'voice', 'type' => 'string', 'label' => 'Uitgaand telefoonnummer-id'],
         ['key' => 'agent.elevenlabs.webhook_secret', 'group' => 'voice', 'type' => 'string', 'label' => 'Webhook-secret', 'secret' => true],
 
