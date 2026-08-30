@@ -44,6 +44,9 @@ Route::post('/admin/login', [AuthController::class, 'login'])
 Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/me', [AuthController::class, 'me'])->name('me');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::post('/password', [AuthController::class, 'updatePassword'])
+        ->middleware('throttle:10,1')
+        ->name('password.update');
 
     Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
     Route::get('/leads/statuses', [LeadController::class, 'statuses'])->name('leads.statuses');

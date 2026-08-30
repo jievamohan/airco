@@ -256,20 +256,11 @@ php artisan config:cache
 Bestaat het account eenmaal, dan laat de seeder het met rust — een volgende
 deploy raakt het wachtwoord dus niet aan.
 
-> **Het dashboard kan het wachtwoord niet wijzigen.** Er is alleen een
-> inlogroute; noch de API noch de instellingenpagina heeft een
-> wachtwoordwijziging. Wat je in `OWNER_INITIAL_PASSWORD` zette blijft dus het
-> echte wachtwoord totdat je het met de hand vervangt:
->
-> ```bash
-> php artisan tinker
-> >>> $u = \App\Models\User::where('email', '…')->firstOrFail();
-> >>> $u->update(['password' => \Hash::make('…')]);
-> ```
->
-> Tinker bewaart die regel in zijn geschiedenis (`~/.config/psysh/`). Zolang die
-> functie er niet is, kies je bij het inrichten dus meteen een wachtwoord dat
-> mag blijven staan.
+Het wachtwoord wijzig je daarna in het dashboard zelf, onder **Instellingen →
+Wachtwoord wijzigen**. Je huidige wachtwoord is daarbij nodig, en andere
+apparaten worden uitgelogd — dit apparaat blijft ingelogd. Wat je in
+`OWNER_INITIAL_PASSWORD` zette is dus een startwachtwoord en hoeft niet je
+definitieve te zijn.
 
 Een tweede gebruiker maak je er met de hand bij:
 
@@ -455,6 +446,7 @@ tail -f apps/api/storage/logs/laravel-$(date +%F).log
 | Leads komen binnen maar er gebeurt niets | `klimaatx-queue` draait niet, of linger staat uit |
 | Deploy stopt op "basisgegevens seeden mislukt" | `OWNER_INITIAL_PASSWORD` is leeg of te kort (stap 5) |
 | Kan niet inloggen op het dashboard | Het account bestaat nog niet: `php artisan db:seed --force` na het invullen van stap 5 |
+| Wachtwoord kwijt | Geen herstelmail; zet een nieuw hash met `php artisan tinker` (`$u->update(['password' => \Hash::make('…')])`). Tinker bewaart die regel in `~/.config/psysh/` |
 | Wijziging in `.env` heeft geen effect | `php artisan config:cache` opnieuw draaien |
 | Deploy stopt op "er loopt al een deploy" | Vorige run is hard afgebroken; verwijder `.deploy.lock` |
 | Een wijziging aan de deploy zelf lijkt niet te werken | Kijk in het log of er `verder met het deployscript uit deze commit` staat; zonder die regel draait er nog een versie van vóór de overdracht |

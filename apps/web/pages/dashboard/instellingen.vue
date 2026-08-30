@@ -54,6 +54,47 @@
         </span>
       </div>
     </form>
+
+    <!--
+      Een eigen formulier, niet een sectie van het bovenstaande: dit gaat naar
+      een ander endpoint en mag niet meeliften op "Instellingen opslaan".
+    -->
+    <form class="panel" style="margin-top: 24px" @submit.prevent="changePassword">
+      <h2 class="panel__title">Wachtwoord wijzigen</h2>
+      <p class="panel__note">
+        Uw huidige wachtwoord is nodig. Na het wijzigen worden andere apparaten
+        uitgelogd; dit apparaat blijft ingelogd.
+      </p>
+
+      <p v-if="passwordFlash" class="notice notice--ok" role="status">{{ passwordFlash }}</p>
+      <p v-if="passwordError" class="notice notice--bad" role="alert">{{ passwordError }}</p>
+
+      <div class="form-grid">
+        <label>
+          <span>Huidig wachtwoord</span>
+          <input v-model="passwordForm.current_password" type="password" autocomplete="current-password" />
+          <em v-if="passwordErrors.current_password" class="small notice--bad">{{ passwordErrors.current_password }}</em>
+        </label>
+
+        <label>
+          <span>Nieuw wachtwoord</span>
+          <input v-model="passwordForm.password" type="password" autocomplete="new-password" />
+          <em v-if="passwordErrors.password" class="small notice--bad">{{ passwordErrors.password }}</em>
+          <em v-else class="small muted">Minimaal 12 tekens.</em>
+        </label>
+
+        <label>
+          <span>Nieuw wachtwoord herhalen</span>
+          <input v-model="passwordForm.password_confirmation" type="password" autocomplete="new-password" />
+        </label>
+      </div>
+
+      <div class="actions" style="margin-top: 20px">
+        <button type="submit" class="btn" :disabled="passwordBusy">
+          {{ passwordBusy ? 'Bezig…' : 'Wachtwoord wijzigen' }}
+        </button>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -146,6 +187,66 @@ async function save() {
     error.value = err.errors ? Object.values(err.errors).flat().join(' ') : err.message
   } finally {
     busy.value = false
+  }
+}
+
+// ---------------------------------------------------------------- wachtwoord
+
+type PasswordForm = {
+  current_password: string
+  password: string
+  password_confirmation: string
+}
+
+const leegWachtwoordFormulier = (): PasswordForm => ({
+  current_password: '',
+  password: '',
+  password_confirmation: '',
+})
+
+const passwordForm = reactive<PasswordForm>(leegWachtwoordFormulier())
+const passwordErrors = reactive<Partial<Record<keyof PasswordForm, string>>>({})
+const passwordBusy = ref(false)
+const passwordFlash = ref('')
+const passwordError = ref('')
+
+function clearPasswordErrors() {
+  ;(Object.keys(passwordErrors) as (keyof PasswordForm)[]).forEach((k) => {
+    delete passwordErrors[k]
+  })
+}
+
+async function changePassword() {
+  passwordBusy.value = true
+  passwordFlash.value = ''
+  passwordError.value = ''
+  clearPasswordErrors()
+
+  // De server is de baas over wat mag; dit voorkomt alleen een ronde over het
+  // netwerk voor iets wat je hier al ziet.
+  if (passwordForm.password !== passwordForm.password_confirmation) {
+    passwordErrors.password = 'De twee nieuwe wachtwoorden zijn niet gelijk.'
+    passwordBusy.value = false
+    return
+  }
+
+  try {
+    await api.post('/admin/password', { ...passwordForm })
+    Object.assign(passwordForm, leegWachtwoordFormulier())
+    passwordFlash.value = 'Uw wachtwoord is gewijzigd. Andere apparaten zijn uitgelogd.'
+  } catch (e) {
+    const err = e as ApiError
+
+    if (err.errors) {
+      for (const [veld, meldingen] of Object.entries(err.errors)) {
+        if (veld in passwordForm) passwordErrors[veld as keyof PasswordForm] = meldingen[0]
+      }
+      passwordError.value = 'Controleer de gemarkeerde velden.'
+    } else {
+      passwordError.value = err.message
+    }
+  } finally {
+    passwordBusy.value = false
   }
 }
 

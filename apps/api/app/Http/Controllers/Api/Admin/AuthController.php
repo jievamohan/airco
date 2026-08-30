@@ -72,6 +72,53 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Wijzigt het wachtwoord van de ingelogde gebruiker.
+     *
+     * Het huidige wachtwoord is verplicht: een sessie die iemand anders heeft
+     * overgenomen mag de eigenaar niet uit zijn eigen dashboard kunnen zetten.
+     */
+    public function updatePassword(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            // Zelfde ondergrens als de seeder aanhoudt voor het eerste account.
+            'password' => ['required', 'string', 'min:12', 'confirmed'],
+        ], [], [
+            'current_password' => 'huidig wachtwoord',
+            'password' => 'nieuw wachtwoord',
+        ]);
+
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => 'Dit is niet uw huidige wachtwoord.',
+            ]);
+        }
+
+        if (Hash::check($data['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => 'Kies een ander wachtwoord dan het huidige.',
+            ]);
+        }
+
+        $user->forceFill(['password' => Hash::make($data['password'])])->save();
+
+        // Andere sessies eruit: wie zijn wachtwoord wijzigt omdat het ergens
+        // rondslingert, heeft er niets aan als de oude tokens blijven werken.
+        // Het token van dit apparaat blijft staan, anders logt de wijziging je
+        // meteen zelf uit.
+        $huidige = $user->currentAccessToken();
+        $user->tokens()->when(
+            $huidige !== null,
+            static fn ($query) => $query->where('id', '!=', $huidige->getKey()),
+        )->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         /** @var User $user */

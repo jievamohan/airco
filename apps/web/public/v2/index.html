@@ -151,9 +151,15 @@ a,button{transition:background .18s ease,color .18s ease,transform .18s ease}
   background:center 38%/cover no-repeat;
   filter:blur(2px) saturate(1.08);
 }
-.hero__season--summer{background-image:url('uploads/hero-zomer-kamer.png')}
+.hero__season--summer{
+  background-image:url('uploads/hero-zomer-kamer.jpg');
+  background-image:-webkit-image-set(url('uploads/hero-zomer-kamer.webp') type('image/webp'),url('uploads/hero-zomer-kamer.jpg') type('image/jpeg'));
+  background-image:image-set(url('uploads/hero-zomer-kamer.webp') type('image/webp'),url('uploads/hero-zomer-kamer.jpg') type('image/jpeg'));
+}
 .hero__season--winter{
-  background-image:url('uploads/hero-winter-kamer.png');
+  background-image:url('uploads/hero-winter-kamer.jpg');
+  background-image:-webkit-image-set(url('uploads/hero-winter-kamer.webp') type('image/webp'),url('uploads/hero-winter-kamer.jpg') type('image/jpeg'));
+  background-image:image-set(url('uploads/hero-winter-kamer.webp') type('image/webp'),url('uploads/hero-winter-kamer.jpg') type('image/jpeg'));
   /* eindstaat is de bron: zonder animatie blijft de split zichtbaar */
   clip-path:polygon(58% 0,100% 0,100% 100%,42% 100%);
   animation:heroWinterIn 1.05s var(--ease) .45s both;
@@ -195,8 +201,16 @@ a,button{transition:background .18s ease,color .18s ease,transform .18s ease}
 .scene-d{height:320vh;height:320svh;position:relative}
 .scene-d__sticky{position:-webkit-sticky;position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
 .scene-d__layer{position:absolute;inset:0;background-size:cover;background-position:center;transform:translateZ(0)}
-.scene-d__winter{background-image:url('uploads/fotob.png')}
-.scene-d__summer{background-image:url('uploads/fotoa.png')}
+.scene-d__winter{
+  background-image:url('uploads/fotob.jpg');
+  background-image:-webkit-image-set(url('uploads/fotob.webp') type('image/webp'),url('uploads/fotob.jpg') type('image/jpeg'));
+  background-image:image-set(url('uploads/fotob.webp') type('image/webp'),url('uploads/fotob.jpg') type('image/jpeg'));
+}
+.scene-d__summer{
+  background-image:url('uploads/fotoa.jpg');
+  background-image:-webkit-image-set(url('uploads/fotoa.webp') type('image/webp'),url('uploads/fotoa.jpg') type('image/jpeg'));
+  background-image:image-set(url('uploads/fotoa.webp') type('image/webp'),url('uploads/fotoa.jpg') type('image/jpeg'));
+}
 .scene-d__stamp{position:absolute;top:var(--s-4xl);left:var(--pad)}
 .scene-d__stamp p{font-size:12px;margin:0}
 .scene-d__stamp .jul{position:absolute;top:0;left:0;color:var(--ink)}
@@ -278,7 +292,12 @@ a,button{transition:background .18s ease,color .18s ease,transform .18s ease}
 .comfort__text .h2{margin:0 -180px var(--s-md) 0}
 .comfort__text p{margin:0;font-size:18px;line-height:1.6;color:var(--body);max-width:440px;text-wrap:pretty}
 .comfort__photo{position:relative;height:min(86vh,780px)}
-.comfort__photo>div{position:absolute;inset:0;background-image:url('uploads/fotoc.png');background-size:cover;background-position:60% center}
+.comfort__photo>div{
+  position:absolute;inset:0;background-size:cover;background-position:60% center;
+  background-image:url('uploads/fotoc.jpg');
+  background-image:-webkit-image-set(url('uploads/fotoc.webp') type('image/webp'),url('uploads/fotoc.jpg') type('image/jpeg'));
+  background-image:image-set(url('uploads/fotoc.webp') type('image/webp'),url('uploads/fotoc.jpg') type('image/jpeg'));
+}
 .comfort__photo::after{
   content:'';position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;
   background:linear-gradient(to top,rgba(15,12,10,.6),rgba(15,12,10,0));
@@ -1136,25 +1155,95 @@ a,button{transition:background .18s ease,color .18s ease,transform .18s ease}
       <div class="gallery__viewport">
         <div class="gallery__track">
           <figure>
-            <img src="uploads/install-tussenwoning.png" alt="Sfeerbeeld: woonkamer in een tussenwoning met twee binnenunits">
+            <picture>
+              <source srcset="uploads/install-tussenwoning.webp" type="image/webp">
+              <img
+                src="uploads/install-tussenwoning.jpg"
+                alt="Sfeerbeeld: woonkamer in een tussenwoning met twee binnenunits"
+                width="1024"
+                height="683"
+                loading="lazy"
+                decoding="async"
+              >
+            </picture>
           </figure>
           <figure>
-            <img src="uploads/install-appartement.png" alt="Sfeerbeeld: appartement met één binnenunit">
+            <picture>
+              <source srcset="uploads/install-appartement.webp" type="image/webp">
+              <img
+                src="uploads/install-appartement.jpg"
+                alt="Sfeerbeeld: appartement met één binnenunit"
+                width="1024"
+                height="683"
+                loading="lazy"
+                decoding="async"
+              >
+            </picture>
           </figure>
           <figure>
-            <img src="uploads/install-vrijstaand.png" alt="Sfeerbeeld: vrijstaande woning met multi-split">
+            <picture>
+              <source srcset="uploads/install-vrijstaand.webp" type="image/webp">
+              <img
+                src="uploads/install-vrijstaand.jpg"
+                alt="Sfeerbeeld: vrijstaande woning met multi-split"
+                width="1024"
+                height="683"
+                loading="lazy"
+                decoding="async"
+              >
+            </picture>
           </figure>
           <figure>
-            <img src="uploads/install-slaapkamer.png" alt="Sfeerbeeld: slaapkamer onder schuin dak met één binnenunit">
+            <picture>
+              <source srcset="uploads/install-slaapkamer.webp" type="image/webp">
+              <img
+                src="uploads/install-slaapkamer.jpg"
+                alt="Sfeerbeeld: slaapkamer onder schuin dak met één binnenunit"
+                width="1024"
+                height="683"
+                loading="lazy"
+                decoding="async"
+              >
+            </picture>
           </figure>
           <figure>
-            <img src="uploads/install-woonkeuken.png" alt="Sfeerbeeld: nieuwbouw woonkeuken met twee binnenunits">
+            <picture>
+              <source srcset="uploads/install-woonkeuken.webp" type="image/webp">
+              <img
+                src="uploads/install-woonkeuken.jpg"
+                alt="Sfeerbeeld: nieuwbouw woonkeuken met twee binnenunits"
+                width="1024"
+                height="683"
+                loading="lazy"
+                decoding="async"
+              >
+            </picture>
           </figure>
           <figure>
-            <img src="uploads/install-werkkamer.png" alt="Sfeerbeeld: werkkamer met één binnenunit">
+            <picture>
+              <source srcset="uploads/install-werkkamer.webp" type="image/webp">
+              <img
+                src="uploads/install-werkkamer.jpg"
+                alt="Sfeerbeeld: werkkamer met één binnenunit"
+                width="1024"
+                height="683"
+                loading="lazy"
+                decoding="async"
+              >
+            </picture>
           </figure>
           <figure>
-            <img src="uploads/install-hoekwoning.png" alt="Sfeerbeeld: hoekwoning met twee binnenunits">
+            <picture>
+              <source srcset="uploads/install-hoekwoning.webp" type="image/webp">
+              <img
+                src="uploads/install-hoekwoning.jpg"
+                alt="Sfeerbeeld: hoekwoning met twee binnenunits"
+                width="1024"
+                height="683"
+                loading="lazy"
+                decoding="async"
+              >
+            </picture>
           </figure>
         </div>
       </div>
