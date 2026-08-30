@@ -47,10 +47,14 @@ class LeadWorkflow
     {
         $sizing = $this->sizing->forLead($lead);
 
+        // De kwaliteitsklasse blijft bewust leeg tot iemand hem kiest of de
+        // agent hem ophaalt. Hier de standaard invullen maakte van een
+        // terugvaloptie een vastgelegde keuze: het dashboard toonde daarna
+        // "Midden" alsof dat besloten was. De offerte valt zelf al terug op de
+        // standaardklasse als er niets staat.
         $lead->forceFill([
             'estimated_kw' => $sizing['kw'],
             'recommended_system' => $sizing['system']->value,
-            'tier' => $lead->tier->value ?? $this->settings->string('agent.pricing.default_tier', 'mid'),
         ])->save();
 
         $this->timeline->record(
