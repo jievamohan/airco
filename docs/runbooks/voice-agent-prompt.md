@@ -12,6 +12,118 @@ in het CRM terecht.
 
 ---
 
+## 0. Klikpad
+
+De volgorde waarin je het doet, met de schermnamen erbij. De secties hierna
+bevatten de inhoud die je op elke plek nodig hebt.
+
+**Vooraf:** een ElevenLabs-account met Agents, en een Twilio-account. Dat
+laatste is geen voorkeur maar een eis: onze code roept
+`/v1/convai/twilio/outbound-call` aan, dus het nummer moet via Twilio bij
+ElevenLabs binnenkomen. Een SIP-trunknummer werkt niet.
+
+### 1 — Twilio: nummer klaarzetten
+
+Twee smaken, en voor ons voldoet de tweede:
+
+| | Inkomend | Uitgaand |
+|---|---|---|
+| Nummer gekocht bij Twilio | ja | ja |
+| Geverifieerde caller ID | nee | ja |
+
+Wij bellen alleen uit. Zet je je bestaande bedrijfsnummer als geverifieerde
+caller ID, dan belt de agent daar vandaan en komt een klant die terugbelt
+gewoon bij jullie uit — vaak beter dan een los nummer waar niemand opneemt.
+
+Je hebt straks een SID en een token nodig. Maak liever een API key aan (de SID
+begint dan met `SK`) dan je account-brede gegevens te gebruiken.
+
+### 2 — ElevenLabs: agent aanmaken
+
+Dit kan met de hand, maar doe het niet: de prompt is zesduizend tekens en §4
+telt achttien velden waarvan de namen exact moeten kloppen. Eén typefout in een
+identifier en die informatie komt nooit in het CRM aan, zonder foutmelding.
+
+Kies eerst een Nederlandse stem in de stemmenbibliotheek en noteer het
+`voice_id`. Daarna:
+
+```bash
+cd apps/api
+ELEVENLABS_API_KEY=<jouw-sleutel> php artisan voice:agent-sync --voice=<voice_id>
+```
+
+Het commando leest de prompt uit §2 en de velden uit §4 van dit document en
+zet ze bij ElevenLabs neer. Het antwoordt met een `agent_…`-id; dat heb je in
+stap 7 nodig.
+
+Wil je eerst zien wat er verstuurd wordt, zonder iets aan te maken:
+
+```bash
+php artisan voice:agent-sync --voice=<voice_id> --dry-run
+```
+
+De sleutel staat bewust in de omgeving van dat ene commando en niet in `.env`:
+hij is alleen nodig om de agent neer te zetten, en hoort daarna nergens meer
+te staan behalve in het dashboard.
+
+Draai je het later opnieuw na een wijziging in dit document, geef dan het
+bestaande id mee — anders komt er een tweede agent naast te staan:
+
+```bash
+ELEVENLABS_API_KEY=… php artisan voice:agent-sync --voice=<voice_id> --agent=<agent_id>
+```
+
+Wat het commando **niet** doet: het nummer koppelen, de webhook aanzetten en de
+sleutels invullen. Dat blijft stap 3, 5 en 7.
+
+### 3 — ElevenLabs: nummer importeren
+
+Tabblad **Phone Numbers** → nummer toevoegen, met vier velden: Label, Phone
+Number, Twilio SID, Twilio Token. ElevenLabs bepaalt zelf of het nummer in- en
+uitgaand kan of alleen uitgaand.
+
+Open daarna het geïmporteerde nummer: het id begint met `phnum_`. **Dat** is
+wat wij nodig hebben, niet het telefoonnummer.
+
+### 4 — ElevenLabs: dataverzameling
+
+Heeft het commando uit stap 2 al gedaan. Controleren kan in tabblad
+**Analysis** → **Data collection**: daar horen de achttien velden uit §4 te
+staan.
+
+Vul je ze liever met de hand, dan is het per veld *Add item* met type,
+identifier en beschrijving. De identifiers moeten exact overeenkomen; §7 legt
+uit waarom.
+
+### 5 — ElevenLabs: webhook
+
+Deze staat **werkruimtebreed**, niet bij de agent: instellingenpagina van
+ElevenAgents → post-call webhooks. Zie §5 voor de URL en het type. Kopieer het
+secret dat er bij het aanmaken verschijnt — je ziet het maar één keer.
+
+### 6 — ElevenLabs: API-sleutel
+
+Profielmenu → **API Keys** → nieuwe sleutel. Beperk hem desnoods in scope.
+
+### 7 — Ons dashboard
+
+Vul de vijf velden in en zet proefmodus uit; dat staat uitgeschreven in §6.
+
+### Welke code hoort waar
+
+| Begint met | Wat het is | Waar je hem invult |
+|---|---|---|
+| `agent_…` | de agent uit stap 2 | ElevenLabs agent-id |
+| `phnum_…` | het nummer uit stap 3 | Uitgaand telefoonnummer-id |
+| `sk_…` | Twilio API key-SID | alleen bij ElevenLabs, stap 3 |
+
+> Schermnamen zijn nagelopen in de documentatie van ElevenLabs. Wijkt de
+> interface af, zoek dan op de begrippen uit de tabellen hierboven —
+> *Phone Numbers*, *Data collection*, *post-call webhook* — want die zitten in
+> de API en veranderen niet met een herontwerp mee.
+
+---
+
 ## 1. Agent-instellingen
 
 | Instelling | Waarde |
@@ -23,6 +135,19 @@ in het CRM terecht.
 | Interruptions | Aan. Mensen praten door de agent heen; zonder dit klinkt hij bot |
 
 Vul daarna het systeemprompt uit §2 en de dataverzameling uit §4 in.
+
+### Uitgaand telefoonnummer
+
+Zonder nummer kan de agent alleen opgebeld worden, niet zelf bellen — en dit
+systeem belt uit. Koppel bij ElevenLabs onder **Phone Numbers** een nummer
+(eigen Twilio-account of een nummer van ElevenLabs zelf).
+
+Wat wij nodig hebben is niet het nummer maar het **id** ervan: onze code stuurt
+`agent_phone_number_id` mee bij elke oproep. Je vindt het in de URL of in de
+detailweergave van dat nummer, en het begint met `phnum_`.
+
+Gebruik een nummer dat de klant kan terugbellen. Belt hij terug op een nummer
+dat nergens uitkomt, dan is dat een lead die je zelf hebt weggegooid.
 
 ---
 
@@ -246,7 +371,7 @@ ElevenLabs, anders komt er vrije tekst binnen die wij negeren.
 Zet de post-call webhook op:
 
 ```
-POST https://<api-host>/api/webhooks/elevenlabs/post-call
+POST https://airco.sinoxi.nl/api/webhooks/elevenlabs/post-call
 ```
 
 Het secret dat ElevenLabs toont, vul je in bij **Instellingen → Voice agent →
@@ -257,9 +382,33 @@ handtekening en elk verzoek ouder dan dertig minuten.
 
 ## 6. Voordat je hem op echte klanten loslaat
 
-1. Zet `AGENT_DRY_RUN` op `false` en `ELEVENLABS_ENABLED` op `true`.
+1. Vul in het dashboard onder **Instellingen → Voice agent** deze vijf in:
+
+   | Veld | Waar het vandaan komt |
+   |---|---|
+   | Voice agent actief | aanzetten |
+   | ElevenLabs API-sleutel | ElevenLabs → profiel → API key |
+   | ElevenLabs agent-id | de agent uit §1, begint met `agent_` |
+   | Uitgaand telefoonnummer-id | het `phnum_`-id uit §1 |
+   | Webhook-secret | het secret dat ElevenLabs bij de webhook toont (§5) |
+
+   Zet daarna onder **Instellingen → Werking** de **proefmodus uit**. Dit is de
+   valkuil: alles goed invullen en die schakelaar vergeten geeft geen
+   foutmelding, maar wel een nepclient die niets belt. De code valt terug op
+   die nepclient zodra proefmodus aan staat *of* de voice agent uit — beide
+   moeten dus goed staan.
+
+   > Een instelling in het dashboard overschrijft `.env`. Staat het veld leeg,
+   > dan beslist `.env`, en pas daarna de standaard uit `config/agent.php`.
+   > Iets in `.env` zetten terwijl er een dashboardwaarde staat, doet dus niets.
+
 2. Maak in het dashboard handmatig een lead aan met **je eigen
    telefoonnummer**, en trap "Kwalificatiegesprek inplannen" af.
+
+   Let op het tijdstip. Er wordt alleen gebeld binnen de belvensters uit
+   `config/agent.php`: maandag t/m vrijdag 09:00–20:00, zaterdag 10:00–17:00,
+   zondag niet. Daarbuiten gebeurt er niets, zonder melding — een test op een
+   late avond lijkt daardoor op een defect.
 3. Neem op. Loop het gesprek af zoals een klant zou doen, en wijk een keer
    bewust af: onderbreek hem, stel een vraag die niet in het script staat, zeg
    dat je niet meer gebeld wil worden.
@@ -273,7 +422,20 @@ klant terechtkomt.
 
 ---
 
-## 7. Wat hier bewust niet in staat
+## 7. Dit document wordt getest
+
+`tests/Feature/VoiceAgentPromptTest.php` leest dit bestand en controleert drie
+dingen: dat elke `{{variabele}}` in het prompt ook echt door onze code wordt
+meegestuurd, dat elk veld uit §4 daadwerkelijk op de lead wordt overgenomen, en
+dat elke uitkomst uit §4 als uitkomst bestaat.
+
+Verzin je hier een veldnaam bij, of hernoem je er een, dan valt CI om. Dat is de
+bedoeling: een veld dat alleen in de documentatie bestaat, levert een gesprek op
+waarvan de helft nergens terechtkomt.
+
+---
+
+## 8. Wat hier bewust niet in staat
 
 Het script belooft nergens een prijs, levertijd of garantie die niet uit onze
 eigen gegevens komt. Dat is geen stijlkeuze: een voice agent die zelf een bedrag
