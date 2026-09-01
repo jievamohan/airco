@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\LeadActionController;
 use App\Http\Controllers\Api\Admin\LeadController;
 use App\Http\Controllers\Api\Admin\SequenceController;
 use App\Http\Controllers\Api\Admin\SettingController;
+use App\Http\Controllers\Api\Admin\SystemStatusController;
 use App\Http\Controllers\Api\Admin\VoiceAgentController;
 use App\Http\Controllers\Api\ElevenLabsWebhookController;
 use App\Http\Controllers\Api\LeadIntakeController;
@@ -56,6 +57,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(functi
     Route::post('/leads/{uuid}/actions', LeadActionController::class)->name('leads.actions');
 
     Route::get('/analytics', AnalyticsController::class)->name('analytics');
+    Route::get('/system-status', SystemStatusController::class)->name('system-status');
 
     Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
     Route::patch('/catalog/{id}', [CatalogController::class, 'update'])->whereNumber('id')->name('catalog.update');
