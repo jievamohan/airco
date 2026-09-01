@@ -114,6 +114,11 @@ class LeadWorkflow
             return null;
         }
 
+        // In de demostand telt het belvenster niet: een demo 's avonds zou
+        // anders een gesprek voor de volgende ochtend inplannen en verder
+        // niets laten zien.
+        $negeerBelvenster = $negeerBelvenster || $this->settings->bool('agent.workflow.follow_up_immediately', false);
+
         $vanaf = $notBefore ?? now();
         $scheduledFor = $negeerBelvenster ? $vanaf : $this->callingWindow->nextOpening($vanaf);
 

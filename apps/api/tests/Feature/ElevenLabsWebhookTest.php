@@ -228,6 +228,103 @@ class ElevenLabsWebhookTest extends TestCase
     }
 
     #[Test]
+    public function een_ingesproken_voicemail_telt_niet_als_gesproken(): void
+    {
+        Queue::fake();
+
+        $lead = Lead::factory()->create(['status' => 'calling']);
+        $call = $this->callFor($lead);
+
+        // De agent praat, de andere kant zegt niets: een antwoordapparaat. Het
+        // gesprek duurt lang genoeg om anders als "opgenomen" door te gaan.
+        $payload = [
+            'data' => [
+                'conversation_id' => 'conv-test-1',
+                'status' => 'done',
+                'metadata' => ['call_duration_secs' => 34],
+                'transcript' => [
+                    ['role' => 'agent', 'message' => 'Goedemiddag, u spreekt met de digitale assistent van KlimaatX.'],
+                    ['role' => 'agent', 'message' => 'Ik bel over uw aanvraag en probeer het later nog eens.'],
+                ],
+                'analysis' => ['call_successful' => 'success'],
+            ],
+        ];
+
+        $this->withHeaders($this->signedHeaders($payload))
+            ->postJson('/api/webhooks/elevenlabs/post-call', $payload)
+            ->assertOk();
+
+        $this->assertSame(CallOutcome::Voicemail, $call->refresh()->outcome);
+        $this->assertNotSame(LeadStatus::Qualified, $lead->refresh()->status);
+
+        Queue::assertNotPushed(SendQuoteJob::class);
+        $this->assertDatabaseHas('lead_sequence_runs', ['lead_id' => $lead->id, 'status' => 'active']);
+    }
+
+    #[Test]
+    public function een_agent_die_een_voicemail_voor_een_klant_aanziet_wint_het_niet_van_het_transcript(): void
+    {
+        Queue::fake();
+
+        $lead = Lead::factory()->create(['status' => 'calling']);
+        $call = $this->callFor($lead);
+
+        $payload = [
+            'data' => [
+                'conversation_id' => 'conv-test-1',
+                'status' => 'done',
+                'metadata' => ['call_duration_secs' => 41],
+                'transcript' => [
+                    ['role' => 'agent', 'message' => 'Goedemiddag, ik bel over uw aanvraag voor airconditioning.'],
+                ],
+                'analysis' => [
+                    'call_successful' => 'success',
+                    'data_collection_results' => [
+                        'outcome' => ['value' => 'answered'],
+                        'rooms_count' => ['value' => 2],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->withHeaders($this->signedHeaders($payload))
+            ->postJson('/api/webhooks/elevenlabs/post-call', $payload)
+            ->assertOk();
+
+        $this->assertSame(CallOutcome::Voicemail, $call->refresh()->outcome);
+        Queue::assertNotPushed(SendQuoteJob::class);
+    }
+
+    #[Test]
+    public function een_gesprek_met_een_stille_agent_maar_een_pratende_klant_blijft_gesproken(): void
+    {
+        Queue::fake();
+
+        $lead = Lead::factory()->create(['status' => 'calling']);
+        $call = $this->callFor($lead);
+
+        $payload = [
+            'data' => [
+                'conversation_id' => 'conv-test-1',
+                'status' => 'done',
+                'metadata' => ['call_duration_secs' => 96],
+                'transcript' => [
+                    ['role' => 'agent', 'message' => 'Goedemiddag, u spreekt met KlimaatX.'],
+                    ['role' => 'user', 'message' => 'Ja, dat klopt, ik wacht op een prijs.'],
+                ],
+                'analysis' => ['call_successful' => 'success'],
+            ],
+        ];
+
+        $this->withHeaders($this->signedHeaders($payload))
+            ->postJson('/api/webhooks/elevenlabs/post-call', $payload)
+            ->assertOk();
+
+        $this->assertSame(CallOutcome::Answered, $call->refresh()->outcome);
+        Queue::assertPushed(SendQuoteJob::class);
+    }
+
+    #[Test]
     public function akkoord_tijdens_het_conversiegesprek_plant_een_opname_en_geen_installatie(): void
     {
         Queue::fake();
