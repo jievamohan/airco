@@ -10,6 +10,7 @@ use App\Enums\Tier;
 use App\Models\CatalogItem;
 use App\Models\Lead;
 use App\Models\Quote;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -69,15 +70,15 @@ class QuoteBuilder
         // --- Apparatuur ---
         if ($system === SystemType::SingleSplit) {
             $set = $this->findEquipment('equipment_set', $tier, $kw);
-            $lines[] = $this->line($set, 1.0, sprintf('Single split %s kW %s (buiten- en binnenunit)', $this->kw($kw), $tier->label()));
+            $lines[] = $this->line($set, 1.0, sprintf('%s — single split, buiten- en binnenunit', $set->name));
             $labourMinutes += $set->labour_minutes;
         } else {
             $outdoor = $this->findOutdoor($tier, $units);
-            $lines[] = $this->line($outdoor, 1.0, sprintf('Multisplit buitenunit %d aansluitingen %s', $outdoor->ports ?? $units, $tier->label()));
+            $lines[] = $this->line($outdoor, 1.0, sprintf('%s — %d aansluitingen', $outdoor->name, $outdoor->ports ?? $units));
             $labourMinutes += $outdoor->labour_minutes;
 
             $indoor = $this->findEquipment('equipment_indoor', $tier, $kw);
-            $lines[] = $this->line($indoor, (float) $units, sprintf('Binnenunit wandmodel %s kW %s', $this->kw($kw), $tier->label()));
+            $lines[] = $this->line($indoor, (float) $units, $indoor->name);
             $labourMinutes += $indoor->labour_minutes * $units;
 
             $assumptions[] = sprintf('Multisplit met %d binnenunits omdat er %d ruimtes zijn opgegeven.', $units, $units);
@@ -439,13 +440,54 @@ class QuoteBuilder
         ];
     }
 
+    /**
+     * De productlijn die bij deze kwaliteitsklasse hoort, per soort.
+     *
+     * Staat in `config/agent.php` onder `pricing.series` en niet op de
+     * catalogusregel zelf: de buitenunit van een multisplit wordt door twee
+     * klassen gedeeld, en een regel kan maar één klasse dragen.
+     */
+    private function series(Tier $tier, string $kind): ?string
+    {
+        $map = $this->settings->get('agent.pricing.series', []);
+        $series = is_array($map) ? ($map[$tier->value][$kind] ?? null) : null;
+
+        return is_string($series) && $series !== '' ? $series : null;
+    }
+
+    /**
+     * De regels die voor deze klasse in aanmerking komen: de ingestelde
+     * productlijn, en zolang die er niet is alles wat op de klasse zelf staat.
+     * Dat laatste is het gedrag van vóór de echte prijslijsten; zo blijft een
+     * catalogus zonder lijnindeling gewoon werken.
+     *
+     * @return Builder<CatalogItem>
+     */
+    private function equipmentQuery(string $kind, Tier $tier): Builder
+    {
+        $series = $this->series($tier, $kind);
+
+        $query = CatalogItem::query()->active()->where('kind', $kind);
+
+        return $series !== null
+            ? $query->where('series', $series)
+            : $query->where('tier', $tier->value);
+    }
+
+    /**
+     * De kleinste unit die de gevraagde vermogensklasse nog aankan.
+     *
+     * Er wordt op `capacity_class_kw` gezocht en niet op het echte vermogen:
+     * een 3,4 kW-set bedient de 3,5 kW-klasse, en op het echte vermogen zou de
+     * offerte daar onnodig een maat overheen gaan.
+     */
     private function findEquipment(string $kind, Tier $tier, float $kw): CatalogItem
     {
-        $item = CatalogItem::active()
-            ->where('kind', $kind)
-            ->where('tier', $tier->value)
-            ->where('capacity_kw', '>=', $kw)
-            ->orderBy('capacity_kw')
+        $item = $this->equipmentQuery($kind, $tier)
+            ->whereNotNull('capacity_class_kw')
+            ->where('capacity_class_kw', '>=', $kw)
+            ->orderBy('capacity_class_kw')
+            ->orderBy('cost_cents')
             ->first();
 
         return $item ?? $this->fallback($kind, $tier);
@@ -453,21 +495,26 @@ class QuoteBuilder
 
     private function findOutdoor(Tier $tier, int $ports): CatalogItem
     {
-        $item = CatalogItem::active()
-            ->where('kind', 'equipment_outdoor')
-            ->where('tier', $tier->value)
+        $item = $this->equipmentQuery('equipment_outdoor', $tier)
             ->where('ports', '>=', $ports)
             ->orderBy('ports')
+            ->orderBy('cost_cents')
             ->first();
 
         return $item ?? $this->fallback('equipment_outdoor', $tier);
     }
 
+    /**
+     * Niets gevonden binnen de klasse: dan de grootste uit dezelfde lijn.
+     *
+     * Bewust geen uitwijk naar een andere lijn — bij een multisplit moeten
+     * buiten- en binnenunit van hetzelfde merk zijn, en een offerte die niet
+     * komt is beter dan een offerte met twee merken door elkaar.
+     */
     private function fallback(string $kind, Tier $tier): CatalogItem
     {
-        $item = CatalogItem::active()
-            ->where('kind', $kind)
-            ->where('tier', $tier->value)
+        $item = $this->equipmentQuery($kind, $tier)
+            ->orderByDesc('capacity_class_kw')
             ->orderByDesc('capacity_kw')
             ->orderByDesc('ports')
             ->first();
@@ -540,10 +587,5 @@ class QuoteBuilder
         $id = $calc['lines'][0]['catalog_item_id'] ?? null;
 
         return $id === null ? '' : (string) CatalogItem::find($id)?->brand;
-    }
-
-    private function kw(float $kw): string
-    {
-        return number_format($kw, 1, ',', '.');
     }
 }

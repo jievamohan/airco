@@ -7,9 +7,16 @@
       </div>
     </div>
 
-    <p class="notice">
-      De startwaarden komen uit marktonderzoek, niet uit jullie eigen inkoop. Zodra jullie echte cijfers hier staan,
-      rekent de agent daarmee. De onderbouwing staat in <code>docs/research/pricing-baseline.md</code>.
+    <p v-if="herkomst" class="notice" :class="herkomst.voorlopig === 0 ? 'notice--ok' : ''">
+      <strong>{{ herkomst.echt }}</strong> van de {{ herkomst.echt + herkomst.voorlopig }} actieve regels rekenen met een
+      echte inkoopprijs<span v-if="herkomst.prijslijsten.length"> uit {{ herkomst.prijslijsten.join(' en ') }}</span>.
+      <template v-if="herkomst.voorlopig">
+        De overige {{ herkomst.voorlopig }} zijn nog afgeleid uit marktonderzoek — herkenbaar aan het label
+        <span class="badge badge--warn">Voorlopig</span>; onderbouwing in <code>docs/research/pricing-baseline.md</code>.
+      </template>
+      <template v-if="herkomst.vervallen">
+        {{ herkomst.vervallen }} vervangen regels staan op vervallen en tellen niet meer mee.
+      </template>
     </p>
 
     <section v-if="check" class="panel">
@@ -80,6 +87,8 @@
         <option value="equipment_set">Single split sets</option>
         <option value="equipment_outdoor">Multisplit buitenunits</option>
         <option value="equipment_indoor">Binnenunits</option>
+        <option value="equipment_heatpump">Warmtepompen</option>
+        <option value="equipment_accessory">Toebehoren</option>
         <option value="material">Materiaal</option>
         <option value="surcharge">Toeslagen</option>
       </select>
@@ -88,6 +97,16 @@
         <option value="budget">Voordelig</option>
         <option value="mid">Middenklasse</option>
         <option value="premium">Premium</option>
+      </select>
+      <select v-model="priceSource" @change="load">
+        <option value="">Alle herkomst</option>
+        <option value="pricelist">Uit prijslijst</option>
+        <option value="dashboard">Eigen invoer</option>
+        <option value="provisional">Nog voorlopig</option>
+      </select>
+      <select v-model="active" @change="load">
+        <option value="1">Actief</option>
+        <option value="0">Vervallen</option>
       </select>
     </div>
 
@@ -103,8 +122,9 @@
           <span class="card__head">
             <span class="card__title">{{ item.name }}</span>
             <span v-if="item.tier" class="badge">{{ tierLabels[item.tier] }}</span>
+            <span class="badge" :class="item.price_is_real ? 'badge--ok' : 'badge--warn'">{{ item.price_source_label }}</span>
           </span>
-          <span class="card__sub">{{ item.sku }} · per {{ item.unit }}</span>
+          <span class="card__sub">{{ item.sku }} · per {{ item.unit }}<template v-if="item.brand"> · {{ item.brand }}</template></span>
 
           <div class="card__fields">
             <label class="field">
@@ -143,6 +163,7 @@
           <thead>
             <tr>
               <th>Artikel</th>
+              <th>Herkomst</th>
               <th>Klasse</th>
               <th class="num">Inkoop excl. btw</th>
               <th class="num">Marge %</th>
@@ -156,7 +177,13 @@
             <tr v-for="item in items" :key="item.id">
               <td>
                 <strong>{{ item.name }}</strong>
-                <span class="small muted" style="display: block">{{ item.sku }} · per {{ item.unit }}</span>
+                <span class="small muted" style="display: block">
+                  {{ item.sku }} · per {{ item.unit }}<template v-if="item.brand"> · {{ item.brand }}</template>
+                </span>
+              </td>
+              <td>
+                <span class="badge" :class="item.price_is_real ? 'badge--ok' : 'badge--warn'">{{ item.price_source_label }}</span>
+                <span v-if="item.price_list_ref" class="small muted" style="display: block">{{ item.price_list_ref }}</span>
               </td>
               <td class="muted">{{ item.tier ? tierLabels[item.tier] : '—' }}</td>
               <td class="num"><input v-model.number="item.cost_euro" type="number" step="0.01" min="0" class="cell" /></td>
@@ -196,6 +223,18 @@ type Item = {
   margin_pct: number
   labour_minutes: number
   active: boolean
+  brand: string | null
+  price_source: string
+  price_source_label: string
+  price_is_real: boolean
+  price_list_ref: string | null
+}
+
+type Herkomst = {
+  echt: number
+  voorlopig: number
+  vervallen: number
+  prijslijsten: string[]
 }
 
 type Pricing = {
@@ -230,8 +269,11 @@ const compact = useIsCompact()
 const items = ref<Item[]>([])
 const pricing = ref<Pricing | null>(null)
 const check = ref<EntryPriceCheck | null>(null)
+const herkomst = ref<Herkomst | null>(null)
 const kind = ref('')
 const tier = ref('')
+const priceSource = ref('')
+const active = ref('1')
 const busy = ref<number | null>(null)
 const flash = ref('')
 const error = ref('')
@@ -243,12 +285,18 @@ async function load() {
   const params = new URLSearchParams()
   if (kind.value) params.set('kind', kind.value)
   if (tier.value) params.set('tier', tier.value)
+  if (priceSource.value) params.set('price_source', priceSource.value)
+  params.set('active', active.value)
 
   try {
-    const result = await api.get<{ items: Item[]; pricing: Pricing; entry_price_check: EntryPriceCheck }>(
-      `/admin/catalog${params.toString() ? `?${params}` : ''}`,
-    )
+    const result = await api.get<{
+      items: Item[]
+      herkomst: Herkomst
+      pricing: Pricing
+      entry_price_check: EntryPriceCheck
+    }>(`/admin/catalog${params.toString() ? `?${params}` : ''}`)
     items.value = result.items.map((item) => ({ ...item, cost_euro: item.cost_cents / 100 }))
+    herkomst.value = result.herkomst
     pricing.value = result.pricing
     check.value = result.entry_price_check
   } catch (e) {

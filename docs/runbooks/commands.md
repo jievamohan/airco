@@ -15,6 +15,10 @@ docker compose logs -f web
 
 docker compose exec api php artisan migrate --force
 docker compose exec api php artisan db:seed --force
+# Prijslijsten van de leverancier in de catalogus; zie runbooks/prijslijsten.md.
+# Draait ook mee in db:seed, dus dit is alleen nodig na een nieuwe lijst.
+docker compose exec api php artisan catalog:import-pricelist --dry-run
+docker compose exec api php artisan catalog:import-pricelist
 docker compose exec api composer test
 docker compose exec api composer analyse
 docker compose exec api vendor/bin/pint --test

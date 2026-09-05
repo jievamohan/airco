@@ -27,6 +27,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SettingsSeeder::class,
             CatalogSeeder::class,
+            // Moet ná CatalogSeeder: die zet de voorlopige regels neer, deze
+            // zet de echte inkoopprijzen ernaast en de vervangen regels uit.
+            PriceListSeeder::class,
             SequenceSeeder::class,
         ]);
 

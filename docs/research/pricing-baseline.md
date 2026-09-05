@@ -1,10 +1,23 @@
-# Voorlopige prijs- en montagetijdbasis (airco-installatie NL)
+# Prijs- en montagetijdbasis (airco-installatie NL)
 
-**Status: VOORLOPIG.** KlimaatX heeft nog geen eigen inkoop-, marge- en normtijdcijfers
-aangeleverd. Alle bedragen hieronder zijn afgeleid uit openbaar marktonderzoek
-(augustus 2026) en dienen als startwaarde. Ze zijn volledig aanpasbaar via
-**Dashboard → Catalogus** en **Dashboard → Instellingen → Prijsstelling**;
-de seeder overschrijft nooit bestaande records.
+**Status per 5 september 2026: apparatuur is ECHT, de rest is nog VOORLOPIG.**
+
+| Onderdeel | Herkomst |
+|---|---|
+| Apparatuur (sets, buiten- en binnenunits, warmtepompen, toebehoren) | Netto inkoopprijzen uit de prijslijsten van Airco Techniek B.V. — MHI 2026 en KAISAI 2026-6, beide versie 0526, ontvangen 3 september 2026 |
+| Materiaal en toeslagen | Nog afgeleid uit marktonderzoek (dit document, §5) |
+| Normtijden, uurtarief, marges | Nog afgeleid uit marktonderzoek (dit document, §6 en §7) |
+
+De catalogus houdt dat per regel bij in `price_source`, en **Dashboard → Catalogus**
+laat het zien: *Prijslijst*, *Eigen invoer* of *Voorlopig*. Wat hieronder nog als
+voorlopig staat, is dus precies wat er nog vervangen moet worden.
+
+Hoe een nieuwe prijslijst erin komt, staat in
+[docs/runbooks/prijslijsten.md](../runbooks/prijslijsten.md).
+
+Alle bedragen blijven aanpasbaar via **Dashboard → Catalogus** en
+**Dashboard → Instellingen → Prijsstelling**; een import laat een regel die daar
+is aangepast met rust.
 
 Alle bedragen in dit document zijn **exclusief btw** tenzij anders vermeld.
 
@@ -64,7 +77,35 @@ adviseert de engine een multisplit.
 
 ## 4. Apparatuur — inkoopprijs per klasse (excl. btw)
 
-Drie kwaliteitstiers:
+> **Vervallen per 5 september 2026.** De tabellen in deze paragraaf zijn vervangen
+> door de netto inkoopprijzen uit de leveranciersprijslijsten. Ze staan hier nog
+> omdat ze de onderbouwing zijn van de vanaf-prijstoets in §8 en van het bedrag
+> waar de proof of concept mee gerekend heeft.
+>
+> **Wat er nu gevoerd wordt** (`config/agent.php`, `pricing.series`):
+>
+> | Klasse | Single split set | Binnenunit multisplit | Buitenunit multisplit |
+> |---|---|---|---|
+> | budget | KAISAI EVO | KAISAI FLY+ | KAISAI multisplit (M-line) |
+> | mid | KAISAI ICE WHITE | KAISAI ICE WHITE | KAISAI multisplit (M-line) |
+> | premium | Mitsubishi SRK-ZS-WF | Mitsubishi SRK-ZS-WF | Mitsubishi SCM |
+>
+> Buiten- en binnenunit van een multisplit moeten van hetzelfde merk zijn; daarom
+> delen budget en mid dezelfde KAISAI-buitenunit. De overige lijnen uit de
+> prijslijsten (ICE BLACK, PRO-HEAT+, GEO+, ART, ZSX, Titanium, cassettes,
+> plafondonderbouw, slim duct, warmtepompen) staan wél in de catalogus, maar
+> worden niet vanzelf gekozen — die zijn er om met de hand op te offreren.
+>
+> **Wat opvalt aan de echte prijzen.** Ze liggen fors lager dan dit
+> marktonderzoek aannam: een 3,5 kW-set kost netto € 210 (KAISAI EVO) tot € 678
+> (Mitsubishi SRK35ZS-WF), waar de afleiding hieronder op € 450–900 uitkwam. Met
+> de standaardmarge van 45% landt een 3,5 kW single split inclusief montage
+> daardoor op ± € 1.376 incl. btw, ónder de marktrange van € 1.600–2.800 uit
+> bron 2. De rekenkant klopt; het is de opslag die ruimte heeft. De knop daarvoor
+> is `pricing.equipment_margin_pct` (of per regel in het dashboard) — dat is een
+> ondernemersbeslissing, geen technische.
+
+Drie kwaliteitstiers zoals het marktonderzoek ze indeelde:
 
 * **budget** — Gree, Haier, Lamborghini
 * **mid** — LG, Fujitsu, Toshiba
@@ -202,8 +243,12 @@ het antwoord meebeweegt zodra de inkoopprijzen of normtijden veranderen.
 
 ## 9. Wat KlimaatX zelf moet aanleveren om dit definitief te maken
 
-1. Werkelijke inkoopprijslijst van de eigen groothandel (per merk/model/kW).
-2. Eigen gehanteerde margestaffels per productgroep.
+1. ~~Werkelijke inkoopprijslijst van de eigen groothandel (per merk/model/kW).~~
+   **Geleverd op 3 september 2026** voor apparatuur: MHI 2026 en KAISAI 2026-6.
+   Nog niet geleverd: materiaal (koelleiding, beugels, condens, kernboring,
+   elektra) en toebehoren buiten deze twee lijsten.
+2. Eigen gehanteerde margestaffels per productgroep. Nu nog één opslag van 45%
+   op apparatuur en 60% op materiaal.
 3. Eigen normtijden per werksoort en de werkelijke ploeggrootte.
 4. Werkelijk uurtarief en voorrijregeling.
 5. Vestigingspostcode en werkgebied.

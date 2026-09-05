@@ -28,6 +28,12 @@ node-compile-cache/
 .deploy.lock
 apps/api/.deploy/
 
+# Aangeleverde prijslijsten van de leverancier. De werkbladen zelf blijven
+# buiten de repo — ze zijn groot en de leverancier merkt ze aan als
+# vertrouwelijk. Wat er wél in gaat is de uitdraai onder
+# apps/api/database/data/pricelists/, gemaakt met scripts/pricelist/.
+/*.xlsx
+
 # Local tooling
 .venv/
 .docker/

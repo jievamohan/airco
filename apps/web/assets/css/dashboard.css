@@ -252,6 +252,10 @@ table.data .num { text-align: right; white-space: nowrap; }
 .badge--calling, .badge--follow_up { background: #fdf3e0; color: var(--dash-warn); }
 .badge--lost, .badge--unreachable, .badge--do_not_contact { background: #fbeaea; color: var(--dash-bad); }
 
+/* Herkomst van een prijs: rust hij op een echt cijfer of nog op een afleiding? */
+.badge--ok { background: #e6f4ec; color: var(--dash-ok); }
+.badge--warn { background: #fdf3e0; color: var(--dash-warn); }
+
 /* ----------------------------------------------------------------- filters */
 
 .filters {

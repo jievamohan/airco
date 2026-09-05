@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\CallPurpose;
+use App\Enums\PriceSource;
 use App\Enums\QuoteKind;
 use App\Jobs\ProcessNewLeadJob;
 use App\Jobs\SendQuoteJob;
@@ -454,7 +455,13 @@ class AdminApiTest extends TestCase
     {
         $this->actingAsOwner();
 
-        $item = CatalogItem::where('sku', 'SET-35-MID')->firstOrFail();
+        // Dezelfde regel die de offerte zelf pakt voor een 3,5 kW-klus in de
+        // middenklasse. Op artikelnummer zoeken zou breken bij elke nieuwe
+        // prijslijst; op productlijn en klasse blijft het staan.
+        $item = CatalogItem::query()
+            ->where('series', config('agent.pricing.series.mid.equipment_set'))
+            ->where('capacity_class_kw', 3.5)
+            ->firstOrFail();
         $lead = Lead::factory()->create();
         $voor = app(QuoteBuilder::class)->calculate($lead)['total_cents'];
 
@@ -466,6 +473,9 @@ class AdminApiTest extends TestCase
         $this->assertGreaterThan($voor, $na);
 
         $this->assertStringContainsString('Aangepast in het dashboard', (string) $item->refresh()->source_note);
+        // Vanaf nu is dit eigen invoer, en laat een volgende prijslijstimport
+        // de regel met rust.
+        $this->assertSame(PriceSource::Dashboard, $item->price_source);
     }
 
     #[Test]
