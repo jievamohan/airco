@@ -86,6 +86,36 @@ Eén regel om in de gaten te houden: **buiten- en binnenunit van een multisplit
 moeten van hetzelfde merk zijn.** Houd de drie soorten per klasse dus binnen één
 merk.
 
+## Klasse en normtijd horen er altijd bij
+
+Elke regel uit een prijslijst krijgt een kwaliteitsklasse en een normtijd. Geen
+van beide mag leeg blijven:
+
+- Een lege **klasse** leest in het dashboard als "hier ontbreekt iets".
+- Een **normtijd** van nul telt in de offerte stilzwijgend als nul uur mee — de
+  klus wordt dan te goedkoop aangeboden zonder dat iemand het ziet.
+
+De klasse staat per sectie in `PriceListRegistry` (`tier`). Alle Mitsubishi is
+premium; bij KAISAI zijn de instaplijnen (EVO, FLY, FLY+, GEO+) voordelig en de
+rest middenklasse. De KAISAI-multisplitbuitenunit draagt `budget`, maar wordt
+door beide KAISAI-klassen gebruikt — dat staat in de omschrijving van die regels.
+
+De normtijd komt uit `PriceListImporter`: `LABOUR_MINUTES` per soort, met
+`LABOUR_MINUTES_BY_SERIES` voor de uitzonderingen. Die uitzonderingen bestaan
+omdat het soort te grof is — een cassette in het plafond (480 min) is een ander
+karwei dan een wandunit ophangen (330 min), en zonder dat onderscheid rekent een
+offerte voor inbouwwerk structureel te weinig uren.
+
+Een test bewaakt dit: `PrijslijstImportTest::elk_artikel_uit_een_prijslijst_heeft_een_klasse_en_een_normtijd`.
+Voeg je een lijn toe zonder indeling, dan valt de suite om in plaats van dat het
+op een offerte opduikt.
+
+Materiaal en toeslagen hebben geen klasse: die gaan mee ongeacht welk merk de
+klant kiest. Het dashboard toont daar "Alle klassen". Vijf materiaalregels staan
+bewust op normtijd nul (leidingset, beugel, condensafvoer, klein materiaal,
+F-gassenregistratie): hun werk zit al in de 330 minuten van de set. Daar tijd
+bij zetten telt dubbel in elke offerte.
+
 ## Vermogen en rekenklasse
 
 De offerte kiest een unit op `capacity_class_kw`, niet op het echte vermogen.

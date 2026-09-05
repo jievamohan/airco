@@ -121,7 +121,7 @@
         <div v-for="item in items" :key="item.id" class="card">
           <span class="card__head">
             <span class="card__title">{{ item.name }}</span>
-            <span v-if="item.tier" class="badge">{{ tierLabels[item.tier] }}</span>
+            <span class="badge">{{ klasse(item) }}</span>
             <span class="badge" :class="item.price_is_real ? 'badge--ok' : 'badge--warn'">{{ item.price_source_label }}</span>
           </span>
           <span class="card__sub">{{ item.sku }} · per {{ item.unit }}<template v-if="item.brand"> · {{ item.brand }}</template></span>
@@ -185,7 +185,7 @@
                 <span class="badge" :class="item.price_is_real ? 'badge--ok' : 'badge--warn'">{{ item.price_source_label }}</span>
                 <span v-if="item.price_list_ref" class="small muted" style="display: block">{{ item.price_list_ref }}</span>
               </td>
-              <td class="muted">{{ item.tier ? tierLabels[item.tier] : '—' }}</td>
+              <td class="muted">{{ klasse(item) }}</td>
               <td class="num"><input v-model.number="item.cost_euro" type="number" step="0.01" min="0" class="cell" /></td>
               <td class="num"><input v-model.number="item.margin_pct" type="number" step="0.1" min="0" class="cell cell--narrow" /></td>
               <td class="num">{{ fmt.euro(Math.round(item.cost_euro * 100 * (1 + item.margin_pct / 100))) }}</td>
@@ -279,6 +279,13 @@ const flash = ref('')
 const error = ref('')
 
 const tierLabels: Record<string, string> = { budget: 'Voordelig', mid: 'Middenklasse', premium: 'Premium' }
+
+// Materiaal en toeslagen horen bij geen enkele kwaliteitsklasse in het
+// bijzonder: ze gaan mee ongeacht welk merk de klant kiest. Een streepje zou
+// lezen als "hier ontbreekt iets".
+function klasse(item: Item): string {
+  return item.tier ? tierLabels[item.tier] : 'Alle klassen'
+}
 
 async function load() {
   error.value = ''

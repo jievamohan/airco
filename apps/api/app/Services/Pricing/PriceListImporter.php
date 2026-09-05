@@ -46,11 +46,66 @@ class PriceListImporter
      */
     private const MHI_SCM_PORTS = [40 => 2, 45 => 3, 50 => 3, 60 => 4, 71 => 4, 80 => 5, 100 => 6, 125 => 6];
 
-    /** Normtijden per soort, in monteursminuten. Nog niet uit eigen nacalculatie. */
+    /**
+     * Normtijd per soort, in monteursminuten. De basis waarop de offerte
+     * rekent: een wandunit erin hangen, leidingwerk maken, vacumeren en
+     * opleveren.
+     *
+     * Nog niet uit eigen nacalculatie — zie docs/research/pricing-baseline.md
+     * §6. Ze zijn per regel aan te passen in het dashboard, en zodra dat
+     * gebeurt laat een volgende import die regel met rust.
+     */
     private const LABOUR_MINUTES = [
         PriceListRegistry::KIND_SET => 330,
         PriceListRegistry::KIND_OUTDOOR => 390,
         PriceListRegistry::KIND_INDOOR => 180,
+        PriceListRegistry::KIND_HEATPUMP => 960,
+        PriceListRegistry::KIND_ACCESSORY => 30,
+    ];
+
+    /**
+     * Normtijd waar het soort alleen te grof is, per `series:kind`.
+     *
+     * Een cassette of een kanaalunit is een heel ander karwei dan een
+     * wandunit: er moet een plafond open, en de afvoer en het inbouwframe
+     * horen erbij. Zonder dit onderscheid zou een offerte voor inbouwwerk
+     * structureel te weinig uren rekenen.
+     */
+    private const LABOUR_MINUTES_BY_SERIES = [
+        // Inbouw in het plafond, als complete set.
+        'mhi-fdtc-set:equipment_set' => 480,
+        'mhi-fdt-set:equipment_set' => 540,
+        'mhi-fde-set:equipment_set' => 450,
+        'kaisai-cassette-60-set:equipment_set' => 480,
+        'kaisai-cassette-90-set:equipment_set' => 540,
+        'kaisai-plafond:equipment_set' => 450,
+        'kaisai-slim-duct-set:equipment_set' => 540,
+        'kaisai-wand-vloer-set:equipment_set' => 360,
+        'mhi-srf-zs-w-set:equipment_set' => 360,
+
+        // Dezelfde units als losse binnenunit op een multisplit.
+        'mhi-fdtc:equipment_indoor' => 300,
+        'kaisai-cassette-60:equipment_indoor' => 300,
+        'kaisai-slim-duct:equipment_indoor' => 330,
+        'kaisai-wand-vloer:equipment_indoor' => 210,
+        'mhi-srf-zs-w:equipment_indoor' => 210,
+
+        // Losse buitenunit van een single split: dat is vervangingswerk, niet
+        // een nieuwe installatie — de leidingen liggen er al.
+        'mhi-src-zs-w:equipment_outdoor' => 240,
+        'mhi-src-zsx-w:equipment_outdoor' => 240,
+
+        // Warmtepompen. Een woningmonoblock is twee monteursdagen; de zwaardere
+        // klassen en de commerciële Artic Power lopen daaroverheen.
+        'kaisai-monoblock-khc:equipment_heatpump' => 1440,
+        'kaisai-artic-power:equipment_heatpump' => 2400,
+        'kaisai-warmtepomp-hydro:equipment_accessory' => 180,
+        'kaisai-warmtepomp-boiler:equipment_accessory' => 240,
+        'kaisai-warmtepomp-regeling:equipment_accessory' => 45,
+
+        // Toebehoren die tijdens dezelfde klus meegaan.
+        'mhi-onderdelen:equipment_accessory' => 30,
+        'mhi-fdtc:equipment_accessory' => 20,
     ];
 
     public function __construct(private readonly PriceListRegistry $registry) {}
@@ -169,7 +224,7 @@ class PriceListImporter
             'list_price_cents' => (int) round((float) $row['bruto_eur'] * 100),
             'purchase_discount_pct' => $row['korting_pct'] === '' ? null : (float) $row['korting_pct'],
             'margin_pct' => $margin,
-            'labour_minutes' => self::LABOUR_MINUTES[$kind] ?? 0,
+            'labour_minutes' => $this->labourMinutes($kind, $sectie['series'] ?? ''),
             'active' => true,
             'price_source' => PriceSource::PriceList->value,
             'price_list_ref' => $definition->ref,
@@ -274,6 +329,18 @@ class PriceListImporter
         }
 
         return $gevonden;
+    }
+
+    /**
+     * De normtijd voor deze regel: de uitzondering per productlijn, en anders
+     * het soort. Elke regel krijgt er een — een lege normtijd zou in de
+     * offerte stilzwijgend als nul uur meetellen.
+     */
+    private function labourMinutes(string $kind, string $series): int
+    {
+        return self::LABOUR_MINUTES_BY_SERIES[$series.':'.$kind]
+            ?? self::LABOUR_MINUTES[$kind]
+            ?? 0;
     }
 
     private function ports(string $kind, string $product, string $series): ?int
