@@ -96,6 +96,14 @@ adviseert de engine een multisplit.
 > plafondonderbouw, slim duct, warmtepompen) staan wél in de catalogus, maar
 > worden niet vanzelf gekozen — die zijn er om met de hand op te offreren.
 >
+> **Normtijden.** Elke ingelezen regel krijgt er een: 330 minuten voor een
+> single split set, 180 voor een losse binnenunit, 390 voor een
+> multisplit-buitenunit — dezelfde waarden als de proof of concept, dus de
+> offerteprijs is hierdoor niet verschoven. Voor inbouwwerk gelden hogere
+> normen (cassette 480, kanaalunit 540, plafondonderbouw 450), en voor
+> warmtepompen 960 tot 2400 minuten. Die zijn afgeleid, niet nagecalculeerd:
+> zie §6, en pas ze aan zodra er eigen cijfers zijn.
+>
 > **Wat opvalt aan de echte prijzen.** Ze liggen fors lager dan dit
 > marktonderzoek aannam: een 3,5 kW-set kost netto € 210 (KAISAI EVO) tot € 678
 > (Mitsubishi SRK35ZS-WF), waar de afleiding hieronder op € 450–900 uitkwam. Met

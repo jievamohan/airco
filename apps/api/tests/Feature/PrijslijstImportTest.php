@@ -154,6 +154,48 @@ class PrijslijstImportTest extends TestCase
     }
 
     #[Test]
+    public function elk_artikel_uit_een_prijslijst_heeft_een_klasse_en_een_normtijd(): void
+    {
+        // Een lege klasse leest in het dashboard als "hier ontbreekt iets", en
+        // een normtijd van nul telt in de offerte stilzwijgend als nul uur mee.
+        // Komt er een prijslijst bij met een lijn die nog niet is ingedeeld,
+        // dan hoort die hier op te vallen — niet pas op een offerte.
+        $zonderKlasse = CatalogItem::query()->realPriced()->whereNull('tier')->pluck('sku');
+        $this->assertCount(0, $zonderKlasse, 'Zonder kwaliteitsklasse: '.$zonderKlasse->implode(', '));
+
+        $zonderNormtijd = CatalogItem::query()->realPriced()->where('labour_minutes', '<=', 0)->pluck('sku');
+        $this->assertCount(0, $zonderNormtijd, 'Zonder normtijd: '.$zonderNormtijd->implode(', '));
+    }
+
+    #[Test]
+    public function inbouwwerk_krijgt_meer_montagetijd_dan_een_wandunit(): void
+    {
+        $wand = CatalogItem::query()->where('sku', 'QP950001')->firstOrFail();      // SRK35ZS-WF set
+        $cassette = CatalogItem::query()->where('sku', 'QP950043')->firstOrFail();  // FDTC25VH 60x60 set
+
+        $this->assertGreaterThan(
+            $wand->labour_minutes,
+            $cassette->labour_minutes,
+            'Een cassette in het plafond is meer werk dan een wandunit ophangen.',
+        );
+    }
+
+    #[Test]
+    public function de_normtijden_waarop_de_offerte_rekent_zijn_niet_verschoven(): void
+    {
+        // Deze drie zitten in elke offerte. Verandert er hier iets, dan
+        // verandert elke prijs mee, en dat hoort een bewuste keuze te zijn.
+        $reeks = static fn (string $kind, string $tier): int => CatalogItem::query()
+            ->where('kind', $kind)
+            ->where('series', config('agent.pricing.series.'.$tier.'.'.$kind))
+            ->value('labour_minutes');
+
+        $this->assertSame(330, $reeks('equipment_set', 'premium'));
+        $this->assertSame(180, $reeks('equipment_indoor', 'premium'));
+        $this->assertSame(390, $reeks('equipment_outdoor', 'budget'));
+    }
+
+    #[Test]
     public function de_import_meldt_een_dubbel_artikelnummer_in_plaats_van_het_stil_te_overschrijven(): void
     {
         $importer = app(PriceListImporter::class);
