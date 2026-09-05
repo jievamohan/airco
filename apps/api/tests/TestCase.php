@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use Database\Seeders\CatalogSeeder;
+use Database\Seeders\PriceListSeeder;
 use Database\Seeders\SequenceSeeder;
 use Database\Seeders\SettingsSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -19,6 +20,7 @@ abstract class TestCase extends BaseTestCase
     {
         $this->seed(SettingsSeeder::class);
         $this->seed(CatalogSeeder::class);
+        $this->seed(PriceListSeeder::class);
         $this->seed(SequenceSeeder::class);
     }
 }

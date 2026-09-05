@@ -125,14 +125,18 @@ class EntryPriceTest extends TestCase
     #[Test]
     public function het_instappakket_topt_een_eenvoudige_klus_af_en_markeert_de_marge(): void
     {
+        // Bewust ruim onder de kostprijs van welke klus dan ook: deze test gaat
+        // over het gedrag van het instappakket, niet over de vraag of een
+        // bepaald bedrag toevallig haalbaar is. Sinds de echte inkoopprijzen in
+        // de catalogus staan ligt € 899 daar namelijk vlak boven.
         $this->configure([
-            'agent.pricing.entry_price_cents' => '89900',
+            'agent.pricing.entry_price_cents' => '50000',
             'agent.pricing.entry_package_enabled' => '1',
         ]);
 
         $quote = app(QuoteBuilder::class)->createForLead($this->instapLead());
 
-        $this->assertSame(89900, $quote->total_cents);
+        $this->assertSame(50000, $quote->total_cents);
         $this->assertLessThan(0, $quote->margin_pct, 'Onder de kostprijs hoort de marge negatief te zijn.');
         $this->assertTrue($quote->margin_warning);
         $this->assertContains('INSTAPPAKKET', $quote->items->pluck('sku')->all());
@@ -175,13 +179,15 @@ class EntryPriceTest extends TestCase
     #[Test]
     public function de_vanaf_prijs_check_rekent_door_of_de_advertentie_klopt(): void
     {
-        $this->configure(['agent.pricing.entry_price_cents' => '89900']);
+        // Een vanaf-prijs onder de kostprijs van de goedkoopste klus hoort de
+        // check hard af te keuren, met een advies dat er wel boven ligt.
+        $this->configure(['agent.pricing.entry_price_cents' => '50000']);
 
         $check = app(EntryPriceCheck::class)->run();
 
         $this->assertFalse($check['achievable']);
         $this->assertLessThan(0, $check['result_at_entry_price_cents']);
-        $this->assertGreaterThan(89900, $check['advised_entry_price_cents']);
+        $this->assertGreaterThan(50000, $check['advised_entry_price_cents']);
         $this->assertStringContainsString('onder de kostprijs', $check['message']);
     }
 

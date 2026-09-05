@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\SystemType;
+use App\Models\CatalogItem;
 use App\Models\Lead;
 use App\Services\QuoteBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,16 +23,43 @@ class QuoteBuilderTest extends TestCase
     }
 
     #[Test]
-    public function een_standaard_woonkamer_valt_binnen_de_marktrange(): void
+    public function een_standaard_woonkamer_blijft_binnen_een_verdedigbare_bandbreedte(): void
     {
         $lead = Lead::factory()->create(['space_size' => 32, 'space_unit' => 'm2', 'building_year' => 1998]);
 
         $calc = app(QuoteBuilder::class)->calculate($lead);
 
-        // Marktrange voor een 3,5 kW single split incl. montage: EUR 1.600 - 2.800 incl. btw.
-        $this->assertGreaterThan(160000, $calc['total_cents']);
+        // Ondergrens is de geadverteerde vanaf-prijs, bovengrens de bovenkant
+        // van de marktrange voor een 3,5 kW single split inclusief montage
+        // (EUR 2.800 incl. btw, zie docs/research/pricing-baseline.md).
+        //
+        // Met de echte inkoopprijzen landt deze klus onder in die range en
+        // niet meer middenin: het marktonderzoek ging uit van een fors hogere
+        // inkoop dan wat de leverancier nu rekent. Dat is geen fout in de
+        // berekening maar ruimte in de opslag — `pricing.equipment_margin_pct`
+        // is de knop, en die zet de ondernemer zelf.
+        $this->assertGreaterThanOrEqual(89900, $calc['total_cents']);
         $this->assertLessThan(280000, $calc['total_cents']);
         $this->assertSame(SystemType::SingleSplit, $calc['system']);
+    }
+
+    #[Test]
+    public function de_apparatuur_op_een_offerte_komt_uit_een_echte_prijslijst(): void
+    {
+        $lead = Lead::factory()->create(['space_size' => 32, 'space_unit' => 'm2', 'building_year' => 1998]);
+
+        $calc = app(QuoteBuilder::class)->calculate($lead);
+        $apparatuur = array_filter($calc['lines'], static fn (array $l): bool => $l['kind'] === 'equipment');
+
+        $this->assertNotEmpty($apparatuur);
+
+        foreach ($apparatuur as $line) {
+            $item = CatalogItem::findOrFail($line['catalog_item_id']);
+            $this->assertTrue(
+                $item->price_source->isReal(),
+                sprintf('Apparatuurregel %s rekent nog met een voorlopige prijs.', (string) $item->sku),
+            );
+        }
     }
 
     #[Test]
@@ -68,12 +96,28 @@ class QuoteBuilderTest extends TestCase
 
         $this->assertSame(SystemType::MultiSplit, $calc['system']);
 
-        $skus = array_column($calc['lines'], 'sku');
-        $this->assertNotEmpty(array_filter($skus, static fn (?string $sku): bool => str_starts_with((string) $sku, 'OUT-')));
+        $items = CatalogItem::query()
+            ->whereIn('id', array_filter(array_column($calc['lines'], 'catalog_item_id')))
+            ->get()
+            ->keyBy('id');
 
-        $indoor = array_values(array_filter($calc['lines'], static fn (array $line): bool => str_starts_with((string) $line['sku'], 'IN-')));
+        // Arbeid en toeslagen hebben geen catalogusregel; die vallen hier weg.
+        $soort = static fn (array $l): ?string => $items->get($l['catalog_item_id'])?->kind;
+
+        $buiten = array_values(array_filter($calc['lines'], static fn (array $l): bool => $soort($l) === 'equipment_outdoor'));
+        $this->assertCount(1, $buiten);
+        $this->assertGreaterThanOrEqual(3, $items->get($buiten[0]['catalog_item_id'])->ports);
+
+        $indoor = array_values(array_filter($calc['lines'], static fn (array $l): bool => $soort($l) === 'equipment_indoor'));
         $this->assertCount(1, $indoor);
         $this->assertSame(3.0, $indoor[0]['quantity']);
+
+        // Buiten- en binnenunit van een multisplit moeten van hetzelfde merk
+        // zijn; anders passen ze fysiek niet op elkaar.
+        $this->assertSame(
+            $items->get($buiten[0]['catalog_item_id'])->brand,
+            $items->get($indoor[0]['catalog_item_id'])->brand,
+        );
     }
 
     #[Test]

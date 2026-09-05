@@ -183,6 +183,41 @@ return [
         'direct_agreement_discount_max_cents' => (int) env('PRICING_DIRECT_DISCOUNT_MAX_CENTS', 15000),
         'free_travel_km' => (int) env('PRICING_FREE_TRAVEL_KM', 30),
         'travel_rate_cents_per_km' => (int) env('PRICING_TRAVEL_RATE_CENTS_PER_KM', 55),
+        // Opslag op de netto inkoopprijs van apparatuur en materiaal. De
+        // catalogus zet hem per regel vast; dit is alleen de startwaarde
+        // waarmee een nieuw ingelezen prijslijstregel binnenkomt.
+        'equipment_margin_pct' => (float) env('PRICING_EQUIPMENT_MARGIN_PCT', 45.0),
+        'material_margin_pct' => (float) env('PRICING_MATERIAL_MARGIN_PCT', 60.0),
+
+        /*
+         * Welke productlijn hoort bij welke kwaliteitsklasse.
+         *
+         * Dit is geen prijs maar een assortimentskeuze, en hij kan niet in de
+         * catalogusregel zelf staan: de buitenunit van een multisplit wordt
+         * door twee klassen gedeeld (voordelig en midden rijden allebei op
+         * KAISAI), en een regel kan maar één klasse dragen.
+         *
+         * Buiten- en binnenunit van een multisplit moeten van hetzelfde merk
+         * zijn. Wie hier iets wijzigt, houdt die drie regels dus per klasse bij
+         * elkaar binnen één merk.
+         */
+        'series' => [
+            'budget' => [
+                'equipment_set' => 'kaisai-evo',
+                'equipment_indoor' => 'kaisai-fly-plus',
+                'equipment_outdoor' => 'kaisai-multi',
+            ],
+            'mid' => [
+                'equipment_set' => 'kaisai-ice-white',
+                'equipment_indoor' => 'kaisai-ice-white',
+                'equipment_outdoor' => 'kaisai-multi',
+            ],
+            'premium' => [
+                'equipment_set' => 'mhi-srk-zs-wf',
+                'equipment_indoor' => 'mhi-srk-zs-wf',
+                'equipment_outdoor' => 'mhi-scm',
+            ],
+        ],
     ],
 
     /*
