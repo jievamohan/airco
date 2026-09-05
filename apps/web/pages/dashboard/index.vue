@@ -19,6 +19,47 @@
 
     <p v-if="error" class="notice notice--bad" role="alert">{{ error }}</p>
 
+    <section v-if="status" class="panel status" :class="{ 'status--alarm': !allesDraait }">
+      <div class="status__head">
+        <h2 class="panel__title">Systeemstatus</h2>
+        <span class="small muted">bijgewerkt {{ statusLeeftijd }}</span>
+      </div>
+
+      <div class="status__row">
+        <div class="status__item">
+          <span class="badge" :class="badgeClass(status.worker.state)">{{ stateLabels[status.worker.state] }}</span>
+          <div>
+            <p class="status__label">Wachtrij-worker</p>
+            <p class="status__sub">{{ heartbeatUitleg(status.worker, 'worker') }}</p>
+          </div>
+        </div>
+
+        <div class="status__item">
+          <span class="badge" :class="badgeClass(status.scheduler.state)">{{ stateLabels[status.scheduler.state] }}</span>
+          <div>
+            <p class="status__label">Planner</p>
+            <p class="status__sub">{{ heartbeatUitleg(status.scheduler, 'scheduler') }}</p>
+          </div>
+        </div>
+
+        <div class="status__item">
+          <span class="badge" :class="status.queue.failed > 0 ? 'badge--lost' : ''">{{ status.queue.pending }}</span>
+          <div>
+            <p class="status__label">In de wachtrij</p>
+            <p class="status__sub">
+              <template v-if="status.queue.failed > 0">{{ status.queue.failed }} mislukt</template>
+              <template v-else>niets mislukt</template>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <p v-if="!allesDraait" class="status__hint">
+        Zolang dit niet groen staat, wordt er niet gebeld en gaat er geen mail uit. Start de
+        wachtrij-worker en de planner op de server (<code>make deploy-worker</code>).
+      </p>
+    </section>
+
     <div v-if="data">
       <div class="kpis">
         <div class="kpi">
@@ -160,10 +201,28 @@ type Analytics = {
   lost_reasons: Record<string, number>
 }
 
+type Heartbeat = {
+  last_seen_at: string | null
+  seconds_ago: number | null
+  fresh: boolean
+  state: 'online' | 'offline' | 'unknown'
+}
+
+type SystemStatus = {
+  scheduler: Heartbeat
+  worker: Heartbeat
+  queue: { pending: number; failed: number }
+  fresh_within_seconds: number
+  checked_at: string
+}
+
 const api = useApi()
 const fmt = useDashboardFormat()
 
 const data = ref<Analytics | null>(null)
+const status = ref<SystemStatus | null>(null)
+const statusOpgehaaldOp = ref<Date | null>(null)
+const nu = ref(Date.now())
 const error = ref('')
 const from = ref('')
 const to = ref('')
@@ -188,6 +247,58 @@ const sourceLabels: Record<string, string> = {
   manual: 'Handmatig ingevoerd',
 }
 
+const stateLabels: Record<string, string> = {
+  online: 'Draait',
+  offline: 'Ligt stil',
+  unknown: 'Onbekend',
+}
+
+function badgeClass(state: string) {
+  return { online: 'badge--won', offline: 'badge--lost', unknown: 'badge--calling' }[state] ?? ''
+}
+
+const allesDraait = computed(
+  () => status.value?.worker.state === 'online' && status.value?.scheduler.state === 'online',
+)
+
+/** "3 minuten geleden" leest hier prettiger dan een tijdstip. */
+function geleden(seconden: number) {
+  if (seconden < 60) return `${seconden} seconden geleden`
+  const minuten = Math.round(seconden / 60)
+  if (minuten < 60) return `${minuten} ${minuten === 1 ? 'minuut' : 'minuten'} geleden`
+  const uren = Math.round(minuten / 60)
+  return `${uren} ${uren === 1 ? 'uur' : 'uur'} geleden`
+}
+
+const statusLeeftijd = computed(() => {
+  if (!statusOpgehaaldOp.value) return 'zojuist'
+  const seconden = Math.max(0, Math.round((nu.value - statusOpgehaaldOp.value.getTime()) / 1000))
+  return seconden < 10 ? 'zojuist' : geleden(seconden)
+})
+
+function heartbeatUitleg(hartslag: Heartbeat, proces: 'worker' | 'scheduler') {
+  if (hartslag.state === 'unknown') {
+    return 'Niet te zeggen zolang de planner stilligt.'
+  }
+
+  if (hartslag.seconds_ago === null) {
+    return proces === 'worker'
+      ? 'Heeft zich nog nooit gemeld.'
+      : 'Heeft zich nog nooit gemeld; draait de cron wel?'
+  }
+
+  return `Laatste levensteken ${geleden(hartslag.seconds_ago)}.`
+}
+
+async function loadStatus() {
+  try {
+    status.value = await api.get<SystemStatus>('/admin/system-status')
+    statusOpgehaaldOp.value = new Date()
+  } catch {
+    // Een mislukte statuscheck mag het overzicht niet in de weg zitten.
+  }
+}
+
 async function load() {
   error.value = ''
   const params = new URLSearchParams()
@@ -201,5 +312,17 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadStatus()
+
+  // Tijdens een demo wil je het omslaan zien zonder te verversen.
+  const statusTimer = setInterval(loadStatus, 20000)
+  const klok = setInterval(() => (nu.value = Date.now()), 1000)
+
+  onUnmounted(() => {
+    clearInterval(statusTimer)
+    clearInterval(klok)
+  })
+})
 </script>

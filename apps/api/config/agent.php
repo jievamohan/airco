@@ -151,6 +151,10 @@ return [
         'max_call_attempts' => (int) env('MAX_CALL_ATTEMPTS', 4),
         'quote_valid_days' => (int) env('QUOTE_VALID_DAYS', 21),
         'first_call_delay_minutes' => (int) env('FIRST_CALL_DELAY_MINUTES', 3),
+        // Demostand: bel meteen bij binnenkomst en negeer het belvenster, zodat
+        // een demo buiten kantooruren de hele keten laat zien. Hoort daarna
+        // weer uit te staan, anders belt de agent 's nachts echte klanten.
+        'follow_up_immediately' => (bool) env('FOLLOW_UP_IMMEDIATELY', false),
     ],
 
     /*

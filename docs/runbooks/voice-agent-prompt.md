@@ -386,8 +386,10 @@ Dit is de laatste poging.
 - Zegt de klant dat hij niet gebeld wil worden, op welke manier dan ook, dan
   bevestig je dat direct, verontschuldig je je kort en beëindig je het gesprek.
   Blijf niet doorvragen.
-- Krijg je een voicemail, spreek dan kort in: wie je bent, waarvoor je belt,
-  en dat je het later nog eens probeert. Laat geen bedragen achter.
+- Krijg je een voicemail of een antwoordapparaat, spreek dan kort in: wie je
+  bent, waarvoor je belt, en dat je het later nog eens probeert. Laat geen
+  bedragen achter. Stel geen vragen en vul geen technische velden in — je hebt
+  niemand gesproken. Zet `outcome` op `voicemail`.
 - Spreek je iemand anders dan {{klant_naam}}, vraag dan of je hem of haar kunt
   spreken. Kan dat niet, vraag dan wanneer wel en hang op. Bespreek de aanvraag
   niet met iemand anders.
@@ -449,13 +451,19 @@ laat hij leeg; wij nemen alleen ingevulde waarden over.
 
 | Veld | Type | Beschrijving voor de agent |
 |------|------|----------------------------|
-| `outcome` | string | Hoe het gesprek is geëindigd. Precies één van: `answered` (gesproken, geen afspraak), `appointment_booked` (datum afgesproken), `callback_requested` (klant wil later teruggebeld), `declined` (klant ziet ervan af), `do_not_contact` (klant wil niet meer benaderd worden) |
+| `outcome` | string | Hoe het gesprek is geëindigd. Precies één van: `answered` (gesproken, geen afspraak), `appointment_booked` (datum afgesproken), `callback_requested` (klant wil later teruggebeld), `declined` (klant ziet ervan af), `do_not_contact` (klant wil niet meer benaderd worden), `voicemail` (voicemail of antwoordapparaat, geen mens gesproken) |
 | `appointment_agreed` | boolean | True als er een concrete datum is afgesproken: bij een conversiegesprek de opname, bij een afsluitgesprek de installatie |
 | `appointment_start` | string | De afgesproken datum en tijd als `JJJJ-MM-DD UU:MM`, in Nederlandse tijd. Bijvoorbeeld `2026-09-15 08:00` |
 
 `outcome` is het belangrijkste veld: daarop bepaalt de workflow of er een
 prijsindicatie uitgaat, een afspraak wordt geboekt of de opvolging start. Laat
 de agent dit altijd invullen.
+
+`voicemail` telt als niet bereikt: de opvolging loopt door alsof er niet is
+opgenomen. Onze kant controleert dat ook zelf — staat er in het transcript geen
+enkele beurt van de klant, dan gaat het gesprek als voicemail de boeken in, wat
+de agent ook meldt. Een gesprek waarin niemand iets terugzegt is geen gesprek,
+en daar hoort geen prijsindicatie achteraan.
 
 Welke afspraak er van `appointment_booked` gemaakt wordt, bepaalt onze kant en
 niet de agent: uit een conversiegesprek volgt een opname, uit een afsluitgesprek

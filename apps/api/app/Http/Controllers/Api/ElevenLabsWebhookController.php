@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Log;
  */
 class ElevenLabsWebhookController extends Controller
 {
+    /** Korter dan dit heeft niemand opgenomen, hooguit weggedrukt. */
+    private const KORT_GESPREK_SECONDEN = 10;
+
     public function __invoke(Request $request, LeadWorkflow $workflow): JsonResponse
     {
         /** @var array<string, mixed> $payload */
@@ -112,6 +115,73 @@ class ElevenLabsWebhookController extends Controller
      */
     private function resolveOutcome(array $data, array $collected): CallOutcome
     {
+        $outcome = $this->reportedOutcome($data, $collected);
+
+        // Een gesprek waarin de klant geen woord heeft gezegd, telt nooit als
+        // bereikt. Een voicemail duurt lang genoeg om als "opgenomen" door te
+        // gaan: de agent spreekt zijn bericht in, het gesprek haalt de
+        // tienseconden-ondergrens ruim, en daarna ging de prijsindicatie naar
+        // iemand die niets heeft gehoord. De uitkomst die de agent zelf meldt
+        // wint hier niet: die kan een antwoordapparaat voor een klant aanzien.
+        if ($outcome->reachedLead() && $this->farEndSpoke($data) === false) {
+            return $this->durationSeconds($data) >= self::KORT_GESPREK_SECONDEN
+                ? CallOutcome::Voicemail
+                : CallOutcome::NoAnswer;
+        }
+
+        return $outcome;
+    }
+
+    /**
+     * Heeft de andere kant iets gezegd? Een echt gesprek heeft altijd beurten
+     * van de klant. Staat alleen de agent in het transcript, dan was er
+     * niemand: een antwoordapparaat, of een lijn die openging en stil bleef.
+     *
+     * Null zodra het transcript niets te oordelen geeft — dan blijft het bij
+     * wat de agent en de telefonie melden.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function farEndSpoke(array $data): ?bool
+    {
+        $transcript = $data['transcript'] ?? null;
+
+        if (! is_array($transcript)) {
+            return null;
+        }
+
+        $beurten = 0;
+        $klant = 0;
+
+        foreach ($transcript as $turn) {
+            if (! is_array($turn) || trim((string) ($turn['message'] ?? '')) === '') {
+                continue;
+            }
+
+            $beurten++;
+
+            if ((string) ($turn['role'] ?? '') === 'user') {
+                $klant++;
+            }
+        }
+
+        return $beurten === 0 ? null : $klant > 0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function durationSeconds(array $data): int
+    {
+        return (int) ($data['metadata']['call_duration_secs'] ?? $data['call_duration_secs'] ?? 0);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $collected
+     */
+    private function reportedOutcome(array $data, array $collected): CallOutcome
+    {
         // Expliciete uitkomst uit de agent wint van afgeleide signalen.
         if (isset($collected['outcome']) && is_string($collected['outcome'])) {
             $outcome = CallOutcome::tryFrom($collected['outcome']);
@@ -134,9 +204,9 @@ class ElevenLabsWebhookController extends Controller
         $analysis = is_array($data['analysis'] ?? null) ? $data['analysis'] : [];
         $successful = $analysis['call_successful'] ?? null;
 
-        $duration = (int) ($data['metadata']['call_duration_secs'] ?? $data['call_duration_secs'] ?? 0);
+        $duration = $this->durationSeconds($data);
 
-        if ($duration > 0 && $duration < 10) {
+        if ($duration > 0 && $duration < self::KORT_GESPREK_SECONDEN) {
             return CallOutcome::NoAnswer;
         }
 

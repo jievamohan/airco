@@ -256,6 +256,65 @@ table.data .num { text-align: right; white-space: nowrap; }
 .badge--ok { background: #e6f4ec; color: var(--dash-ok); }
 .badge--warn { background: #fdf3e0; color: var(--dash-warn); }
 
+/* ------------------------------------------------------------ systeemstatus */
+
+.status__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.status__head .panel__title { margin: 0; }
+
+.status--alarm {
+  border-color: #eecccc;
+  background: #fdf7f7;
+}
+
+.status__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px 24px;
+}
+
+.status__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.status__label {
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.status__sub {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--dash-muted);
+}
+
+.status__hint {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--dash-line);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--dash-muted);
+}
+
+.status__hint code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f0f0f0;
+  font-size: 12.5px;
+}
+
 /* ----------------------------------------------------------------- filters */
 
 .filters {
