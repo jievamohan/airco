@@ -34,6 +34,10 @@ apps/api/.deploy/
 # apps/api/database/data/pricelists/, gemaakt met scripts/pricelist/.
 /*.xlsx
 
+# Persoonlijke Claude Code-instellingen voor deze checkout. Blijft lokaal:
+# permissieregels zijn een keuze van de gebruiker, niet van het project.
+.claude/settings.local.json
+
 # Local tooling
 .venv/
 .docker/
